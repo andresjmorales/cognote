@@ -62,7 +62,12 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err: any) {
-      setError(err.message ?? "Something went wrong");
+      const msg = err.message ?? "Something went wrong";
+      if (msg.toLowerCase().includes("email not confirmed")) {
+        setError("Please check your email and click the confirmation link to activate your account.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }

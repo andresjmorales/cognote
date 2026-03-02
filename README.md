@@ -231,20 +231,45 @@ Sign up at [supabase.com](https://supabase.com) (free tier is sufficient) and cr
 ### 2. Push the schema
 
 ```bash
+npx supabase login
 npx supabase link --project-ref <your-project-ref>
 npx supabase db push
 ```
 
-### 3. Deploy to Vercel
+`db push` applies migrations only — it does **not** run `seed.sql`. Your production database will have the schema but no test data.
+
+### 3. Configure Supabase Auth redirects
+
+If you use email confirmation, Supabase must know where to redirect users after they click the confirmation link:
+
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard) → your project → **Authentication** → **URL Configuration**
+2. Set **Site URL** to your production URL (e.g. `https://your-app.vercel.app`)
+3. Add your production URL to **Redirect URLs** (e.g. `https://your-app.vercel.app/**`)
+4. To support both local and production, add both: `http://localhost:3000/**` and `https://your-app.vercel.app/**`
+
+Without this, confirmation links will redirect to localhost.
+
+### 4. Deploy to Vercel
 
 Connect your GitHub repo to [Vercel](https://vercel.com) and set these environment variables:
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
-TOKEN_ENCRYPTION_KEY=<generate a 64-char hex string>
-```
+| Variable | Where to get it |
+|----------|-----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Settings → API → anon (public) key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API → service_role key (click Reveal) |
+| `TOKEN_ENCRYPTION_KEY` | Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+
+**Important:** Use the keys from your **cloud** Supabase project, not from `.env.local` (which has local Docker keys). Only `TOKEN_ENCRYPTION_KEY` can be copied from local — or generate a new one for production.
+
+Variables without the `NEXT_PUBLIC_` prefix (like `SUPABASE_SERVICE_ROLE_KEY`) are server-only and never exposed to the browser.
+
+### 5. Demo link / seed data (optional)
+
+The landing page "Try a demo" button links to `/practice/dev-token-emma-week1`, which requires seed data. Since `db push` doesn't run the seed, that link will 404 in production until you either:
+
+- **Option A:** Run `supabase/seed.sql` manually in Supabase Dashboard → SQL Editor (may need to adjust the `auth.users` insert for cloud)
+- **Option B:** Sign up in production, create a student and plan, assign it, and update the landing page to use that practice URL as the demo link
 
 ---
 

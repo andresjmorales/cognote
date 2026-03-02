@@ -1,5 +1,14 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
+/**
+ * Generate a short, URL-safe token for practice links.
+ * 8 chars = ~48 bits of entropy, suitable for shareable links.
+ * Stored in DB; lookup is by token, no decryption needed.
+ */
+export function generateShortToken(): string {
+  return randomBytes(6).toString("base64url");
+}
+
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;

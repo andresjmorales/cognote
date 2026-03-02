@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { encryptToken } from "@/lib/token";
+import { generateShortToken } from "@/lib/token";
 
 export async function POST(
   req: NextRequest,
@@ -47,19 +47,6 @@ export async function POST(
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
-  // Generate token
-  let token: string;
-  try {
-    token = encryptToken({
-      studentId,
-      planId,
-      teacherId: user.id,
-    });
-  } catch {
-    // Fallback for dev without TOKEN_ENCRYPTION_KEY
-    token = `dev-${studentId.slice(0, 8)}-${planId.slice(0, 8)}`;
-  }
-
   // Check if assignment already exists
   const serviceClient = createServiceClient();
   const { data: existing } = await serviceClient
@@ -73,18 +60,33 @@ export async function POST(
     return NextResponse.json({ token: existing.token });
   }
 
-  const { data: studentPlan, error } = await serviceClient
-    .from("student_plans")
-    .insert({
-      student_id: studentId,
-      plan_id: planId,
-      token,
-    })
-    .select("token")
-    .single();
+  // Generate short token (8 chars); retry on collision
+  let studentPlan: { token: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const token = generateShortToken();
+    const { data, error } = await serviceClient
+      .from("student_plans")
+      .insert({
+        student_id: studentId,
+        plan_id: planId,
+        token,
+      })
+      .select("token")
+      .single();
 
-  if (error) {
+    if (!error) {
+      studentPlan = data;
+      break;
+    }
+    if (error.code === "23505") {
+      // Unique violation (token collision) — retry
+      continue;
+    }
     console.error("Failed to assign plan:", error);
+    return NextResponse.json({ error: "Failed to assign plan" }, { status: 500 });
+  }
+
+  if (!studentPlan) {
     return NextResponse.json({ error: "Failed to assign plan" }, { status: 500 });
   }
 
