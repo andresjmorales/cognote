@@ -1,0 +1,193 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import { StaffRenderer } from "./StaffRenderer";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  type FlashcardState,
+  type SRSRating,
+  SRS_KID_LABELS,
+  nextReviewState,
+} from "@/lib/srs";
+import { noteName, shuffle, KEY_SIGNATURES } from "@/lib/music";
+
+export interface FlashcardItem {
+  note: string;
+  clef: "treble" | "bass";
+  state: FlashcardState;
+}
+
+interface FlashcardEngineProps {
+  cards: FlashcardItem[];
+  keySignature?: string;
+  onReview?: (
+    note: string,
+    clef: "treble" | "bass",
+    rating: SRSRating,
+    newState: FlashcardState
+  ) => void;
+  onQuit?: () => void;
+}
+
+/**
+ * Anki-style session logic:
+ * - "Got it!" or "Too easy!" (rating >= 3) → card graduates, removed from the pile
+ * - "No clue" or "Tricky" (rating < 3)    → card goes back into the remaining pile
+ * - Session ends when all cards have graduated
+ */
+export function FlashcardEngine({
+  cards: initialCards,
+  keySignature = "C major",
+  onReview,
+  onQuit,
+}: FlashcardEngineProps) {
+  const [queue, setQueue] = useState<FlashcardItem[]>(initialCards);
+  const [flipped, setFlipped] = useState(false);
+  const [reviewed, setReviewed] = useState(0);
+  const [graduated, setGraduated] = useState(0);
+  const total = initialCards.length;
+
+  const vexKeySig = KEY_SIGNATURES[keySignature] ?? "C";
+  const current = queue[0] ?? null;
+
+  const handleRating = useCallback(
+    (rating: SRSRating) => {
+      if (!current) return;
+
+      const newState = nextReviewState(current.state, rating);
+      onReview?.(current.note, current.clef, rating, newState);
+      setReviewed((r) => r + 1);
+      setFlipped(false);
+
+      setQueue((prev) => {
+        const rest = prev.slice(1);
+
+        if (rating >= 3) {
+          // Card graduates — don't put it back
+          setGraduated((g) => g + 1);
+          return rest;
+        }
+
+        // Card failed — reinsert at a random position in the back half
+        // so the student doesn't see it again immediately
+        const updated = { ...current, state: newState };
+        const minPos = Math.max(1, Math.floor(rest.length / 2));
+        const insertAt =
+          rest.length <= 1
+            ? rest.length
+            : minPos + Math.floor(Math.random() * (rest.length - minPos + 1));
+        const newQueue = [...rest];
+        newQueue.splice(insertAt, 0, updated);
+        return newQueue;
+      });
+    },
+    [current, onReview]
+  );
+
+  if (!current || queue.length === 0) {
+    return (
+      <Card padding="lg" className="max-w-md mx-auto text-center font-[family-name:var(--font-nunito)]">
+        <div className="text-5xl mb-4">🎶</div>
+        <h2 className="text-2xl font-bold mb-2">All done!</h2>
+        <p className="text-muted mb-2">
+          {graduated} card{graduated !== 1 && "s"} reviewed in {reviewed} flip{reviewed !== 1 && "s"}.
+        </p>
+        {reviewed > graduated && (
+          <p className="text-sm text-muted mb-4">
+            You repeated {reviewed - graduated} card{reviewed - graduated !== 1 && "s"} until you got them.
+          </p>
+        )}
+        {onQuit && (
+          <Button onClick={onQuit} variant="secondary">
+            Go Back
+          </Button>
+        )}
+      </Card>
+    );
+  }
+
+  return (
+    <div className="max-w-md mx-auto font-[family-name:var(--font-nunito)]">
+      <div className="flex justify-between items-center text-sm text-muted mb-4">
+        <span>Reviewed: {reviewed}</span>
+        <span>
+          {graduated}/{total} done
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-2 bg-surface-dim rounded-full overflow-hidden mb-4">
+        <div
+          className="h-full bg-primary rounded-full transition-all duration-300"
+          style={{ width: `${total > 0 ? (graduated / total) * 100 : 0}%` }}
+        />
+      </div>
+
+      <Card
+        className="mb-6 cursor-pointer select-none"
+        onClick={() => !flipped && setFlipped(true)}
+      >
+        <div className="flex flex-col items-center">
+          <StaffRenderer
+            note={current.note}
+            clef={current.clef}
+            keySignature={vexKeySig}
+          />
+
+          {flipped ? (
+            <div className="mt-4 text-center">
+              <div className="text-4xl font-bold text-primary">
+                {noteName(current.note)}
+              </div>
+              <div className="text-sm text-muted mt-1">
+                {current.note} — {current.clef} clef
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-muted text-center">Tap to reveal</p>
+          )}
+        </div>
+      </Card>
+
+      {flipped ? (
+        <div className="grid grid-cols-4 gap-2">
+          {([1, 2, 4, 5] as SRSRating[]).map((rating) => {
+            const { emoji, text } = SRS_KID_LABELS[rating];
+            const variant =
+              rating === 5 ? "success" :
+              rating === 4 ? "successLight" :
+              rating === 2 ? "warning" :
+              "error";
+            return (
+              <Button
+                key={rating}
+                variant={variant}
+                size="lg"
+                onClick={() => handleRating(rating)}
+                className="flex flex-col gap-0.5 !py-3"
+              >
+                <span className="text-2xl">{emoji}</span>
+                <span className="text-xs">{text}</span>
+              </Button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center">
+          <Button size="lg" onClick={() => setFlipped(true)}>
+            Show Answer
+          </Button>
+        </div>
+      )}
+
+      {onQuit && (
+        <div className="mt-4 text-center">
+          <Button variant="ghost" size="sm" onClick={onQuit}>
+            I&apos;m Done
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
