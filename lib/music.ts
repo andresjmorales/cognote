@@ -152,6 +152,37 @@ export const KEY_SIGNATURES: Record<string, string> = {
 /** All available key signature display names */
 export const KEY_SIGNATURE_OPTIONS = Object.keys(KEY_SIGNATURES);
 
+/** Which key signatures inherently use sharps */
+export const KEYS_WITH_SHARPS = new Set([
+  "G major", "D major", "A major", "E major", "B major",
+  "E minor", "B minor",
+]);
+
+/** Which key signatures inherently use flats */
+export const KEYS_WITH_FLATS = new Set([
+  "F major", "Bb major", "Eb major", "Ab major",
+  "D minor", "G minor", "C minor",
+]);
+
+/** C major / A minor have neither sharps nor flats in the key signature */
+export const KEYS_NEUTRAL = new Set(["C major", "A minor"]);
+
+/**
+ * Returns which accidental checkboxes should be enabled for a given key signature.
+ * - Keys with sharps: "include sharps" is relevant, "include flats" is not
+ * - Keys with flats: "include flats" is relevant, "include sharps" is not
+ * - Neutral keys (C major, A minor): both are relevant
+ */
+export function accidentalOptionsForKey(key: string): {
+  sharpsEnabled: boolean;
+  flatsEnabled: boolean;
+} {
+  if (KEYS_NEUTRAL.has(key)) return { sharpsEnabled: true, flatsEnabled: true };
+  if (KEYS_WITH_SHARPS.has(key)) return { sharpsEnabled: true, flatsEnabled: false };
+  if (KEYS_WITH_FLATS.has(key)) return { sharpsEnabled: false, flatsEnabled: true };
+  return { sharpsEnabled: true, flatsEnabled: true };
+}
+
 /**
  * Common note presets teachers can choose from.
  */

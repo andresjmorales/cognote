@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
+import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStudentButton";
+import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
 
 export default async function StudentDetailPage({
   params,
@@ -31,7 +33,7 @@ export default async function StudentDetailPage({
     .select(
       `
       id, token, assigned_at, due_date,
-      plans ( id, name, clef, key_signature, notes ),
+      plans ( id, name, clef, key_signature, notes, plan_type ),
       practice_sessions (
         id, mode, started_at, completed_at,
         total_correct, total_incorrect, total_questions
@@ -41,7 +43,12 @@ export default async function StudentDetailPage({
     .eq("student_id", id)
     .order("assigned_at", { ascending: false });
 
-  // Gather all sessions across plans
+  const { data: allPlans } = await supabase
+    .from("plans")
+    .select("id, name")
+    .eq("teacher_id", user.id)
+    .order("name");
+
   const allSessions = (studentPlans ?? []).flatMap(
     (sp: any) => sp.practice_sessions ?? []
   );
@@ -60,14 +67,13 @@ export default async function StudentDetailPage({
   const overallAccuracy =
     totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : null;
 
-  // Note-level accuracy from attempts
-  const { data: attempts } = await supabase
-    .from("note_attempts")
-    .select("note_displayed, is_correct")
-    .in(
-      "session_id",
-      allSessions.map((s: any) => s.id)
-    );
+  const sessionIds = allSessions.map((s: any) => s.id);
+  const { data: attempts } = sessionIds.length > 0
+    ? await supabase
+        .from("note_attempts")
+        .select("note_displayed, is_correct")
+        .in("session_id", sessionIds)
+    : { data: [] };
 
   const noteStats: Record<string, { correct: number; total: number }> = {};
   (attempts ?? []).forEach((a: any) => {
@@ -94,14 +100,25 @@ export default async function StudentDetailPage({
         </Link>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">{student.name}</h1>
           {student.parent_contact && (
             <p className="text-muted text-sm">{student.parent_contact}</p>
           )}
         </div>
+        <AssignPlanToStudentButton
+          studentId={id}
+          studentName={student.name}
+          plans={allPlans ?? []}
+        />
       </div>
+
+      {/* Teacher Notes */}
+      <StudentNotesEditor
+        studentId={id}
+        initialNotes={student.teacher_notes ?? ""}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -132,29 +149,29 @@ export default async function StudentDetailPage({
           {!studentPlans?.length ? (
             <Card className="text-center text-muted">
               <p>No plans assigned yet.</p>
-              <Link href="/plans" className="text-primary text-sm hover:underline">
-                Assign a plan
-              </Link>
+              <p className="text-sm mt-1">Use the "Assign Plan" button above.</p>
             </Card>
           ) : (
             <div className="space-y-2">
               {(studentPlans as any[]).map((sp) => {
                 const sessions = sp.practice_sessions?.length ?? 0;
                 const practiceUrl = `/practice/${sp.token}`;
+                const isSymbolPlan = sp.plans?.plan_type === "symbol_concepts";
                 return (
                   <Card key={sp.id} padding="sm">
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-medium">{sp.plans?.name}</div>
                         <div className="text-xs text-muted">
-                          {sp.plans?.clef} clef · {sp.plans?.key_signature} ·{" "}
-                          {(sp.plans?.notes as string[])?.length ?? 0} notes
+                          {isSymbolPlan ? "Symbols & Concepts" : (
+                            <>{sp.plans?.clef} clef · {sp.plans?.key_signature} · {(sp.plans?.notes as string[])?.length ?? 0} notes</>
+                          )}
                         </div>
                         <div className="text-xs text-muted mt-1">
                           {sessions} session{sessions !== 1 && "s"}
                         </div>
                       </div>
-                      <CopyLinkButton url={practiceUrl} />
+                      <CopyLinkClient url={practiceUrl} />
                     </div>
                   </Card>
                 );
@@ -175,9 +192,7 @@ export default async function StudentDetailPage({
               <div className="space-y-2">
                 {sortedNotes.map(({ note, accuracy, total }) => (
                   <div key={note} className="flex items-center gap-3">
-                    <span className="w-10 font-mono font-bold text-sm">
-                      {note}
-                    </span>
+                    <span className="w-10 font-mono font-bold text-sm">{note}</span>
                     <div className="flex-1 h-5 bg-surface-dim rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${
@@ -217,9 +232,7 @@ export default async function StudentDetailPage({
                 .map((s: any) => {
                   const pct =
                     s.total_questions > 0
-                      ? Math.round(
-                          (s.total_correct / s.total_questions) * 100
-                        )
+                      ? Math.round((s.total_correct / s.total_questions) * 100)
                       : 0;
                   return (
                     <Card key={s.id} padding="sm">
@@ -257,10 +270,3 @@ export default async function StudentDetailPage({
     </div>
   );
 }
-
-function CopyLinkButton({ url }: { url: string }) {
-  return <CopyLinkClient url={url} />;
-}
-
-// Separate client component for the copy button
-import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";

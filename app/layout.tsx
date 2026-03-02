@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "CogNote",
   description:
     "Music note memorization for piano students — quiz, flashcards, and spaced repetition",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({

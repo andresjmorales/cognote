@@ -1,0 +1,61 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { PlanEditor } from "./PlanEditor";
+
+interface PlanEditWrapperProps {
+  planId: string;
+  initialData: {
+    name: string;
+    is_template: boolean;
+    plan_type: string;
+    clef: "treble" | "bass" | "both";
+    key_signature: string;
+    include_sharps: boolean;
+    include_flats: boolean;
+    measures_shown: number;
+    questions_per_lesson: number;
+    answer_choices: number;
+    notes: string[];
+    symbols: any[];
+    difficulty: string;
+    teacher_notes: string;
+  };
+  children: React.ReactNode;
+}
+
+export function PlanEditWrapper({
+  planId,
+  initialData,
+  children,
+}: PlanEditWrapperProps) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Edit Plan</h1>
+          <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
+        </div>
+        <PlanEditor mode="edit" planId={planId} initialData={initialData} />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="max-w-2xl mx-auto">
+        <div className="flex justify-end mb-2">
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            Edit Plan
+          </Button>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}

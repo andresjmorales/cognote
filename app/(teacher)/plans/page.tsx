@@ -99,18 +99,32 @@ export default async function PlansPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {studentSpecific.map((plan: any) => {
               const noteCount = (plan.notes as string[])?.length ?? 0;
+              const assignedStudents = (plan.student_plans ?? [])
+                .map((sp: any) => sp.students?.name)
+                .filter(Boolean);
+
               return (
-                <Link key={plan.id} href={`/plans/${plan.id}`}>
-                  <Card
-                    padding="sm"
-                    className="hover:border-primary/40 transition-colors cursor-pointer"
-                  >
-                    <div className="font-semibold">{plan.name}</div>
-                    <div className="text-xs text-muted mt-1">
-                      {plan.clef} clef · {plan.key_signature} · {noteCount} notes
-                    </div>
-                  </Card>
-                </Link>
+                <Card key={plan.id} padding="sm">
+                  <div className="flex justify-between items-start">
+                    <Link href={`/plans/${plan.id}`} className="flex-1">
+                      <div className="font-semibold hover:text-primary transition-colors">
+                        {plan.name}
+                      </div>
+                      <div className="text-xs text-muted mt-1">
+                        {plan.clef} clef · {plan.key_signature} · {noteCount} notes
+                      </div>
+                      {assignedStudents.length > 0 && (
+                        <div className="text-xs text-muted mt-1">
+                          Assigned to: {assignedStudents.join(", ")}
+                        </div>
+                      )}
+                    </Link>
+                    <AssignPlanButton
+                      planId={plan.id}
+                      students={students ?? []}
+                    />
+                  </div>
+                </Card>
               );
             })}
           </div>

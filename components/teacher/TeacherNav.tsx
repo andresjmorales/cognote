@@ -8,6 +8,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/students", label: "Students" },
   { href: "/plans", label: "Plans" },
+  { href: "/help", label: "Help" },
 ];
 
 export function TeacherNav({ teacherName }: { teacherName: string }) {

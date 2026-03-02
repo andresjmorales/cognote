@@ -2,20 +2,21 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-interface Student {
+interface Plan {
   id: string;
   name: string;
 }
 
-export function AssignPlanButton({
-  planId,
-  students,
+export function AssignPlanToStudentButton({
+  studentId,
+  studentName,
+  plans,
 }: {
-  planId: string;
-  students: Student[];
+  studentId: string;
+  studentName: string;
+  plans: Plan[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -33,7 +34,7 @@ export function AssignPlanButton({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function handleAssign(studentId: string, studentName: string) {
+  async function handleAssign(planId: string, planName: string) {
     setAssigning(true);
 
     try {
@@ -47,7 +48,7 @@ export function AssignPlanButton({
         const data = await res.json();
         const fullUrl = `${window.location.origin}/practice/${data.token}`;
         await navigator.clipboard.writeText(fullUrl);
-        setToast(`Link copied! Send to ${studentName}'s parent.`);
+        setToast(`"${planName}" assigned! Link copied.`);
         setTimeout(() => setToast(null), 3000);
         router.refresh();
       }
@@ -62,23 +63,23 @@ export function AssignPlanButton({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(!open)}>
-        Assign
+      <Button size="sm" onClick={() => setOpen(!open)}>
+        Assign Plan
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-48">
-          {students.length === 0 ? (
-            <div className="p-3 text-sm text-muted">No students yet</div>
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-64 max-h-64 overflow-y-auto">
+          {plans.length === 0 ? (
+            <div className="p-3 text-sm text-muted">No plans yet</div>
           ) : (
-            students.map((s) => (
+            plans.map((p) => (
               <button
-                key={s.id}
+                key={p.id}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-surface-dim transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer"
-                onClick={() => handleAssign(s.id, s.name)}
+                onClick={() => handleAssign(p.id, p.name)}
                 disabled={assigning}
               >
-                {s.name}
+                {p.name}
               </button>
             ))
           )}
@@ -86,7 +87,7 @@ export function AssignPlanButton({
       )}
 
       {toast && (
-        <div className="fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50 animate-[fadeIn_0.2s]">
+        <div className="fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50">
           {toast}
         </div>
       )}
