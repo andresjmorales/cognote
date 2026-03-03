@@ -47,6 +47,7 @@ interface PlanEditorProps {
     symbols: MusicalSymbol[];
     difficulty: string;
     teacher_notes: string;
+    show_hints: boolean;
   };
 }
 
@@ -72,6 +73,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(
     initialData?.symbols?.map((s) => s.id) ?? []
   );
+  const [showHints, setShowHints] = useState(initialData?.show_hints ?? true);
 
   const accidentalOpts = accidentalOptionsForKey(keySignature);
 
@@ -148,6 +150,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
       answer_choices: answerChoices,
       notes: planType === "note_identification" ? selectedNotes : [],
       symbols: planType === "symbol_concepts" ? symbolData : [],
+      show_hints: showHints,
       difficulty,
       teacher_notes: teacherNotes.trim(),
     };
@@ -472,6 +475,22 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+          {!isNoteMode && (
+            <div className="col-span-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showHints}
+                  onChange={(e) => setShowHints(e.target.checked)}
+                  className="rounded"
+                />
+                Show hints (definitions under symbols)
+              </label>
+              <p className="text-xs text-muted mt-1">
+                When disabled, students only see the symbol and must identify it without the definition hint.
+              </p>
             </div>
           )}
         </div>

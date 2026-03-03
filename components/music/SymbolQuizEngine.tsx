@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { pickRandom, shuffle } from "@/lib/music";
+import { shuffle } from "@/lib/music";
 import type { AttemptResult } from "./QuizEngine";
 
 export interface SymbolItem {
@@ -19,6 +19,7 @@ export interface SymbolQuizConfig {
   questionsPerLesson: number;
   answerChoices: number;
   mode: "lesson" | "free_practice";
+  showHints?: boolean;
 }
 
 interface SymbolQuizEngineProps {
@@ -53,7 +54,7 @@ export function SymbolQuizEngine({
   onComplete,
   onQuit,
 }: SymbolQuizEngineProps) {
-  const { symbols, questionsPerLesson, answerChoices, mode } = config;
+  const { symbols, questionsPerLesson, answerChoices, mode, showHints = true } = config;
   const isLesson = mode === "lesson";
 
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -62,11 +63,11 @@ export function SymbolQuizEngine({
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
-  const currentSymbol = useMemo(
-    () => pickRandom(symbols),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [questionIndex, symbols]
-  );
+  // Bag-based symbol selection: shuffle all symbols, cycle through, reshuffle when exhausted.
+  const [symbolBag, setSymbolBag] = useState<SymbolItem[]>(() => shuffle(symbols));
+  const [bagIndex, setBagIndex] = useState(0);
+
+  const currentSymbol = symbolBag[bagIndex % symbolBag.length];
 
   const choices = useMemo(
     () => buildSymbolChoices(currentSymbol.term, symbols, answerChoices),
@@ -104,6 +105,13 @@ export function SymbolQuizEngine({
             setPhase("complete");
             onComplete?.(allResults);
           } else {
+            const nextBagIndex = bagIndex + 1;
+            if (nextBagIndex >= symbolBag.length) {
+              setSymbolBag(shuffle(symbols));
+              setBagIndex(0);
+            } else {
+              setBagIndex(nextBagIndex);
+            }
             setQuestionIndex(nextIndex);
             setSelectedAnswer(null);
             setPhase("playing");
@@ -122,6 +130,9 @@ export function SymbolQuizEngine({
       results,
       onAttempt,
       onComplete,
+      bagIndex,
+      symbolBag,
+      symbols,
     ]
   );
 
@@ -160,6 +171,8 @@ export function SymbolQuizEngine({
               setQuestionIndex(0);
               setResults([]);
               setSelectedAnswer(null);
+              setSymbolBag(shuffle(symbols));
+              setBagIndex(0);
               setPhase("playing");
             }}
           >
@@ -199,7 +212,9 @@ export function SymbolQuizEngine({
         ) : (
           <>
             <div className="text-4xl font-bold mb-2">{currentSymbol.symbol}</div>
-            <p className="text-sm text-muted">{currentSymbol.definition}</p>
+            {showHints && (
+              <p className="text-sm text-muted">{currentSymbol.definition}</p>
+            )}
           </>
         )}
       </Card>

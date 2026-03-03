@@ -44,16 +44,27 @@ export function AssignPlanToStudentButton({
         body: JSON.stringify({ studentId }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const fullUrl = `${window.location.origin}/practice/${data.token}`;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        setToast(errData?.error ?? "Failed to assign lesson plan");
+        setTimeout(() => setToast(null), 3000);
+        setAssigning(false);
+        setOpen(false);
+        return;
+      }
+
+      const data = await res.json();
+      const fullUrl = `${window.location.origin}/practice/${data.token}`;
+      try {
         await navigator.clipboard.writeText(fullUrl);
         setToast(`"${planName}" assigned! Link copied.`);
-        setTimeout(() => setToast(null), 3000);
-        router.refresh();
+      } catch {
+        setToast(`"${planName}" assigned! Link: ${fullUrl}`);
       }
+      setTimeout(() => setToast(null), 5000);
+      router.refresh();
     } catch {
-      setToast("Failed to assign lesson plan");
+      setToast("Failed to assign lesson plan — check your connection.");
       setTimeout(() => setToast(null), 3000);
     }
 

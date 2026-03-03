@@ -8,7 +8,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   buildAnswerChoices,
   noteName,
-  pickRandom,
+  shuffle,
   KEY_SIGNATURES,
 } from "@/lib/music";
 
@@ -55,10 +55,16 @@ export function QuizEngine({
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
-  const currentNote = useMemo(() => pickRandom(notes), [questionIndex, notes]);
+  // Bag-based note selection: shuffle all notes, cycle through them, reshuffle when exhausted.
+  // This guarantees every note is asked before any repeats.
+  const [noteBag, setNoteBag] = useState<string[]>(() => shuffle(notes));
+  const [bagIndex, setBagIndex] = useState(0);
+
+  const currentNote = noteBag[bagIndex % noteBag.length];
   const currentClef = useMemo((): "treble" | "bass" => {
     if (clef === "both") return Math.random() > 0.5 ? "treble" : "bass";
     return clef;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questionIndex, clef]);
 
   const choices = useMemo(
@@ -102,6 +108,14 @@ export function QuizEngine({
             setPhase("complete");
             onComplete?.(allResults);
           } else {
+            const nextBagIndex = bagIndex + 1;
+            if (nextBagIndex >= noteBag.length) {
+              // Reshuffle the bag for the next cycle
+              setNoteBag(shuffle(notes));
+              setBagIndex(0);
+            } else {
+              setBagIndex(nextBagIndex);
+            }
             setQuestionIndex(nextIndex);
             setSelectedAnswer(null);
             setPhase("playing");
@@ -122,6 +136,9 @@ export function QuizEngine({
       results,
       onAttempt,
       onComplete,
+      bagIndex,
+      noteBag,
+      notes,
     ]
   );
 
@@ -154,6 +171,8 @@ export function QuizEngine({
               setQuestionIndex(0);
               setResults([]);
               setSelectedAnswer(null);
+              setNoteBag(shuffle(notes));
+              setBagIndex(0);
               setPhase("playing");
             }}
           >
