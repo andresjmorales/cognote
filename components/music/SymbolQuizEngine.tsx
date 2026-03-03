@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { shuffle } from "@/lib/music";
+import { SymbolDisplay } from "./MusicalSymbolIcon";
 import type { AttemptResult } from "./QuizEngine";
 
 export interface SymbolItem {
@@ -211,7 +212,9 @@ export function SymbolQuizEngine({
           </>
         ) : (
           <>
-            <div className="text-4xl font-bold mb-2">{currentSymbol.symbol}</div>
+            <div className="text-4xl font-bold mb-2">
+              <SymbolDisplay symbolId={currentSymbol.id} symbolText={currentSymbol.symbol} size={56} />
+            </div>
             {showHints && (
               <p className="text-sm text-muted">{currentSymbol.definition}</p>
             )}

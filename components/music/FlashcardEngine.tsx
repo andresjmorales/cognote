@@ -11,6 +11,7 @@ import {
   nextReviewState,
 } from "@/lib/srs";
 import { noteName, KEY_SIGNATURES } from "@/lib/music";
+import { SymbolDisplay } from "./MusicalSymbolIcon";
 
 interface NoteCard {
   itemType: "note";
@@ -187,7 +188,9 @@ export function FlashcardEngine({
           ) : (
             <>
               <div className="py-6 text-center">
-                <div className="text-4xl font-bold mb-2">{current.symbol}</div>
+                <div className="text-4xl font-bold mb-2">
+                  <SymbolDisplay symbolId={current.symbolId} symbolText={current.symbol} size={56} />
+                </div>
               </div>
               {flipped ? (
                 <div className="text-center pb-2">

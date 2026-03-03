@@ -15,6 +15,7 @@ import {
   symbolsByCategory,
   type MusicalSymbol,
 } from "@/lib/symbols";
+import { SymbolDisplay } from "@/components/music/MusicalSymbolIcon";
 
 const CLEF_OPTIONS = ["treble", "bass", "both"] as const;
 const DIFFICULTY_OPTIONS = ["beginner", "intermediate", "advanced"] as const;
@@ -419,7 +420,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                             : "bg-surface-dim text-muted hover:bg-border"
                         }`}
                       >
-                        <span className="mr-1">{sym.symbol}</span> {sym.term}
+                        <span className="mr-1"><SymbolDisplay symbolId={sym.id} symbolText={sym.symbol} size={14} /></span> {sym.term}
                       </button>
                     ))}
                   </div>
