@@ -33,11 +33,13 @@ export async function POST(
   }
 
   // Fire-and-forget: update session tallies without blocking the response
-  supabase
-    .from("practice_sessions")
-    .select("total_correct, total_incorrect, total_questions")
-    .eq("id", sessionId)
-    .single()
+  Promise.resolve(
+    supabase
+      .from("practice_sessions")
+      .select("total_correct, total_incorrect, total_questions")
+      .eq("id", sessionId)
+      .single()
+  )
     .then(({ data: session }) => {
       if (!session) return;
       return supabase
