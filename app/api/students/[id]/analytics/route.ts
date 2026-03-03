@@ -27,7 +27,6 @@ export async function GET(
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
-  // Get all student_plans
   const { data: studentPlans } = await supabase
     .from("student_plans")
     .select("id")
@@ -46,19 +45,19 @@ export async function GET(
     });
   }
 
-  // Get all sessions
   const { data: sessions } = await supabase
     .from("practice_sessions")
     .select("*")
     .in("student_plan_id", spIds)
     .order("started_at", { ascending: false });
 
-  // Get all attempts
   const sessionIds = (sessions ?? []).map((s) => s.id);
-  const { data: attempts } = await supabase
-    .from("note_attempts")
-    .select("note_displayed, is_correct, response_time_ms")
-    .in("session_id", sessionIds);
+  const { data: attempts } = sessionIds.length > 0
+    ? await supabase
+        .from("note_attempts")
+        .select("note_displayed, is_correct, response_time_ms")
+        .in("session_id", sessionIds)
+    : { data: [] as any[] };
 
   // Compute note accuracy
   const noteAccuracy: Record<

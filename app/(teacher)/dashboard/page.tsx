@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+export const metadata = { title: "Dashboard" };
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -11,33 +13,33 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
-  const { data: students } = await supabase
-    .from("students")
-    .select("id, name, created_at")
-    .eq("teacher_id", user.id)
-    .order("name");
+  const [{ data: students }, { data: plans }, { data: recentSessions }] =
+    await Promise.all([
+      supabase
+        .from("students")
+        .select("id, name, created_at")
+        .eq("teacher_id", user.id)
+        .order("name"),
+      supabase
+        .from("plans")
+        .select("id, name, is_template")
+        .eq("teacher_id", user.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("practice_sessions")
+        .select(
+          `
+          id, mode, started_at, completed_at, total_correct, total_questions,
+          student_plans!inner (
+            students!inner ( id, name, teacher_id ),
+            plans!inner ( name )
+          )
+        `
+        )
+        .order("started_at", { ascending: false })
+        .limit(10),
+    ]);
 
-  const { data: plans } = await supabase
-    .from("plans")
-    .select("id, name, is_template")
-    .eq("teacher_id", user.id)
-    .order("created_at", { ascending: false });
-
-  const { data: recentSessions } = await supabase
-    .from("practice_sessions")
-    .select(
-      `
-      id, mode, started_at, completed_at, total_correct, total_questions,
-      student_plans!inner (
-        students!inner ( id, name, teacher_id ),
-        plans!inner ( name )
-      )
-    `
-    )
-    .order("started_at", { ascending: false })
-    .limit(10);
-
-  // Filter to only this teacher's sessions
   const teacherSessions = (recentSessions ?? []).filter(
     (s: any) => s.student_plans?.students?.teacher_id === user.id
   );
@@ -48,7 +50,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <div className="flex gap-2">
           <Link href="/plans/new">
-            <Button size="sm">New Plan</Button>
+            <Button size="sm">New Lesson Plan</Button>
           </Link>
           <Link href="/students">
             <Button size="sm" variant="secondary">
@@ -64,7 +66,7 @@ export default async function DashboardPage() {
           <div className="text-3xl font-bold">{students?.length ?? 0}</div>
         </Card>
         <Card>
-          <div className="text-sm text-muted">Plans</div>
+          <div className="text-sm text-muted">Lesson Plans</div>
           <div className="text-3xl font-bold">{plans?.length ?? 0}</div>
         </Card>
         <Card>

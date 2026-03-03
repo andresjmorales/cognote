@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { StaffRenderer } from "./StaffRenderer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,23 +10,38 @@ import {
   SRS_KID_LABELS,
   nextReviewState,
 } from "@/lib/srs";
-import { noteName, shuffle, KEY_SIGNATURES } from "@/lib/music";
+import { noteName, KEY_SIGNATURES } from "@/lib/music";
 
-export interface FlashcardItem {
+interface NoteCard {
+  itemType: "note";
   note: string;
   clef: "treble" | "bass";
   state: FlashcardState;
 }
 
+interface SymbolCard {
+  itemType: "symbol";
+  symbolId: string;
+  symbol: string;
+  term: string;
+  definition: string;
+  state: FlashcardState;
+}
+
+export type FlashcardItem = NoteCard | SymbolCard;
+
+export interface FlashcardReviewData {
+  itemType: "note" | "symbol";
+  itemId: string;
+  clef: "treble" | "bass" | "none";
+  rating: SRSRating;
+  newState: FlashcardState;
+}
+
 interface FlashcardEngineProps {
   cards: FlashcardItem[];
   keySignature?: string;
-  onReview?: (
-    note: string,
-    clef: "treble" | "bass",
-    rating: SRSRating,
-    newState: FlashcardState
-  ) => void;
+  onReview?: (data: FlashcardReviewData) => void;
   onQuit?: () => void;
 }
 
@@ -56,7 +71,13 @@ export function FlashcardEngine({
       if (!current) return;
 
       const newState = nextReviewState(current.state, rating);
-      onReview?.(current.note, current.clef, rating, newState);
+      onReview?.({
+        itemType: current.itemType,
+        itemId: current.itemType === "note" ? current.note : current.symbolId,
+        clef: current.itemType === "note" ? current.clef : "none",
+        rating,
+        newState,
+      });
       setReviewed((r) => r + 1);
       setFlipped(false);
 
@@ -129,23 +150,54 @@ export function FlashcardEngine({
         onClick={() => !flipped && setFlipped(true)}
       >
         <div className="flex flex-col items-center">
-          <StaffRenderer
-            note={current.note}
-            clef={current.clef}
-            keySignature={vexKeySig}
-          />
-
-          {flipped ? (
-            <div className="mt-4 text-center">
-              <div className="text-4xl font-bold text-primary">
-                {noteName(current.note)}
+          {current.itemType === "note" ? (
+            <>
+              <StaffRenderer
+                note={current.note}
+                clef={current.clef}
+                keySignature={vexKeySig}
+              />
+              {flipped ? (
+                <div className="mt-4 text-center">
+                  <div className="text-4xl font-bold text-primary">
+                    {noteName(current.note)}
+                  </div>
+                  <div className="text-sm text-muted mt-1">
+                    {current.note} — {current.clef} clef
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-4 text-muted text-center">Tap to reveal</p>
+              )}
+            </>
+          ) : current.symbol.toLowerCase().trim() === current.term.toLowerCase().trim() ? (
+            <>
+              <div className="py-6 text-center">
+                <div className="text-lg text-muted mb-1">What term means...</div>
+                <div className="text-2xl font-bold">{current.definition}</div>
               </div>
-              <div className="text-sm text-muted mt-1">
-                {current.note} — {current.clef} clef
-              </div>
-            </div>
+              {flipped ? (
+                <div className="text-center pb-2">
+                  <div className="text-3xl font-bold text-primary">{current.term}</div>
+                </div>
+              ) : (
+                <p className="text-muted text-center pb-2">Tap to reveal</p>
+              )}
+            </>
           ) : (
-            <p className="mt-4 text-muted text-center">Tap to reveal</p>
+            <>
+              <div className="py-6 text-center">
+                <div className="text-4xl font-bold mb-2">{current.symbol}</div>
+              </div>
+              {flipped ? (
+                <div className="text-center pb-2">
+                  <div className="text-3xl font-bold text-primary">{current.term}</div>
+                  <div className="text-sm text-muted mt-1">{current.definition}</div>
+                </div>
+              ) : (
+                <p className="text-muted text-center pb-2">Tap to reveal</p>
+              )}
+            </>
           )}
         </div>
       </Card>

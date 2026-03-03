@@ -24,7 +24,8 @@ export async function GET(
         students ( name ),
         plans (
           name, clef, key_signature, include_sharps, include_flats,
-          measures_shown, questions_per_lesson, answer_choices, notes
+          measures_shown, questions_per_lesson, answer_choices, notes,
+          plan_type, symbols
         )
       `
       )
@@ -50,7 +51,8 @@ export async function GET(
           students ( name ),
           plans (
             name, clef, key_signature, include_sharps, include_flats,
-            measures_shown, questions_per_lesson, answer_choices, notes
+            measures_shown, questions_per_lesson, answer_choices, notes,
+            plan_type, symbols
           )
         `
         )

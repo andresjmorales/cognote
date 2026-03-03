@@ -52,7 +52,7 @@ export function AssignPlanButton({
         router.refresh();
       }
     } catch {
-      setToast("Failed to assign plan");
+      setToast("Failed to assign lesson plan");
       setTimeout(() => setToast(null), 3000);
     }
 

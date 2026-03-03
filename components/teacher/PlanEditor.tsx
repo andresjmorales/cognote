@@ -249,7 +249,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
             <textarea
               value={teacherNotes}
               onChange={(e) => setTeacherNotes(e.target.value)}
-              placeholder="Private notes about this plan (only you can see these)"
+              placeholder="Private notes about this lesson plan (only you can see these)"
               rows={2}
               className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm resize-y"
             />
@@ -493,7 +493,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
             (!isNoteMode && selectedSymbols.length === 0)
           }
         >
-          {loading ? "Saving..." : mode === "edit" ? "Save Changes" : "Create Plan"}
+          {loading ? "Saving..." : mode === "edit" ? "Save Changes" : "Create Lesson Plan"}
         </Button>
       </div>
     </form>

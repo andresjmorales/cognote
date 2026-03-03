@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
 
+export const metadata = { title: "Lesson Plans" };
+
 export default async function PlansPage() {
   const supabase = await createClient();
   const {
@@ -12,22 +14,23 @@ export default async function PlansPage() {
 
   if (!user) return null;
 
-  const { data: plans } = await supabase
-    .from("plans")
-    .select(
+  const [{ data: plans }, { data: students }] = await Promise.all([
+    supabase
+      .from("plans")
+      .select(
+        `
+        id, name, is_template, clef, key_signature, notes, questions_per_lesson,
+        student_plans ( id, students ( id, name ) )
       `
-      id, name, is_template, clef, key_signature, notes, questions_per_lesson,
-      student_plans ( id, students ( id, name ) )
-    `
-    )
-    .eq("teacher_id", user.id)
-    .order("created_at", { ascending: false });
-
-  const { data: students } = await supabase
-    .from("students")
-    .select("id, name")
-    .eq("teacher_id", user.id)
-    .order("name");
+      )
+      .eq("teacher_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("students")
+      .select("id, name")
+      .eq("teacher_id", user.id)
+      .order("name"),
+  ]);
 
   const templates = (plans ?? []).filter((p: any) => p.is_template);
   const studentSpecific = (plans ?? []).filter((p: any) => !p.is_template);
@@ -35,9 +38,9 @@ export default async function PlansPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Plans</h1>
+        <h1 className="text-2xl font-bold">Lesson Plans</h1>
         <Link href="/plans/new">
-          <Button size="sm">Create Plan</Button>
+          <Button size="sm">Create Lesson Plan</Button>
         </Link>
       </div>
 
@@ -48,7 +51,7 @@ export default async function PlansPage() {
           <Card className="text-center text-muted">
             <p>No templates yet.</p>
             <Link href="/plans/new" className="text-primary text-sm hover:underline">
-              Create your first plan template
+              Create your first lesson plan template
             </Link>
           </Card>
         ) : (
@@ -90,7 +93,7 @@ export default async function PlansPage() {
 
       {/* Student-Specific Plans */}
       <section>
-        <h2 className="text-lg font-semibold mb-3">Student-Specific Plans</h2>
+        <h2 className="text-lg font-semibold mb-3">Student-Specific Lesson Plans</h2>
         {studentSpecific.length === 0 ? (
           <Card className="text-center text-muted">
             <p>No student-specific plans yet.</p>

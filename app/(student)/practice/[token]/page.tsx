@@ -4,12 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { QuizEngine, type AttemptResult, type QuizConfig } from "@/components/music/QuizEngine";
 import {
+  SymbolQuizEngine,
+  type SymbolItem,
+  type SymbolQuizConfig,
+} from "@/components/music/SymbolQuizEngine";
+import {
   FlashcardEngine,
   type FlashcardItem,
+  type FlashcardReviewData,
 } from "@/components/music/FlashcardEngine";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { FlashcardState, SRSRating } from "@/lib/srs";
 import { defaultFlashcardState, nextReviewDate } from "@/lib/srs";
 import { shuffle } from "@/lib/music";
 
@@ -22,6 +27,8 @@ interface PlanData {
   questions_per_lesson: number;
   answer_choices: number;
   notes: string[];
+  plan_type: "note_identification" | "symbol_concepts";
+  symbols: SymbolItem[];
 }
 
 export default function PracticePage() {
@@ -48,6 +55,7 @@ export default function PracticePage() {
         setStudentName(data.studentName);
         setStudentPlanId(data.studentPlanId);
         setPlan(data.plan);
+        document.title = `CogNote - Practice`;
       } catch {
         setError("Could not load your practice session.");
       } finally {
@@ -58,54 +66,75 @@ export default function PracticePage() {
   }, [token]);
 
   const startSession = useCallback(
-    async (m: "lesson" | "free_practice" | "flashcard") => {
+    (m: "lesson" | "free_practice" | "flashcard") => {
       if (m === "flashcard") {
-        try {
-          const res = await fetch(`/api/practice/${token}/flashcards`);
-          if (res.ok) {
-            const data = await res.json();
-            const planNotes: string[] = data.plan?.notes ?? plan?.notes ?? [];
-            const clef = plan?.clef === "both" ? "treble" : (plan?.clef ?? "treble");
-
-            const items: FlashcardItem[] = planNotes.map((note: string) => {
-              const existing = data.progress?.find(
-                (p: any) => p.note === note && p.clef === clef
-              );
-              return {
-                note,
-                clef: clef as "treble" | "bass",
-                state: existing
-                  ? {
-                      easeFactor: existing.ease_factor,
-                      intervalDays: existing.interval_days,
-                      repetitions: existing.repetitions,
-                    }
-                  : defaultFlashcardState(),
-              };
-            });
-            setFlashcardItems(shuffle(items));
-          }
-        } catch {
-          // Fall through with empty flashcards
-        }
         setMode("flashcard");
+        fetch(`/api/practice/${token}/flashcards`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (!data) return;
+            const isSymbolPlan = data.plan?.plan_type === "symbol_concepts";
+
+            let items: FlashcardItem[];
+            if (isSymbolPlan) {
+              const symbols: SymbolItem[] = data.plan?.symbols ?? plan?.symbols ?? [];
+              items = symbols.map((sym) => {
+                const existing = data.progress?.find(
+                  (p: any) => p.item_type === "symbol" && p.note === sym.id
+                );
+                return {
+                  itemType: "symbol" as const,
+                  symbolId: sym.id,
+                  symbol: sym.symbol,
+                  term: sym.term,
+                  definition: sym.definition,
+                  state: existing
+                    ? {
+                        easeFactor: existing.ease_factor,
+                        intervalDays: existing.interval_days,
+                        repetitions: existing.repetitions,
+                      }
+                    : defaultFlashcardState(),
+                };
+              });
+            } else {
+              const planNotes: string[] = data.plan?.notes ?? plan?.notes ?? [];
+              const clef = plan?.clef === "both" ? "treble" : (plan?.clef ?? "treble");
+              items = planNotes.map((note: string) => {
+                const existing = data.progress?.find(
+                  (p: any) => p.note === note && p.clef === clef && (p.item_type === "note" || !p.item_type)
+                );
+                return {
+                  itemType: "note" as const,
+                  note,
+                  clef: clef as "treble" | "bass",
+                  state: existing
+                    ? {
+                        easeFactor: existing.ease_factor,
+                        intervalDays: existing.interval_days,
+                        repetitions: existing.repetitions,
+                      }
+                    : defaultFlashcardState(),
+                };
+              });
+            }
+            setFlashcardItems(shuffle(items));
+          })
+          .catch(() => {});
         return;
       }
 
-      try {
-        const res = await fetch(`/api/practice/${token}/session`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: m }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setSessionId(data.sessionId);
-        }
-      } catch {
-        // Continue even if session creation fails — offline-friendly
-      }
       setMode(m);
+      fetch(`/api/practice/${token}/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: m }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setSessionId(data.sessionId);
+        })
+        .catch(() => {});
     },
     [token, plan]
   );
@@ -144,23 +173,19 @@ export default function PracticePage() {
   );
 
   const handleFlashcardReview = useCallback(
-    async (
-      note: string,
-      clef: "treble" | "bass",
-      rating: SRSRating,
-      newState: FlashcardState
-    ) => {
+    async (data: FlashcardReviewData) => {
       try {
         await fetch(`/api/practice/${token}/flashcards`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            note,
-            clef,
-            easeFactor: newState.easeFactor,
-            intervalDays: newState.intervalDays,
-            repetitions: newState.repetitions,
-            nextReview: nextReviewDate(newState.intervalDays).toISOString(),
+            itemType: data.itemType,
+            itemId: data.itemId,
+            clef: data.clef,
+            easeFactor: data.newState.easeFactor,
+            intervalDays: data.newState.intervalDays,
+            repetitions: data.newState.repetitions,
+            nextReview: nextReviewDate(data.newState.intervalDays).toISOString(),
           }),
         });
       } catch {
@@ -236,12 +261,39 @@ export default function PracticePage() {
   }
 
   if (mode === "flashcard") {
+    if (flashcardItems.length === 0) {
+      return (
+        <div className="min-h-screen flex items-center justify-center font-[family-name:var(--font-nunito)]">
+          <div className="text-xl text-muted animate-pulse">Loading flashcards...</div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <FlashcardEngine
           cards={flashcardItems}
           keySignature={plan.key_signature}
           onReview={handleFlashcardReview}
+          onQuit={() => { setFlashcardItems([]); setMode("welcome"); }}
+        />
+      </div>
+    );
+  }
+
+  if (plan.plan_type === "symbol_concepts") {
+    const symbolConfig: SymbolQuizConfig = {
+      symbols: (plan.symbols ?? []) as SymbolItem[],
+      questionsPerLesson: plan.questions_per_lesson,
+      answerChoices: Math.min(plan.answer_choices, (plan.symbols ?? []).length),
+      mode: mode as "lesson" | "free_practice",
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <SymbolQuizEngine
+          config={symbolConfig}
+          onAttempt={handleAttempt}
+          onComplete={handleComplete}
           onQuit={() => setMode("welcome")}
         />
       </div>

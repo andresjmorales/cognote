@@ -11,15 +11,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: students } = await supabase
-    .from("students")
-    .select("id, name")
-    .eq("teacher_id", user.id);
-
-  const { data: plans } = await supabase
-    .from("plans")
-    .select("id")
-    .eq("teacher_id", user.id);
+  const [{ data: students }, { data: plans }] = await Promise.all([
+    supabase.from("students").select("id, name").eq("teacher_id", user.id),
+    supabase.from("plans").select("id").eq("teacher_id", user.id),
+  ]);
 
   const studentIds = (students ?? []).map((s) => s.id);
 

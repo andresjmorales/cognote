@@ -10,7 +10,7 @@ export async function GET(
 
   const { data: sp } = await supabase
     .from("student_plans")
-    .select("id, plans ( notes, clef )")
+    .select("id, plans ( notes, clef, plan_type, symbols )")
     .eq("token", token)
     .single();
 
@@ -36,7 +36,17 @@ export async function PUT(
 ) {
   const { token } = await params;
   const body = await req.json();
-  const { note, clef, easeFactor, intervalDays, repetitions, nextReview } = body;
+  const {
+    itemType = "note",
+    itemId,
+    clef,
+    easeFactor,
+    intervalDays,
+    repetitions,
+    nextReview,
+    // Legacy fields for backward compatibility
+    note,
+  } = body;
 
   const supabase = createServiceClient();
 
@@ -50,20 +60,24 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid token" }, { status: 404 });
   }
 
+  const resolvedNote = itemId ?? note;
+  const resolvedClef = clef ?? "none";
+
   const { error } = await supabase
     .from("flashcard_progress")
     .upsert(
       {
         student_plan_id: sp.id,
-        note,
-        clef,
+        item_type: itemType,
+        note: resolvedNote,
+        clef: resolvedClef,
         ease_factor: easeFactor,
         interval_days: intervalDays,
         repetitions,
         next_review: nextReview,
         last_reviewed: new Date().toISOString(),
       },
-      { onConflict: "student_plan_id,note,clef" }
+      { onConflict: "student_plan_id,item_type,note,clef" }
     );
 
   if (error) {

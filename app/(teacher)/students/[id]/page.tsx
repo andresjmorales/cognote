@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -5,6 +6,21 @@ import { Card } from "@/components/ui/card";
 import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
 import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStudentButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: student } = await supabase
+    .from("students")
+    .select("name")
+    .eq("id", id)
+    .single();
+  return { title: student?.name ?? "Student" };
+}
 
 export default async function StudentDetailPage({
   params,
@@ -19,35 +35,36 @@ export default async function StudentDetailPage({
 
   if (!user) return null;
 
-  const { data: student } = await supabase
-    .from("students")
-    .select("*")
-    .eq("id", id)
-    .eq("teacher_id", user.id)
-    .single();
+  const [{ data: student }, { data: studentPlans }, { data: allPlans }] =
+    await Promise.all([
+      supabase
+        .from("students")
+        .select("*")
+        .eq("id", id)
+        .eq("teacher_id", user.id)
+        .single(),
+      supabase
+        .from("student_plans")
+        .select(
+          `
+          id, token, assigned_at, due_date,
+          plans ( id, name, clef, key_signature, notes, plan_type ),
+          practice_sessions (
+            id, mode, started_at, completed_at,
+            total_correct, total_incorrect, total_questions
+          )
+        `
+        )
+        .eq("student_id", id)
+        .order("assigned_at", { ascending: false }),
+      supabase
+        .from("plans")
+        .select("id, name")
+        .eq("teacher_id", user.id)
+        .order("name"),
+    ]);
 
   if (!student) notFound();
-
-  const { data: studentPlans } = await supabase
-    .from("student_plans")
-    .select(
-      `
-      id, token, assigned_at, due_date,
-      plans ( id, name, clef, key_signature, notes, plan_type ),
-      practice_sessions (
-        id, mode, started_at, completed_at,
-        total_correct, total_incorrect, total_questions
-      )
-    `
-    )
-    .eq("student_id", id)
-    .order("assigned_at", { ascending: false });
-
-  const { data: allPlans } = await supabase
-    .from("plans")
-    .select("id, name")
-    .eq("teacher_id", user.id)
-    .order("name");
 
   const allSessions = (studentPlans ?? []).flatMap(
     (sp: any) => sp.practice_sessions ?? []
@@ -84,13 +101,17 @@ export default async function StudentDetailPage({
     if (a.is_correct) noteStats[a.note_displayed].correct++;
   });
 
-  const sortedNotes = Object.entries(noteStats)
+  const allItems = Object.entries(noteStats)
     .map(([note, stats]) => ({
       note,
       accuracy: Math.round((stats.correct / stats.total) * 100),
       total: stats.total,
     }))
     .sort((a, b) => a.accuracy - b.accuracy);
+
+  const isMusicalNote = (s: string) => /^[A-G][b#]?\d$/.test(s);
+  const noteItems = allItems.filter((i) => isMusicalNote(i.note));
+  const conceptItems = allItems.filter((i) => !isMusicalNote(i.note));
 
   return (
     <div>
@@ -145,11 +166,11 @@ export default async function StudentDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assigned Plans */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Assigned Plans</h2>
+          <h2 className="text-lg font-semibold mb-3">Assigned Lesson Plans</h2>
           {!studentPlans?.length ? (
             <Card className="text-center text-muted">
-              <p>No plans assigned yet.</p>
-              <p className="text-sm mt-1">Use the "Assign Plan" button above.</p>
+              <p>No lesson plans assigned yet.</p>
+              <p className="text-sm mt-1">Use the &quot;Assign Lesson Plan&quot; button above.</p>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -180,36 +201,73 @@ export default async function StudentDetailPage({
           )}
         </div>
 
-        {/* Note Accuracy */}
+        {/* Accuracy Breakdown */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Note Accuracy</h2>
-          {sortedNotes.length === 0 ? (
+          <h2 className="text-lg font-semibold mb-3">Accuracy</h2>
+          {allItems.length === 0 ? (
             <Card className="text-center text-muted">
               <p>No practice data yet.</p>
             </Card>
           ) : (
             <Card padding="sm">
               <div className="space-y-2">
-                {sortedNotes.map(({ note, accuracy, total }) => (
-                  <div key={note} className="flex items-center gap-3">
-                    <span className="w-10 font-mono font-bold text-sm">{note}</span>
-                    <div className="flex-1 h-5 bg-surface-dim rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${
-                          accuracy >= 80
-                            ? "bg-success"
-                            : accuracy >= 50
-                              ? "bg-warning"
-                              : "bg-error"
-                        }`}
-                        style={{ width: `${accuracy}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-muted w-16 text-right">
-                      {accuracy}% ({total})
-                    </span>
-                  </div>
-                ))}
+                {noteItems.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wide">Notes</p>
+                    {noteItems.map(({ note, accuracy, total }) => (
+                      <div key={note} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 font-semibold text-xs truncate" title={note}>
+                          {note}
+                        </span>
+                        <div className="flex-1 h-5 bg-surface-dim rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              accuracy >= 80
+                                ? "bg-success"
+                                : accuracy >= 50
+                                  ? "bg-warning"
+                                  : "bg-error"
+                            }`}
+                            style={{ width: `${accuracy}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted w-16 text-right shrink-0">
+                          {accuracy}% ({total})
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {noteItems.length > 0 && conceptItems.length > 0 && (
+                  <hr className="border-border my-2" />
+                )}
+                {conceptItems.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wide">Concepts</p>
+                    {conceptItems.map(({ note, accuracy, total }) => (
+                      <div key={note} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 font-semibold text-xs truncate" title={note}>
+                          {note}
+                        </span>
+                        <div className="flex-1 h-5 bg-surface-dim rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              accuracy >= 80
+                                ? "bg-success"
+                                : accuracy >= 50
+                                  ? "bg-warning"
+                                  : "bg-error"
+                            }`}
+                            style={{ width: `${accuracy}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted w-16 text-right shrink-0">
+                          {accuracy}% ({total})
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </Card>
           )}

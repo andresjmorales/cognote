@@ -1,9 +1,25 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
 import { PlanEditWrapper } from "@/components/teacher/PlanEditWrapper";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: plan } = await supabase
+    .from("plans")
+    .select("name")
+    .eq("id", id)
+    .single();
+  return { title: plan?.name ?? "Lesson Plan" };
+}
 
 export default async function PlanDetailPage({
   params,
@@ -66,7 +82,7 @@ export default async function PlanDetailPage({
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <Link href="/plans" className="text-muted hover:text-foreground">
-            ← Plans
+            ← Lesson Plans
           </Link>
         </div>
 
@@ -121,18 +137,33 @@ export default async function PlanDetailPage({
 
         {isSymbolPlan ? (
           <Card className="mb-6">
-            <h2 className="font-semibold mb-2">Symbols &amp; Concepts ({symbols.length})</h2>
-            <div className="space-y-1.5">
-              {symbols.map((sym: any) => (
-                <div key={sym.id} className="flex items-center gap-3 py-1">
-                  <span className="text-lg w-12 text-center">{sym.symbol}</span>
-                  <div>
-                    <span className="font-medium text-sm">{sym.term}</span>
-                    <span className="text-muted text-xs ml-2">{sym.definition}</span>
+            <h2 className="font-semibold mb-3">Symbols &amp; Concepts ({symbols.length})</h2>
+            {(() => {
+              const grouped: Record<string, any[]> = {};
+              for (const sym of symbols) {
+                const cat = sym.category ?? "Other";
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(sym);
+              }
+              return Object.entries(grouped).map(([category, items]) => (
+                <div key={category} className="mb-4 last:mb-0">
+                  <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+                    {category}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {items.map((sym: any) => (
+                      <span
+                        key={sym.id}
+                        className="px-2.5 py-1 bg-accent/10 text-accent rounded-lg text-sm font-medium"
+                        title={sym.definition}
+                      >
+                        {sym.term}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              ));
+            })()}
           </Card>
         ) : (
           <Card className="mb-6">

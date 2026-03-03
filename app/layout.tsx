@@ -13,7 +13,10 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "CogNote",
+  title: {
+    default: "CogNote",
+    template: "CogNote - %s",
+  },
   description:
     "Music note memorization for piano students — quiz, flashcards, and spaced repetition",
   icons: {

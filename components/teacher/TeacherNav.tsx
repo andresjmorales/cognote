@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -7,13 +8,14 @@ import { createClient } from "@/lib/supabase/client";
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/students", label: "Students" },
-  { href: "/plans", label: "Plans" },
+  { href: "/plans", label: "Lesson Plans" },
   { href: "/help", label: "Help" },
 ];
 
 export function TeacherNav({ teacherName }: { teacherName: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -32,7 +34,7 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
           >
             CogNote
           </Link>
-          <nav className="flex gap-1">
+          <nav className="hidden md:flex gap-1">
             {navItems.map((item) => {
               const active = pathname.startsWith(item.href);
               return (
@@ -52,8 +54,14 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted">{teacherName}</span>
+        {/* Desktop account links */}
+        <div className="hidden md:flex items-center gap-4">
+          <Link
+            href="/account"
+            className="text-sm text-muted hover:text-foreground transition-colors"
+          >
+            {teacherName}
+          </Link>
           <button
             onClick={handleSignOut}
             className="text-sm text-muted hover:text-foreground cursor-pointer"
@@ -61,7 +69,67 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
             Sign out
           </button>
         </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden p-2 -mr-2 text-muted hover:text-foreground cursor-pointer"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Toggle menu"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {mobileOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </>
+            )}
+          </svg>
+        </button>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-border bg-surface px-4 pb-3 pt-2 space-y-1">
+          {navItems.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted hover:text-foreground hover:bg-surface-dim"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+          <div className="border-t border-border mt-2 pt-2 flex items-center justify-between px-3">
+            <Link
+              href="/account"
+              onClick={() => setMobileOpen(false)}
+              className="text-sm text-muted hover:text-foreground transition-colors"
+            >
+              {teacherName}
+            </Link>
+            <button
+              onClick={() => { setMobileOpen(false); handleSignOut(); }}
+              className="text-sm text-muted hover:text-foreground cursor-pointer"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

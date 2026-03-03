@@ -2,7 +2,7 @@
 
 **Music note memorization for piano students — quizzes, flashcards, and spaced repetition.**
 
-CogNote is an open-source web app that helps piano teachers assign and track note-reading exercises for their students. Teachers create customizable study plans, share them via unique URLs, and monitor progress through an analytics dashboard. Students — primarily children ages 5–14 — open a link and immediately start practicing. No login, no signup.
+CogNote is an open-source web app that helps piano teachers assign and track music exercises for their students. Teachers create customizable lesson plans — note identification drills, musical symbol quizzes, or both — share them via unique URLs, and monitor progress through an analytics dashboard. Students — primarily children ages 5–14 — open a link and immediately start practicing. No login, no signup.
 
 ---
 
@@ -10,27 +10,28 @@ CogNote is an open-source web app that helps piano teachers assign and track not
 
 ### For Teachers
 - **Student management** — Add students, track their practice history, and see per-note accuracy breakdowns
-- **Customizable plans** — Choose clef (treble/bass/both), key signature, specific notes, number of questions, and answer choices
-- **Reusable templates** — Create plan templates and assign them to multiple students with one click
+- **Customizable lesson plans** — Two plan types: note identification (clef, key signature, specific notes) and musical symbols & concepts (dynamics, tempo, articulation, note values, and more)
+- **Reusable templates** — Create lesson plan templates and assign them to multiple students with one click
 - **Share via URL** — Each student gets a unique practice link; copy it to clipboard and send to parents
 - **Analytics dashboard** — See which notes students struggle with, session history, accuracy trends
 
 ### For Students
-- **Quiz mode** — Multiple-choice note identification with immediate feedback and score tracking
+- **Quiz mode** — Multiple-choice note identification or symbol/concept questions with immediate feedback and score tracking
 - **Free practice** — Unlimited questions with no pressure, practice at your own pace
-- **Flashcard mode** — Spaced repetition (SM-2 algorithm) with kid-friendly emoji ratings
+- **Flashcard mode** — Spaced repetition (SM-2 algorithm) for both notes and symbols, with kid-friendly emoji ratings
 - **Zero friction** — Open the link, tap "Start", begin practicing. No account needed
 - **Kid-friendly UI** — Large buttons, friendly fonts, gentle feedback animations
 
 ### Music Notation
 - Real staff rendering with [VexFlow](https://www.vexflow.com/) — treble and bass clefs, key signatures, accidentals, ledger lines
 - Clean, large notation sized for tablet screens
+- Built-in library of 40+ musical symbols and concepts across 7 categories
 
 ---
 
 ## Spaced Repetition
 
-The flashcard mode uses the **SM-2 algorithm** (same as Anki). Students rate each card with kid-friendly labels:
+The flashcard mode uses the **SM-2 algorithm** (same as Anki) and works for both note identification and symbol/concept plans. Students rate each card with kid-friendly labels:
 
 | Button | SM-2 Rating | Effect |
 |--------|------------|--------|
@@ -113,7 +114,7 @@ The seed data includes a pre-configured teacher account:
 - **Email:** `teacher@example.com`
 - **Password:** `password123`
 
-This account comes with 3 sample students, 3 plans, and practice session history so you can explore the dashboard immediately.
+This account comes with 3 sample students, 3 lesson plans, and practice session history so you can explore the dashboard immediately.
 
 ### Demo Practice Links
 
@@ -142,7 +143,7 @@ cognote/
 │   │   ├── dashboard/          # Overview with stats and recent activity
 │   │   ├── students/           # Student list + detail views
 │   │   │   └── [id]/           # Per-student analytics
-│   │   └── plans/              # Plan list, editor, detail views
+│   │   └── plans/              # Lesson plan list, editor, detail views
 │   │       ├── [id]/
 │   │       └── new/
 │   ├── (student)/              # Student pages (no auth)
@@ -151,7 +152,7 @@ cognote/
 │   ├── api/                    # API routes
 │   │   ├── auth/               # Teacher account setup
 │   │   ├── dashboard/          # Dashboard summary
-│   │   ├── plans/              # Plan CRUD + assignment
+│   │   ├── plans/              # Lesson plan CRUD + assignment
 │   │   ├── practice/           # Student session + attempt tracking
 │   │   └── students/           # Student CRUD + analytics
 │   ├── login/                  # Teacher login/signup
@@ -163,6 +164,7 @@ cognote/
 ├── lib/
 │   ├── supabase/               # Client, server, and middleware helpers
 │   ├── music.ts                # Note utilities, answer generation, presets
+│   ├── symbols.ts              # Musical symbols & concepts library
 │   ├── srs.ts                  # SM-2 spaced repetition algorithm
 │   └── token.ts                # AES-256-GCM token encryption
 ├── supabase/
@@ -182,12 +184,12 @@ teachers
   └── student_plans (students ↔ plans, many-to-many)
         └── practice_sessions (one-to-many)
         │     └── note_attempts (one-to-many)
-        └── flashcard_progress (one-to-many, per note)
+        └── flashcard_progress (one-to-many, per note or symbol)
 ```
 
-All teacher data is protected by **Row Level Security** — a teacher can only see their own students, plans, and analytics. Student practice endpoints use token-based access with no authentication.
+All teacher data is protected by **Row Level Security** — a teacher can only see their own students, lesson plans, and analytics. Student practice endpoints use token-based access with no authentication.
 
-Migrations live in `supabase/migrations/` and are applied with `npx supabase db reset`.
+Migrations live in `supabase/migrations/` and are applied with `npx supabase db reset` (local) or `npx supabase db push` (remote).
 
 ---
 
@@ -202,11 +204,11 @@ Migrations live in `supabase/migrations/` and are applied with `npx supabase db 
 | PUT | `/api/students/[id]` | Update student |
 | DELETE | `/api/students/[id]` | Remove student |
 | GET | `/api/students/[id]/analytics` | Student analytics |
-| GET | `/api/plans` | List teacher's plans |
-| POST | `/api/plans` | Create plan |
-| PUT | `/api/plans/[id]` | Update plan |
-| DELETE | `/api/plans/[id]` | Remove plan |
-| POST | `/api/plans/[id]/assign` | Assign plan to student, get practice URL |
+| GET | `/api/plans` | List teacher's lesson plans |
+| POST | `/api/plans` | Create lesson plan |
+| PUT | `/api/plans/[id]` | Update lesson plan |
+| DELETE | `/api/plans/[id]` | Remove lesson plan |
+| POST | `/api/plans/[id]/assign` | Assign lesson plan to student, get practice URL |
 | GET | `/api/dashboard/summary` | Dashboard metrics |
 
 ### Student-side (token-based, no auth)
@@ -217,8 +219,8 @@ Migrations live in `supabase/migrations/` and are applied with `npx supabase db 
 | POST | `/api/practice/[token]/session` | Start a practice session |
 | POST | `/api/practice/[token]/session/[id]/attempt` | Record a note attempt |
 | PUT | `/api/practice/[token]/session/[id]/complete` | Mark session complete |
-| GET | `/api/practice/[token]/flashcards` | Get flashcard state |
-| PUT | `/api/practice/[token]/flashcards` | Update flashcard after review |
+| GET | `/api/practice/[token]/flashcards` | Get flashcard state (notes or symbols) |
+| PUT | `/api/practice/[token]/flashcards` | Update flashcard after review (notes or symbols) |
 
 ---
 
@@ -269,7 +271,7 @@ Variables without the `NEXT_PUBLIC_` prefix (like `SUPABASE_SERVICE_ROLE_KEY`) a
 The landing page "Try a demo" button links to `/practice/dev-token-emma-week1`, which requires seed data. Since `db push` doesn't run the seed, that link will 404 in production until you either:
 
 - **Option A:** Run `supabase/seed.sql` manually in Supabase Dashboard → SQL Editor (may need to adjust the `auth.users` insert for cloud)
-- **Option B:** Sign up in production, create a student and plan, assign it, and update the landing page to use that practice URL as the demo link
+- **Option B:** Sign up in production, create a student and lesson plan, assign it, and update the landing page to use that practice URL as the demo link
 
 ---
 

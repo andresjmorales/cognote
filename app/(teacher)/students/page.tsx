@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { AddStudentForm } from "@/components/teacher/AddStudentForm";
 
+export const metadata = { title: "Students" };
+
 export default async function StudentsPage() {
   const supabase = await createClient();
   const {
