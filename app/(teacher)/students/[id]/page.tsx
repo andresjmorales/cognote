@@ -182,9 +182,13 @@ export default async function StudentDetailPage({
                   <Card key={sp.id} padding="sm">
                     <div className="flex justify-between items-start">
                       <div>
-                        <Link href={`/plans/${sp.plans?.id}`} className="font-medium hover:text-primary transition-colors">
-                          {sp.plans?.name}
-                        </Link>
+                        {sp.plans?.id ? (
+                          <Link href={`/plans/${sp.plans.id}`} className="font-medium hover:text-primary transition-colors">
+                            {sp.plans.name}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{sp.plans?.name ?? "Unknown Lesson"}</span>
+                        )}
                         <div className="text-xs text-muted">
                           {isSymbolPlan ? "Symbols & Concepts" : (
                             <>{sp.plans?.clef} clef · {sp.plans?.key_signature} · {(sp.plans?.notes as string[])?.length ?? 0} notes</>
