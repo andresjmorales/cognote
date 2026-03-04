@@ -1,4 +1,5 @@
--- Seed data for local development
+-- Seed data for LOCAL DEVELOPMENT ONLY.
+-- Do NOT run this in production — it creates a test account with a known password.
 -- Creates a test auth user + matching teacher, students, plans, and sample sessions.
 
 -- Create a test auth user directly (password: "password123")

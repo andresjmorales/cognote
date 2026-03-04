@@ -108,22 +108,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Test Account
+### Seed Data (Local Development Only)
 
-The seed data includes a pre-configured teacher account:
-
-- **Email:** `teacher@example.com`
-- **Password:** `password123`
-
-This account comes with 3 sample students, 3 lesson plans, and practice session history so you can explore the dashboard immediately.
-
-### Demo Practice Links
-
-These links work with the seeded data (no login required):
-
-- [/practice/dev-token-emma-week1](http://localhost:3000/practice/dev-token-emma-week1) — Emma's Middle C Position plan
-- [/practice/dev-token-liam-week1](http://localhost:3000/practice/dev-token-liam-week1) — Liam's Middle C Position plan
-- [/practice/dev-token-sophia-week2](http://localhost:3000/practice/dev-token-sophia-week2) — Sophia's Treble Staff Lines plan
+Running `npx supabase db reset` loads `supabase/seed.sql` with a test teacher account, sample students, lesson plans, and practice history so you can explore the full dashboard immediately. See `seed.sql` for credentials — these are for **local development only** and should never be used in production.
 
 ### Local Dev Tools
 
@@ -272,12 +259,9 @@ Connect your GitHub repo to [Vercel](https://vercel.com) and set these environme
 
 Variables without the `NEXT_PUBLIC_` prefix (like `SUPABASE_SERVICE_ROLE_KEY`) are server-only and never exposed to the browser.
 
-### 5. Demo link / seed data (optional)
+### 5. Try a Quiz
 
-The landing page "Try a demo" button links to `/practice/dev-token-emma-week1`, which requires seed data. Since `db push` doesn't run the seed, that link will 404 in production until you either:
-
-- **Option A:** Run `supabase/seed.sql` manually in Supabase Dashboard → SQL Editor (may need to adjust the `auth.users` insert for cloud)
-- **Option B:** Sign up in production, create a student and lesson plan, assign it, and update the landing page to use that practice URL as the demo link
+The landing page "Try a Quiz" button links to `/try`, a standalone note-identification quiz that works without any seed data or database records. Visitors can pick a note set and start practicing immediately.
 
 ---
 
