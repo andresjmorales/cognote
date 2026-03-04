@@ -74,7 +74,7 @@ export function AssignPlanButton({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <Button size="sm" variant="success" onClick={() => setOpen(!open)}>
+      <Button size="sm" variant="primary" onClick={() => setOpen(!open)}>
         Assign
       </Button>
 
