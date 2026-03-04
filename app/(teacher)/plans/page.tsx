@@ -6,6 +6,38 @@ import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
 
 export const metadata = { title: "Lesson Plans" };
 
+function PlanCard({ plan, students }: { plan: any; students: { id: string; name: string }[] }) {
+  const isSymbolPlan = plan.plan_type === "symbol_concepts";
+  const noteCount = (plan.notes as string[])?.length ?? 0;
+  const symbolCount = (plan.symbols as any[])?.length ?? 0;
+  const assignedStudents = (plan.student_plans ?? [])
+    .map((sp: any) => sp.students?.name)
+    .filter(Boolean);
+
+  return (
+    <Card padding="sm">
+      <div className="flex justify-between items-start">
+        <Link href={`/plans/${plan.id}`} className="flex-1">
+          <div className="font-semibold hover:text-primary transition-colors">
+            {plan.name}
+          </div>
+          <div className="text-xs text-muted mt-1">
+            {isSymbolPlan
+              ? `${symbolCount} symbol${symbolCount !== 1 ? "s" : ""} · ${plan.questions_per_lesson} questions`
+              : `${plan.clef} clef · ${plan.key_signature} · ${noteCount} note${noteCount !== 1 ? "s" : ""} · ${plan.questions_per_lesson} questions`}
+          </div>
+          {assignedStudents.length > 0 && (
+            <div className="text-xs text-muted mt-1">
+              Assigned to: {assignedStudents.join(", ")}
+            </div>
+          )}
+        </Link>
+        <AssignPlanButton planId={plan.id} students={students} />
+      </div>
+    </Card>
+  );
+}
+
 export default async function PlansPage() {
   const supabase = await createClient();
   const {
@@ -20,6 +52,7 @@ export default async function PlansPage() {
       .select(
         `
         id, name, is_template, clef, key_signature, notes, questions_per_lesson,
+        plan_type, symbols,
         student_plans ( id, students ( id, name ) )
       `
       )
@@ -56,37 +89,9 @@ export default async function PlansPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {templates.map((plan: any) => {
-              const noteCount = (plan.notes as string[])?.length ?? 0;
-              const assignedStudents = (plan.student_plans ?? [])
-                .map((sp: any) => sp.students?.name)
-                .filter(Boolean);
-
-              return (
-                <Card key={plan.id} padding="sm">
-                  <div className="flex justify-between items-start">
-                    <Link href={`/plans/${plan.id}`} className="flex-1">
-                      <div className="font-semibold hover:text-primary transition-colors">
-                        {plan.name}
-                      </div>
-                      <div className="text-xs text-muted mt-1">
-                        {plan.clef} clef · {plan.key_signature} · {noteCount} notes ·{" "}
-                        {plan.questions_per_lesson} questions
-                      </div>
-                      {assignedStudents.length > 0 && (
-                        <div className="text-xs text-muted mt-1">
-                          Assigned to: {assignedStudents.join(", ")}
-                        </div>
-                      )}
-                    </Link>
-                    <AssignPlanButton
-                      planId={plan.id}
-                      students={students ?? []}
-                    />
-                  </div>
-                </Card>
-              );
-            })}
+            {templates.map((plan: any) => (
+              <PlanCard key={plan.id} plan={plan} students={students ?? []} />
+            ))}
           </div>
         )}
       </section>
@@ -100,36 +105,9 @@ export default async function PlansPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {studentSpecific.map((plan: any) => {
-              const noteCount = (plan.notes as string[])?.length ?? 0;
-              const assignedStudents = (plan.student_plans ?? [])
-                .map((sp: any) => sp.students?.name)
-                .filter(Boolean);
-
-              return (
-                <Card key={plan.id} padding="sm">
-                  <div className="flex justify-between items-start">
-                    <Link href={`/plans/${plan.id}`} className="flex-1">
-                      <div className="font-semibold hover:text-primary transition-colors">
-                        {plan.name}
-                      </div>
-                      <div className="text-xs text-muted mt-1">
-                        {plan.clef} clef · {plan.key_signature} · {noteCount} notes
-                      </div>
-                      {assignedStudents.length > 0 && (
-                        <div className="text-xs text-muted mt-1">
-                          Assigned to: {assignedStudents.join(", ")}
-                        </div>
-                      )}
-                    </Link>
-                    <AssignPlanButton
-                      planId={plan.id}
-                      students={students ?? []}
-                    />
-                  </div>
-                </Card>
-              );
-            })}
+            {studentSpecific.map((plan: any) => (
+              <PlanCard key={plan.id} plan={plan} students={students ?? []} />
+            ))}
           </div>
         )}
       </section>

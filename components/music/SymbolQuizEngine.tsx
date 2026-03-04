@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { pickRandom, shuffle } from "@/lib/music";
+import { shuffle } from "@/lib/music";
+import { SymbolDisplay } from "./VexFlowSymbol";
 import type { AttemptResult } from "./QuizEngine";
 
 export interface SymbolItem {
@@ -19,6 +20,7 @@ export interface SymbolQuizConfig {
   questionsPerLesson: number;
   answerChoices: number;
   mode: "lesson" | "free_practice";
+  showHints?: boolean;
 }
 
 interface SymbolQuizEngineProps {
@@ -53,7 +55,7 @@ export function SymbolQuizEngine({
   onComplete,
   onQuit,
 }: SymbolQuizEngineProps) {
-  const { symbols, questionsPerLesson, answerChoices, mode } = config;
+  const { symbols, questionsPerLesson, answerChoices, mode, showHints = true } = config;
   const isLesson = mode === "lesson";
 
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -62,11 +64,19 @@ export function SymbolQuizEngine({
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
-  const currentSymbol = useMemo(
-    () => pickRandom(symbols),
+  const bagRef = useRef<SymbolItem[]>([]);
+  const bagIndexRef = useRef(0);
+
+  const currentSymbol = useMemo(() => {
+    if (bagRef.current.length === 0 || bagIndexRef.current >= bagRef.current.length) {
+      bagRef.current = shuffle(symbols);
+      bagIndexRef.current = 0;
+    }
+    const sym = bagRef.current[bagIndexRef.current];
+    bagIndexRef.current++;
+    return sym;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [questionIndex, symbols]
-  );
+  }, [questionIndex, symbols]);
 
   const choices = useMemo(
     () => buildSymbolChoices(currentSymbol.term, symbols, answerChoices),
@@ -198,8 +208,15 @@ export function SymbolQuizEngine({
           </>
         ) : (
           <>
-            <div className="text-4xl font-bold mb-2">{currentSymbol.symbol}</div>
-            <p className="text-sm text-muted">{currentSymbol.definition}</p>
+            <div className="flex items-center justify-center mb-2">
+              <SymbolDisplay
+                symbolId={currentSymbol.id}
+                symbolText={currentSymbol.symbol}
+              />
+            </div>
+            {showHints && (
+              <p className="text-sm text-muted">{currentSymbol.definition}</p>
+            )}
           </>
         )}
       </Card>

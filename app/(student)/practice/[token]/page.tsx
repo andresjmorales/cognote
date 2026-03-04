@@ -29,6 +29,7 @@ interface PlanData {
   notes: string[];
   plan_type: "note_identification" | "symbol_concepts";
   symbols: SymbolItem[];
+  show_hints: boolean;
 }
 
 export default function PracticePage() {
@@ -286,6 +287,7 @@ export default function PracticePage() {
       questionsPerLesson: plan.questions_per_lesson,
       answerChoices: Math.min(plan.answer_choices, (plan.symbols ?? []).length),
       mode: mode as "lesson" | "free_practice",
+      showHints: plan.show_hints ?? true,
     };
 
     return (

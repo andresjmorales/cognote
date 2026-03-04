@@ -46,7 +46,7 @@ export const MUSICAL_SYMBOLS: MusicalSymbol[] = [
 
   // Articulation
   { id: "staccato", category: "Articulation", symbol: "• (dot above note)", term: "Staccato", definition: "Short and detached" },
-  { id: "legato", category: "Articulation", symbol: "⌢ (curved line)", term: "Legato / Slur", definition: "Smooth and connected" },
+  { id: "legato", category: "Articulation", symbol: "⌢ (between different notes)", term: "Legato / Slur", definition: "Smooth and connected" },
   { id: "accent", category: "Articulation", symbol: "> (above note)", term: "Accent", definition: "Play the note with emphasis" },
   { id: "tenuto", category: "Articulation", symbol: "— (line above note)", term: "Tenuto", definition: "Hold the note for its full value" },
 

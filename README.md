@@ -25,6 +25,7 @@ CogNote is an open-source web app that helps piano teachers assign and track mus
 ### Music Notation
 - Real staff rendering with [VexFlow](https://www.vexflow.com/) — treble and bass clefs, key signatures, accidentals, ledger lines
 - Clean, large notation sized for tablet screens
+- **Standalone symbol SVGs** — Clefs, notes, rests, dynamics, articulations, and more are rendered from pre-extracted Bravura (SMuFL) vector paths in `public/symbols/`. No runtime font loading; consistent on all devices including iOS (no “tofu” from missing Unicode music fonts).
 - Built-in library of 40+ musical symbols and concepts across 7 categories
 
 ---
@@ -164,9 +165,14 @@ cognote/
 ├── lib/
 │   ├── supabase/               # Client, server, and middleware helpers
 │   ├── music.ts                # Note utilities, answer generation, presets
+│   ├── symbol-paths.ts         # Auto-generated: Bravura SVG path data (do not edit)
 │   ├── symbols.ts              # Musical symbols & concepts library
 │   ├── srs.ts                  # SM-2 spaced repetition algorithm
 │   └── token.ts                # AES-256-GCM token encryption
+├── public/
+│   └── symbols/                # Standalone SVG files (Bravura glyphs)
+├── scripts/
+│   └── extract-bravura-glyphs.js  # One-time: extract Bravura → SVG + lib/symbol-paths.ts
 ├── supabase/
 │   ├── migrations/             # SQL schema migrations
 │   └── seed.sql                # Test data for local development
@@ -291,6 +297,17 @@ npx supabase migration new <description>
 # Edit the generated SQL file in supabase/migrations/
 npx supabase db reset  # Apply it
 ```
+
+### Regenerating musical symbol SVGs
+
+Symbols (clefs, notes, dynamics, articulations, etc.) are rendered from Bravura glyphs extracted into `public/symbols/` and `lib/symbol-paths.ts`. To add or update symbols:
+
+```bash
+npm install --save-dev opentype.js wawoff2
+node scripts/extract-bravura-glyphs.js
+```
+
+Edit the `GLYPHS` map in `scripts/extract-bravura-glyphs.js` to add SMuFL code points (see [SMuFL](https://w3c.github.io/smufl/gitbook/)), then run the script. It reads Bravura from the VexFlow package, writes SVGs to `public/symbols/`, and regenerates `lib/symbol-paths.ts`. You can then remove the dev deps if desired.
 
 ---
 
