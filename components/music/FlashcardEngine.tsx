@@ -10,7 +10,8 @@ import {
   SRS_KID_LABELS,
   nextReviewState,
 } from "@/lib/srs";
-import { noteName, KEY_SIGNATURES } from "@/lib/music";
+import { noteName, shuffle, KEY_SIGNATURES } from "@/lib/music";
+import { SymbolDisplay } from "./VexFlowSymbol";
 
 interface NoteCard {
   itemType: "note";
@@ -57,7 +58,7 @@ export function FlashcardEngine({
   onReview,
   onQuit,
 }: FlashcardEngineProps) {
-  const [queue, setQueue] = useState<FlashcardItem[]>(initialCards);
+  const [queue, setQueue] = useState<FlashcardItem[]>(() => shuffle(initialCards));
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState(0);
   const [graduated, setGraduated] = useState(0);
@@ -129,7 +130,7 @@ export function FlashcardEngine({
   }
 
   return (
-    <div className="max-w-md mx-auto font-[family-name:var(--font-nunito)]">
+    <div className="max-w-md w-full mx-auto font-[family-name:var(--font-nunito)] flex flex-col">
       <div className="flex justify-between items-center text-sm text-muted mb-4">
         <span>Reviewed: {reviewed}</span>
         <span>
@@ -137,7 +138,6 @@ export function FlashcardEngine({
         </span>
       </div>
 
-      {/* Progress bar */}
       <div className="h-2 bg-surface-dim rounded-full overflow-hidden mb-4">
         <div
           className="h-full bg-primary rounded-full transition-all duration-300"
@@ -147,9 +147,10 @@ export function FlashcardEngine({
 
       <Card
         className="mb-6 cursor-pointer select-none"
+        style={{ minHeight: 280 }}
         onClick={() => !flipped && setFlipped(true)}
       >
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center justify-center h-full" style={{ minHeight: 248 }}>
           {current.itemType === "note" ? (
             <>
               <StaffRenderer
@@ -157,7 +158,7 @@ export function FlashcardEngine({
                 clef={current.clef}
                 keySignature={vexKeySig}
               />
-              {flipped ? (
+              {flipped && (
                 <div className="mt-4 text-center">
                   <div className="text-4xl font-bold text-primary">
                     {noteName(current.note)}
@@ -166,45 +167,38 @@ export function FlashcardEngine({
                     {current.note} — {current.clef} clef
                   </div>
                 </div>
-              ) : (
-                <p className="mt-4 text-muted text-center">Tap to reveal</p>
               )}
             </>
           ) : current.symbol.toLowerCase().trim() === current.term.toLowerCase().trim() ? (
             <>
               <div className="py-6 text-center">
-                <div className="text-lg text-muted mb-1">What term means...</div>
-                <div className="text-2xl font-bold">{current.definition}</div>
+                <div className="text-3xl font-bold">{current.term}</div>
               </div>
-              {flipped ? (
+              {flipped && (
                 <div className="text-center pb-2">
-                  <div className="text-3xl font-bold text-primary">{current.term}</div>
+                  <div className="text-base text-muted">{current.definition}</div>
                 </div>
-              ) : (
-                <p className="text-muted text-center pb-2">Tap to reveal</p>
               )}
             </>
           ) : (
             <>
-              <div className="py-6 text-center">
-                <div className="text-4xl font-bold mb-2">{current.symbol}</div>
+              <div className="py-4 flex flex-col items-center justify-center">
+                <SymbolDisplay symbolId={current.symbolId} symbolText={current.symbol} />
               </div>
-              {flipped ? (
+              {flipped && (
                 <div className="text-center pb-2">
                   <div className="text-3xl font-bold text-primary">{current.term}</div>
-                  <div className="text-sm text-muted mt-1">{current.definition}</div>
+                  <div className="text-base text-muted mt-1">{current.definition}</div>
                 </div>
-              ) : (
-                <p className="text-muted text-center pb-2">Tap to reveal</p>
               )}
             </>
           )}
         </div>
       </Card>
 
-      {flipped ? (
-        <div className="grid grid-cols-4 gap-2">
-          {([1, 2, 4, 5] as SRSRating[]).map((rating) => {
+      <div className="grid grid-cols-4 gap-2" style={{ minHeight: 72 }}>
+        {flipped ? (
+          ([1, 2, 4, 5] as SRSRating[]).map((rating) => {
             const { emoji, text } = SRS_KID_LABELS[rating];
             const variant =
               rating === 5 ? "success" :
@@ -223,15 +217,15 @@ export function FlashcardEngine({
                 <span className="text-xs">{text}</span>
               </Button>
             );
-          })}
-        </div>
-      ) : (
-        <div className="text-center">
-          <Button size="lg" onClick={() => setFlipped(true)}>
-            Show Answer
-          </Button>
-        </div>
-      )}
+          })
+        ) : (
+          <div className="col-span-4 flex justify-center">
+            <Button size="lg" onClick={() => setFlipped(true)} className="w-full">
+              Show Answer
+            </Button>
+          </div>
+        )}
+      </div>
 
       {onQuit && (
         <div className="mt-4 text-center">

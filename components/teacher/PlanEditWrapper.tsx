@@ -21,6 +21,7 @@ interface PlanEditWrapperProps {
     symbols: any[];
     difficulty: string;
     teacher_notes: string;
+    show_hints: boolean;
   };
   children: React.ReactNode;
 }

@@ -47,6 +47,7 @@ interface PlanEditorProps {
     symbols: MusicalSymbol[];
     difficulty: string;
     teacher_notes: string;
+    show_hints: boolean;
   };
 }
 
@@ -72,6 +73,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(
     initialData?.symbols?.map((s) => s.id) ?? []
   );
+  const [showHints, setShowHints] = useState(initialData?.show_hints ?? true);
 
   const accidentalOpts = accidentalOptionsForKey(keySignature);
 
@@ -150,6 +152,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
       symbols: planType === "symbol_concepts" ? symbolData : [],
       difficulty,
       teacher_notes: teacherNotes.trim(),
+      show_hints: planType === "symbol_concepts" ? showHints : true,
     };
 
     let result;
@@ -472,6 +475,22 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+          {!isNoteMode && (
+            <div className="col-span-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showHints}
+                  onChange={(e) => setShowHints(e.target.checked)}
+                  className="rounded"
+                />
+                Show hints during quiz
+              </label>
+              <p className="text-xs text-muted mt-1 ml-6">
+                When enabled, definitions (e.g. &ldquo;4 beats&rdquo;, &ldquo;Very loud&rdquo;) are shown beneath symbols. Disable for harder quizzes that require visual-only recognition.
+              </p>
             </div>
           )}
         </div>

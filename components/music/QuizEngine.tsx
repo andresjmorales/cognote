@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StaffRenderer } from "./StaffRenderer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   buildAnswerChoices,
   noteName,
-  pickRandom,
+  shuffle,
   KEY_SIGNATURES,
 } from "@/lib/music";
 
@@ -55,10 +55,24 @@ export function QuizEngine({
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
-  const currentNote = useMemo(() => pickRandom(notes), [questionIndex, notes]);
+  const bagRef = useRef<string[]>([]);
+  const bagIndexRef = useRef(0);
+
+  const currentNote = useMemo(() => {
+    if (bagRef.current.length === 0 || bagIndexRef.current >= bagRef.current.length) {
+      bagRef.current = shuffle(notes);
+      bagIndexRef.current = 0;
+    }
+    const note = bagRef.current[bagIndexRef.current];
+    bagIndexRef.current++;
+    return note;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionIndex, notes]);
+
   const currentClef = useMemo((): "treble" | "bass" => {
     if (clef === "both") return Math.random() > 0.5 ? "treble" : "bass";
     return clef;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questionIndex, clef]);
 
   const choices = useMemo(

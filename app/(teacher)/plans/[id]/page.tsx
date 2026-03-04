@@ -77,6 +77,7 @@ export default async function PlanDetailPage({
         symbols,
         difficulty: plan.difficulty ?? "beginner",
         teacher_notes: plan.teacher_notes ?? "",
+        show_hints: plan.show_hints ?? true,
       }}
     >
       <div className="max-w-2xl mx-auto">
