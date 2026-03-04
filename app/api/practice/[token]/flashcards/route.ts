@@ -10,7 +10,7 @@ export async function GET(
 
   const { data: sp } = await supabase
     .from("student_plans")
-    .select("id, plans ( notes, clef, plan_type, symbols )")
+    .select("id, plans ( notes, clef, plan_type, symbols, key_signature, include_sharps, include_flats )")
     .eq("token", token)
     .single();
 

@@ -28,14 +28,20 @@ const ALL_NOTE_LABELS = [
 
 /** Parse "C#4" → { name: "C#", octave: 4 } */
 export function parseNote(note: string): { name: string; octave: number } {
-  const match = note.match(/^([A-Ga-g][#b]?)(\d)$/);
+  const match = note.match(/^([A-Ga-g])([#b]?)(\d)$/);
   if (!match) throw new Error(`Invalid note: ${note}`);
-  return { name: match[1].toUpperCase(), octave: parseInt(match[2], 10) };
+  return { name: match[1].toUpperCase() + match[2], octave: parseInt(match[3], 10) };
 }
 
 /** Get just the letter name (no accidental, no octave). "F#4" → "F#" */
 export function noteName(note: string): string {
   return parseNote(note).name;
+}
+
+/** Format for display with proper musical symbols: "F#4" → "F♯4", "Db" → "D♭" */
+export function displayNoteName(name: string): string {
+  if (name.length <= 1) return name;
+  return name[0] + name.slice(1).replace("#", "♯").replace("b", "♭");
 }
 
 /** Get just the letter (no accidental). "F#4" → "F" */
@@ -89,7 +95,9 @@ export function generateDistractors(
 
 /**
  * Build a full set of answer choices: 1 correct + N distractors.
- * If the note pool doesn't have enough distinct note names, pad from ALL_NOTE_LABELS.
+ * Distractors match the correct answer's "shape" — if the correct answer has an
+ * accidental, distractors also have accidentals (and vice versa), so students
+ * can't use the presence/absence of ♯/♭ as a shortcut.
  */
 export function buildAnswerChoices(
   correctNote: string,
@@ -98,15 +106,30 @@ export function buildAnswerChoices(
 ): string[] {
   const correct = noteName(correctNote);
   const distractorCount = totalChoices - 1;
+  const correctAcc = correct.length > 1 ? correct.slice(1) : "";
+  const sameShape = (n: string) => {
+    const acc = n.length > 1 ? n.slice(1) : "";
+    return acc === correctAcc;
+  };
 
-  let distractors = generateDistractors(correctNote, notePool, distractorCount);
+  const poolNames = [...new Set(notePool.map((n) => noteName(n)))].filter((n) => n !== correct);
+  let distractors = shuffle(poolNames.filter(sameShape)).slice(0, distractorCount);
 
   if (distractors.length < distractorCount) {
-    const existing = new Set([correct, ...distractors]);
-    const extras = ALL_NOTE_LABELS.filter((n) => !existing.has(n));
+    const used = new Set([correct, ...distractors]);
+    const extras = [...ALL_NOTE_LABELS].filter((n) => sameShape(n) && !used.has(n));
     distractors = [
       ...distractors,
-      ...shuffle([...extras]).slice(0, distractorCount - distractors.length),
+      ...shuffle(extras).slice(0, distractorCount - distractors.length),
+    ];
+  }
+
+  if (distractors.length < distractorCount) {
+    const used = new Set([correct, ...distractors]);
+    const fallback = [...ALL_NOTE_LABELS].filter((n) => !used.has(n));
+    distractors = [
+      ...distractors,
+      ...shuffle(fallback).slice(0, distractorCount - distractors.length),
     ];
   }
 
@@ -181,6 +204,37 @@ export function accidentalOptionsForKey(key: string): {
   if (KEYS_WITH_SHARPS.has(key)) return { sharpsEnabled: true, flatsEnabled: false };
   if (KEYS_WITH_FLATS.has(key)) return { sharpsEnabled: false, flatsEnabled: true };
   return { sharpsEnabled: true, flatsEnabled: true };
+}
+
+/**
+ * Expand a set of natural notes with sharp/flat variants.
+ * E#/B# and Cb/Fb are omitted as they're enharmonic equivalents rarely used in pedagogy.
+ */
+const SHARP_NOTES = new Set(["C", "D", "F", "G", "A"]);
+const FLAT_NOTES = new Set(["D", "E", "G", "A", "B"]);
+
+export function expandNotesWithAccidentals(
+  notes: string[],
+  includeSharps: boolean,
+  includeFlats: boolean
+): string[] {
+  if (!includeSharps && !includeFlats) return notes;
+
+  const expanded: string[] = [];
+  for (const note of notes) {
+    expanded.push(note);
+    const { name, octave } = parseNote(note);
+    const letter = name[0];
+    if (name.length > 1) continue; // already has an accidental
+
+    if (includeSharps && SHARP_NOTES.has(letter)) {
+      expanded.push(`${letter}#${octave}`);
+    }
+    if (includeFlats && FLAT_NOTES.has(letter)) {
+      expanded.push(`${letter}b${octave}`);
+    }
+  }
+  return expanded;
 }
 
 /**

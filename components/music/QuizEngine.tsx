@@ -8,6 +8,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   buildAnswerChoices,
   noteName,
+  displayNoteName,
   shuffle,
   KEY_SIGNATURES,
 } from "@/lib/music";
@@ -223,7 +224,7 @@ export function QuizEngine({
               onClick={() => handleAnswer(choice)}
               className="text-2xl font-bold"
             >
-              {choice}
+              {displayNoteName(choice)}
             </Button>
           );
         })}

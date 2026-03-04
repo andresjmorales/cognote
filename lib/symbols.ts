@@ -52,10 +52,10 @@ export const MUSICAL_SYMBOLS: MusicalSymbol[] = [
 
   // Notes & Rests
   { id: "whole-note", category: "Notes & Rests", symbol: "𝅝", term: "Whole Note", definition: "4 beats" },
-  { id: "half-note", category: "Notes & Rests", symbol: "𝅗𝅥", term: "Half Note", definition: "2 beats" },
+  { id: "half-note", category: "Notes & Rests", symbol: "𝅗𝅥", term: "Half Note", definition: "2 beats" },
   { id: "quarter-note", category: "Notes & Rests", symbol: "♩", term: "Quarter Note", definition: "1 beat" },
   { id: "eighth-note", category: "Notes & Rests", symbol: "♪", term: "Eighth Note", definition: "½ beat" },
-  { id: "dotted-half", category: "Notes & Rests", symbol: "𝅗𝅥.", term: "Dotted Half Note", definition: "3 beats" },
+  { id: "dotted-half", category: "Notes & Rests", symbol: "𝅗𝅥.", term: "Dotted Half Note", definition: "3 beats" },
   { id: "whole-rest", category: "Notes & Rests", symbol: "▬ (hangs from line)", term: "Whole Rest", definition: "4 beats of silence" },
   { id: "half-rest", category: "Notes & Rests", symbol: "▬ (sits on line)", term: "Half Rest", definition: "2 beats of silence" },
   { id: "quarter-rest", category: "Notes & Rests", symbol: "𝄾", term: "Quarter Rest", definition: "1 beat of silence" },
@@ -71,7 +71,7 @@ export const MUSICAL_SYMBOLS: MusicalSymbol[] = [
   { id: "time-sig-44", category: "Notation", symbol: "4/4", term: "Common Time", definition: "4 beats per measure" },
   { id: "time-sig-34", category: "Notation", symbol: "3/4", term: "Waltz Time", definition: "3 beats per measure" },
   { id: "time-sig-24", category: "Notation", symbol: "2/4", term: "March Time", definition: "2 beats per measure" },
-  { id: "tie", category: "Notation", symbol: "⌢ (between same notes)", term: "Tie", definition: "Connect two notes of the same pitch into one longer note" },
+  { id: "tie", category: "Notation", symbol: "⌢ (between identical notes)", term: "Tie", definition: "Connect two notes of the same pitch into one longer note" },
 
   // Repeats & Navigation
   { id: "repeat-sign", category: "Repeats & Navigation", symbol: "𝄆 𝄇", term: "Repeat Signs", definition: "Play the section again" },

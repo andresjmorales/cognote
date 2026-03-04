@@ -10,7 +10,7 @@ import {
   SRS_KID_LABELS,
   nextReviewState,
 } from "@/lib/srs";
-import { noteName, shuffle, KEY_SIGNATURES } from "@/lib/music";
+import { noteName, displayNoteName, shuffle, KEY_SIGNATURES } from "@/lib/music";
 import { SymbolDisplay } from "./VexFlowSymbol";
 
 interface NoteCard {
@@ -161,10 +161,10 @@ export function FlashcardEngine({
               {flipped && (
                 <div className="mt-4 text-center">
                   <div className="text-4xl font-bold text-primary">
-                    {noteName(current.note)}
+                    {displayNoteName(noteName(current.note))}
                   </div>
                   <div className="text-sm text-muted mt-1">
-                    {current.note} — {current.clef} clef
+                    {displayNoteName(current.note)} — {current.clef} clef
                   </div>
                 </div>
               )}
