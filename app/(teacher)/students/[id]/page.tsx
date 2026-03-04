@@ -166,11 +166,11 @@ export default async function StudentDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assigned Plans */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Assigned Lesson Plans</h2>
+          <h2 className="text-lg font-semibold mb-3">Assigned Lessons</h2>
           {!studentPlans?.length ? (
             <Card className="text-center text-muted">
-              <p>No lesson plans assigned yet.</p>
-              <p className="text-sm mt-1">Use the &quot;Assign Lesson Plan&quot; button above.</p>
+              <p>No lessons assigned yet.</p>
+              <p className="text-sm mt-1">Use the &quot;Assign Lesson&quot; button above.</p>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -182,7 +182,9 @@ export default async function StudentDetailPage({
                   <Card key={sp.id} padding="sm">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium">{sp.plans?.name}</div>
+                        <Link href={`/plans/${sp.plans?.id}`} className="font-medium hover:text-primary transition-colors">
+                          {sp.plans?.name}
+                        </Link>
                         <div className="text-xs text-muted">
                           {isSymbolPlan ? "Symbols & Concepts" : (
                             <>{sp.plans?.clef} clef · {sp.plans?.key_signature} · {(sp.plans?.notes as string[])?.length ?? 0} notes</>

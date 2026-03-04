@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
 
-export const metadata = { title: "Lesson Plans" };
+export const metadata = { title: "Lessons" };
 
 function PlanCard({ plan, students }: { plan: any; students: { id: string; name: string }[] }) {
   const isSymbolPlan = plan.plan_type === "symbol_concepts";
@@ -71,9 +71,9 @@ export default async function PlansPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Lesson Plans</h1>
+        <h1 className="text-2xl font-bold">Lessons</h1>
         <Link href="/plans/new">
-          <Button size="sm">Create Lesson Plan</Button>
+          <Button size="sm">Create Lesson</Button>
         </Link>
       </div>
 
@@ -84,7 +84,7 @@ export default async function PlansPage() {
           <Card className="text-center text-muted">
             <p>No templates yet.</p>
             <Link href="/plans/new" className="text-primary text-sm hover:underline">
-              Create your first lesson plan template
+              Create your first lesson template
             </Link>
           </Card>
         ) : (
@@ -98,7 +98,7 @@ export default async function PlansPage() {
 
       {/* Student-Specific Plans */}
       <section>
-        <h2 className="text-lg font-semibold mb-3">Student-Specific Lesson Plans</h2>
+        <h2 className="text-lg font-semibold mb-3">Student-Specific Lessons</h2>
         {studentSpecific.length === 0 ? (
           <Card className="text-center text-muted">
             <p>No student-specific plans yet.</p>

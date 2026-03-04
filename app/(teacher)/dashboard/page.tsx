@@ -50,7 +50,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <div className="flex gap-2">
           <Link href="/plans/new">
-            <Button size="sm">New Lesson Plan</Button>
+            <Button size="sm">New Lesson</Button>
           </Link>
           <Link href="/students">
             <Button size="sm" variant="secondary">
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
           <div className="text-3xl font-bold">{students?.length ?? 0}</div>
         </Card>
         <Card>
-          <div className="text-sm text-muted">Lesson Plans</div>
+          <div className="text-sm text-muted">Lessons</div>
           <div className="text-3xl font-bold">{plans?.length ?? 0}</div>
         </Card>
         <Card>

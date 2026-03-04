@@ -18,7 +18,7 @@ export async function generateMetadata({
     .select("name")
     .eq("id", id)
     .single();
-  return { title: plan?.name ?? "Lesson Plan" };
+  return { title: plan?.name ?? "Lesson" };
 }
 
 export default async function PlanDetailPage({
@@ -80,10 +80,11 @@ export default async function PlanDetailPage({
         show_hints: plan.show_hints ?? true,
       }}
     >
+      {(editButton) => (
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <Link href="/plans" className="text-muted hover:text-foreground">
-            ← Lesson Plans
+            ← Lessons
           </Link>
         </div>
 
@@ -102,6 +103,7 @@ export default async function PlanDetailPage({
             </div>
           </div>
           <div className="flex gap-2">
+            {editButton}
             <AssignPlanButton planId={plan.id} students={students ?? []} />
           </div>
         </div>
@@ -205,6 +207,7 @@ export default async function PlanDetailPage({
           )}
         </Card>
       </div>
+      )}
     </PlanEditWrapper>
   );
 }
