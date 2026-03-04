@@ -44,7 +44,7 @@ export default function LandingPage() {
             </Link>
             <Link href="/try">
               <Button size="lg" variant="secondary">
-                Try a Quiz
+                Try a Lesson
               </Button>
             </Link>
           </div>

@@ -259,9 +259,9 @@ Connect your GitHub repo to [Vercel](https://vercel.com) and set these environme
 
 Variables without the `NEXT_PUBLIC_` prefix (like `SUPABASE_SERVICE_ROLE_KEY`) are server-only and never exposed to the browser.
 
-### 5. Try a Quiz
+### 5. Try a Lesson
 
-The landing page "Try a Quiz" button links to `/try`, a standalone note-identification quiz that works without any seed data or database records. Visitors can pick a note set and start practicing immediately.
+The landing page "Try a Lesson" button links to `/try`, a standalone practice page that works without any seed data or database records. Visitors pick a note set and get the same experience students see — Start Lesson, Free Practice, and Flashcards.
 
 ---
 
