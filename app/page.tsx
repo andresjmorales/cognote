@@ -42,9 +42,9 @@ export default function LandingPage() {
             <Link href="/login">
               <Button size="lg">Get Started</Button>
             </Link>
-            <Link href="/practice/dev-token-emma-week1">
+            <Link href="/try">
               <Button size="lg" variant="secondary">
-                Try a Demo
+                Try a Lesson
               </Button>
             </Link>
           </div>
