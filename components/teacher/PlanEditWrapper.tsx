@@ -23,12 +23,14 @@ interface PlanEditWrapperProps {
     teacher_notes: string;
     show_hints: boolean;
   };
-  children: (editButton: React.ReactNode) => React.ReactNode;
+  actionSlot?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export function PlanEditWrapper({
   planId,
   initialData,
+  actionSlot,
   children,
 }: PlanEditWrapperProps) {
   const [editing, setEditing] = useState(false);
@@ -47,15 +49,17 @@ export function PlanEditWrapper({
     );
   }
 
-  const editButton = (
-    <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-      Edit Lesson
-    </Button>
-  );
-
   return (
     <div>
-      {children(editButton)}
+      <div className="max-w-2xl mx-auto">
+        <div className="flex justify-end gap-2 mb-2">
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            Edit Lesson
+          </Button>
+          {actionSlot}
+        </div>
+      </div>
+      {children}
     </div>
   );
 }
