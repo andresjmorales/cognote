@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   description:
     "Music note memorization for piano students — quiz, flashcards, and spaced repetition",
   icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
+    icon: "/icon/cognote.svg",
+    apple: "/icon/cognote.svg",
   },
 };
 

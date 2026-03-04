@@ -30,8 +30,15 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
         <div className="flex items-center gap-8">
           <Link
             href="/dashboard"
-            className="text-xl font-bold text-primary tracking-tight"
+            className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
           >
+            <img
+              src="/icon/cognote.svg"
+              alt=""
+              className="h-8 w-8"
+              width={32}
+              height={32}
+            />
             CogNote
           </Link>
           <nav className="hidden md:flex gap-1">
