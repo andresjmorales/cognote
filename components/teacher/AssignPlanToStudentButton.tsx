@@ -46,7 +46,7 @@ export function AssignPlanToStudentButton({
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        setToast(err?.error ?? "Failed to assign lesson plan");
+        setToast(err?.error ?? "Failed to assign lesson");
         setTimeout(() => setToast(null), 4000);
         setAssigning(false);
         setOpen(false);
@@ -65,7 +65,7 @@ export function AssignPlanToStudentButton({
       setTimeout(() => setToast(null), 5000);
       router.refresh();
     } catch {
-      setToast("Failed to assign lesson plan");
+      setToast("Failed to assign lesson");
       setTimeout(() => setToast(null), 4000);
     }
 
@@ -76,13 +76,13 @@ export function AssignPlanToStudentButton({
   return (
     <div className="relative" ref={dropdownRef}>
       <Button size="sm" onClick={() => setOpen(!open)}>
-        Assign Lesson Plan
+        Assign Lesson
       </Button>
 
       {open && (
         <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-64 max-h-64 overflow-y-auto">
           {plans.length === 0 ? (
-            <div className="p-3 text-sm text-muted">No lesson plans yet</div>
+            <div className="p-3 text-sm text-muted">No lessons yet</div>
           ) : (
             plans.map((p) => (
               <button

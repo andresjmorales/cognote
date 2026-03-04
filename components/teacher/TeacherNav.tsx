@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/students", label: "Students" },
-  { href: "/plans", label: "Lesson Plans" },
+  { href: "/plans", label: "Lessons" },
   { href: "/help", label: "Help" },
 ];
 
@@ -26,7 +26,7 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
 
   return (
     <header className="bg-surface border-b border-border">
-      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16 md:h-14">
         <div className="flex items-center gap-8">
           <Link
             href="/dashboard"
@@ -79,11 +79,11 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden p-2 -mr-2 text-muted hover:text-foreground cursor-pointer"
+          className="md:hidden p-3 -mr-3 text-muted hover:text-foreground cursor-pointer"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {mobileOpen ? (
               <>
                 <line x1="18" y1="6" x2="6" y2="18" />

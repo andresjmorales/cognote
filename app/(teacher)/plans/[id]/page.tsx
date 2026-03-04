@@ -18,7 +18,7 @@ export async function generateMetadata({
     .select("name")
     .eq("id", id)
     .single();
-  return { title: plan?.name ?? "Lesson Plan" };
+  return { title: plan?.name ?? "Lesson" };
 }
 
 export default async function PlanDetailPage({
@@ -79,30 +79,26 @@ export default async function PlanDetailPage({
         teacher_notes: plan.teacher_notes ?? "",
         show_hints: plan.show_hints ?? true,
       }}
+      actionSlot={<AssignPlanButton planId={plan.id} students={students ?? []} />}
     >
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <Link href="/plans" className="text-muted hover:text-foreground">
-            ← Lesson Plans
+            ← Lessons
           </Link>
         </div>
 
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">{plan.name}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                isSymbolPlan ? "bg-accent/20 text-accent" : "bg-primary/10 text-primary"
-              }`}>
-                {isSymbolPlan ? "Symbols & Concepts" : "Note Identification"}
-              </span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-surface-dim text-muted font-medium">
-                {difficultyLabel}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <AssignPlanButton planId={plan.id} students={students ?? []} />
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">{plan.name}</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              isSymbolPlan ? "bg-accent/20 text-accent" : "bg-primary/10 text-primary"
+            }`}>
+              {isSymbolPlan ? "Symbols & Concepts" : "Note Identification"}
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-surface-dim text-muted font-medium">
+              {difficultyLabel}
+            </span>
           </div>
         </div>
 

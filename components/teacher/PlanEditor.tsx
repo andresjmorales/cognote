@@ -512,7 +512,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
             (!isNoteMode && selectedSymbols.length === 0)
           }
         >
-          {loading ? "Saving..." : mode === "edit" ? "Save Changes" : "Create Lesson Plan"}
+          {loading ? "Saving..." : mode === "edit" ? "Save Changes" : "Create Lesson"}
         </Button>
       </div>
     </form>
