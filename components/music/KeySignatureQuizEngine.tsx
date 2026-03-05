@@ -1,30 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StaffRenderer } from "./StaffRenderer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { shuffleAvoidingFirst } from "@/lib/music";
-import { SymbolDisplay } from "./VexFlowSymbol";
+import {
+  buildKeySigAnswerChoices,
+  displayKeySignatureName,
+  shuffleAvoidingFirst,
+  KEY_SIGNATURES,
+} from "@/lib/music";
 import type { AttemptResult } from "./QuizEngine";
 
-export interface SymbolItem {
-  id: string;
-  symbol: string;
-  term: string;
-  definition: string;
-}
-
-export interface SymbolQuizConfig {
-  symbols: SymbolItem[];
+export interface KeySignatureQuizConfig {
+  keySignatures: string[];
+  clef: "treble" | "bass" | "both";
   questionsPerLesson: number;
   answerChoices: number;
   mode: "lesson" | "free_practice";
-  showHints?: boolean;
 }
 
-interface SymbolQuizEngineProps {
-  config: SymbolQuizConfig;
+interface KeySignatureQuizEngineProps {
+  config: KeySignatureQuizConfig;
   onAttempt?: (attempt: AttemptResult) => void;
   onComplete?: (results: AttemptResult[]) => void;
   onQuit?: () => void;
@@ -32,30 +30,13 @@ interface SymbolQuizEngineProps {
 
 type Phase = "playing" | "feedback" | "complete";
 
-function buildSymbolChoices(
-  correctTerm: string,
-  pool: SymbolItem[],
-  totalChoices: number
-): string[] {
-  const distractors = pool
-    .filter((s) => s.term !== correctTerm)
-    .map((s) => s.term);
-  const unique = [...new Set(distractors)];
-  const picked = shuffle(unique).slice(0, totalChoices - 1);
-  return shuffle([correctTerm, ...picked]);
-}
-
-function symbolMatchesTerm(sym: SymbolItem): boolean {
-  return sym.symbol.toLowerCase().trim() === sym.term.toLowerCase().trim();
-}
-
-export function SymbolQuizEngine({
+export function KeySignatureQuizEngine({
   config,
   onAttempt,
   onComplete,
   onQuit,
-}: SymbolQuizEngineProps) {
-  const { symbols, questionsPerLesson, answerChoices, mode, showHints = true } = config;
+}: KeySignatureQuizEngineProps) {
+  const { keySignatures, clef, questionsPerLesson, answerChoices, mode } = config;
   const isLesson = mode === "lesson";
 
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -64,26 +45,37 @@ export function SymbolQuizEngine({
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
-  const bagRef = useRef<SymbolItem[]>([]);
+  const bagRef = useRef<string[]>([]);
   const bagIndexRef = useRef(0);
-  const lastShownRef = useRef<SymbolItem | null>(null);
+  const lastShownRef = useRef<string | null>(null);
 
-  const currentSymbol = useMemo(() => {
+  const currentKey = useMemo(() => {
     if (bagRef.current.length === 0 || bagIndexRef.current >= bagRef.current.length) {
-      bagRef.current = shuffleAvoidingFirst(symbols, lastShownRef.current);
+      bagRef.current = shuffleAvoidingFirst(keySignatures, lastShownRef.current);
       bagIndexRef.current = 0;
     }
-    const sym = bagRef.current[bagIndexRef.current];
+    const keyName = bagRef.current[bagIndexRef.current];
     bagIndexRef.current++;
-    lastShownRef.current = sym;
-    return sym;
+    lastShownRef.current = keyName;
+    return keyName;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionIndex, symbols]);
+  }, [questionIndex, keySignatures]);
+
+  const currentClef = useMemo((): "treble" | "bass" => {
+    if (clef === "both") return Math.random() > 0.5 ? "treble" : "bass";
+    return clef;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionIndex, clef]);
 
   const choices = useMemo(
-    () => buildSymbolChoices(currentSymbol.term, symbols, answerChoices),
-    [currentSymbol, symbols, answerChoices]
+    () => buildKeySigAnswerChoices(currentKey, keySignatures, answerChoices),
+    [currentKey, keySignatures, answerChoices]
   );
+
+  const vexKeySignature = KEY_SIGNATURES[currentKey] ?? "C";
+  const correctAnswer = currentKey;
+  const correctCount = results.filter((r) => r.isCorrect).length;
+  const incorrectCount = results.filter((r) => !r.isCorrect).length;
 
   useEffect(() => {
     setQuestionStartTime(Date.now());
@@ -93,11 +85,11 @@ export function SymbolQuizEngine({
     (answer: string) => {
       if (phase !== "playing") return;
 
-      const isCorrect = answer === currentSymbol.term;
+      const isCorrect = answer === correctAnswer;
       const attempt: AttemptResult = {
-        noteDisplayed: currentSymbol.id,
-        clef: "treble",
-        correctAnswer: currentSymbol.term,
+        noteDisplayed: currentKey,
+        clef: currentClef,
+        correctAnswer,
         studentAnswer: answer,
         isCorrect,
         responseTimeMs: Date.now() - questionStartTime,
@@ -126,7 +118,9 @@ export function SymbolQuizEngine({
     },
     [
       phase,
-      currentSymbol,
+      correctAnswer,
+      currentKey,
+      currentClef,
       questionStartTime,
       questionIndex,
       questionsPerLesson,
@@ -137,19 +131,13 @@ export function SymbolQuizEngine({
     ]
   );
 
-  const correctCount = results.filter((r) => r.isCorrect).length;
-  const incorrectCount = results.filter((r) => !r.isCorrect).length;
-
   if (phase === "complete") {
     const total = results.length;
     const correct = results.filter((r) => r.isCorrect).length;
     const pct = Math.round((correct / total) * 100);
 
     return (
-      <Card
-        padding="lg"
-        className="max-w-md mx-auto text-center font-[family-name:var(--font-nunito)]"
-      >
+      <Card padding="lg" className="max-w-md mx-auto text-center font-[family-name:var(--font-nunito)]">
         <div className="text-6xl mb-4">
           {pct >= 90 ? "🎉" : pct >= 70 ? "⭐" : pct >= 50 ? "👍" : "💪"}
         </div>
@@ -158,9 +146,9 @@ export function SymbolQuizEngine({
         </h2>
         <p className="text-lg text-muted mb-6">
           {pct >= 90
-            ? "Amazing! You know your musical terms!"
+            ? "Amazing! You know your key signatures!"
             : pct >= 70
-              ? "Great job! Keep learning!"
+              ? "Great job! Keep practicing!"
               : pct >= 50
                 ? "Good effort! You're getting better!"
                 : "Keep at it! Practice makes perfect!"}
@@ -202,36 +190,18 @@ export function SymbolQuizEngine({
         <span className="text-error font-semibold">✗ {incorrectCount}</span>
       </div>
 
-      <Card padding="lg" className="mb-6 text-center">
-        {symbolMatchesTerm(currentSymbol) ? (
-          <>
-            <p className="text-lg text-muted mb-1">Which term means...</p>
-            <div className="text-2xl font-bold">{currentSymbol.definition}</div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center justify-center mb-2">
-              <SymbolDisplay
-                symbolId={currentSymbol.id}
-                symbolText={currentSymbol.symbol}
-              />
-            </div>
-            {showHints && (
-              <p className="text-sm text-muted">{currentSymbol.definition}</p>
-            )}
-          </>
-        )}
+      <Card className="mb-6 flex items-center justify-center">
+        <StaffRenderer
+          clef={currentClef}
+          keySignature={vexKeySignature}
+        />
       </Card>
-
-      <p className="text-center text-sm text-muted mb-3">
-        {symbolMatchesTerm(currentSymbol) ? "Pick the correct term:" : "What is this called?"}
-      </p>
 
       <div className="grid grid-cols-2 gap-3">
         {choices.map((choice) => {
           let variant: "secondary" | "success" | "error" = "secondary";
           if (phase === "feedback") {
-            if (choice === currentSymbol.term) variant = "success";
+            if (choice === correctAnswer) variant = "success";
             else if (choice === selectedAnswer) variant = "error";
           }
 
@@ -244,7 +214,7 @@ export function SymbolQuizEngine({
               onClick={() => handleAnswer(choice)}
               className="text-lg font-bold"
             >
-              {choice}
+              {displayKeySignatureName(choice)}
             </Button>
           );
         })}

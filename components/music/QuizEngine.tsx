@@ -9,7 +9,7 @@ import {
   buildAnswerChoices,
   noteName,
   displayNoteName,
-  shuffle,
+  shuffleAvoidingFirst,
   KEY_SIGNATURES,
 } from "@/lib/music";
 
@@ -58,14 +58,16 @@ export function QuizEngine({
 
   const bagRef = useRef<string[]>([]);
   const bagIndexRef = useRef(0);
+  const lastShownRef = useRef<string | null>(null);
 
   const currentNote = useMemo(() => {
     if (bagRef.current.length === 0 || bagIndexRef.current >= bagRef.current.length) {
-      bagRef.current = shuffle(notes);
+      bagRef.current = shuffleAvoidingFirst(notes, lastShownRef.current);
       bagIndexRef.current = 0;
     }
     const note = bagRef.current[bagIndexRef.current];
     bagIndexRef.current++;
+    lastShownRef.current = note;
     return note;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questionIndex, notes]);

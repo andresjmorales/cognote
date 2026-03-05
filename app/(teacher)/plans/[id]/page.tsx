@@ -57,7 +57,9 @@ export default async function PlanDetailPage({
 
   const notes = (plan.notes as string[]) ?? [];
   const symbols = (plan.symbols as any[]) ?? [];
+  const keySignatures = (plan.key_signatures as string[]) ?? [];
   const isSymbolPlan = plan.plan_type === "symbol_concepts";
+  const isKeySigPlan = plan.plan_type === "key_signature_identification";
   const difficultyLabel = (plan.difficulty as string)?.charAt(0).toUpperCase() + (plan.difficulty as string)?.slice(1);
 
   return (
@@ -79,6 +81,8 @@ export default async function PlanDetailPage({
         difficulty: plan.difficulty ?? "beginner",
         teacher_notes: plan.teacher_notes ?? "",
         show_hints: plan.show_hints ?? true,
+        key_sig_scale_mode: plan.key_sig_scale_mode ?? "major",
+        key_signatures: keySignatures,
       }}
       actionSlot={
         <>
@@ -98,9 +102,9 @@ export default async function PlanDetailPage({
           <h1 className="text-2xl font-bold">{plan.name}</h1>
           <div className="flex items-center gap-2 mt-1">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              isSymbolPlan ? "bg-accent/20 text-accent" : "bg-primary/10 text-primary"
+              isSymbolPlan ? "bg-accent/20 text-accent" : isKeySigPlan ? "bg-primary/10 text-primary" : "bg-primary/10 text-primary"
             }`}>
-              {isSymbolPlan ? "Symbols & Concepts" : "Note Identification"}
+              {isSymbolPlan ? "Symbols & Concepts" : isKeySigPlan ? "Key Signature Identification" : "Note Identification"}
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-surface-dim text-muted font-medium">
               {difficultyLabel}
@@ -116,7 +120,7 @@ export default async function PlanDetailPage({
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {!isSymbolPlan && (
+          {!isSymbolPlan && !isKeySigPlan && (
             <>
               <Card padding="sm">
                 <div className="text-xs text-muted">Clef</div>
@@ -125,6 +129,18 @@ export default async function PlanDetailPage({
               <Card padding="sm">
                 <div className="text-xs text-muted">Key Signature</div>
                 <div className="font-semibold">{plan.key_signature}</div>
+              </Card>
+            </>
+          )}
+          {isKeySigPlan && (
+            <>
+              <Card padding="sm">
+                <div className="text-xs text-muted">Scale</div>
+                <div className="font-semibold capitalize">{plan.key_sig_scale_mode ?? "major"}</div>
+              </Card>
+              <Card padding="sm">
+                <div className="text-xs text-muted">Clef</div>
+                <div className="font-semibold capitalize">{plan.clef}</div>
               </Card>
             </>
           )}
@@ -138,7 +154,21 @@ export default async function PlanDetailPage({
           </Card>
         </div>
 
-        {isSymbolPlan ? (
+        {isKeySigPlan ? (
+          <Card className="mb-6">
+            <h2 className="font-semibold mb-3">Key Signatures ({keySignatures.length})</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {keySignatures.map((k: string) => (
+                <span
+                  key={k}
+                  className="px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-sm font-medium"
+                >
+                  {k}
+                </span>
+              ))}
+            </div>
+          </Card>
+        ) : isSymbolPlan ? (
           <Card className="mb-6">
             <h2 className="font-semibold mb-3">Symbols &amp; Concepts ({symbols.length})</h2>
             {(() => {

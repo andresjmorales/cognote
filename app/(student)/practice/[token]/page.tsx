@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { QuizEngine, type AttemptResult, type QuizConfig } from "@/components/music/QuizEngine";
 import {
+  KeySignatureQuizEngine,
+  type KeySignatureQuizConfig,
+} from "@/components/music/KeySignatureQuizEngine";
+import {
   SymbolQuizEngine,
   type SymbolItem,
   type SymbolQuizConfig,
@@ -29,9 +33,11 @@ interface PlanData {
   questions_per_lesson: number;
   answer_choices: number;
   notes: string[];
-  plan_type: "note_identification" | "symbol_concepts";
+  plan_type: "note_identification" | "key_signature_identification" | "symbol_concepts";
   symbols: SymbolItem[];
   show_hints: boolean;
+  key_sig_scale_mode?: "major" | "minor" | "both";
+  key_signatures?: string[];
 }
 
 export default function PracticePage() {
@@ -295,6 +301,26 @@ export default function PracticePage() {
     );
   }
 
+  if (plan.plan_type === "key_signature_identification") {
+    const keySigConfig: KeySignatureQuizConfig = {
+      keySignatures: plan.key_signatures ?? [],
+      clef: plan.clef,
+      questionsPerLesson: plan.questions_per_lesson,
+      answerChoices: Math.min(plan.answer_choices, (plan.key_signatures ?? []).length || 4),
+      mode: mode as "lesson" | "free_practice",
+    };
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <KeySignatureQuizEngine
+          config={keySigConfig}
+          onAttempt={handleAttempt}
+          onComplete={handleComplete}
+          onQuit={() => setMode("welcome")}
+        />
+      </div>
+    );
+  }
+
   if (plan.plan_type === "symbol_concepts") {
     const symbolConfig: SymbolQuizConfig = {
       symbols: (plan.symbols ?? []) as SymbolItem[],
@@ -323,7 +349,7 @@ export default function PracticePage() {
       plan.include_flats ?? false,
     ),
     clef: plan.clef,
-    keySignature: plan.key_signature,
+    keySignature: "", // Don't show key signature on staff for note-ID (accidentals still on notes)
     questionsPerLesson: plan.questions_per_lesson,
     answerChoices: plan.answer_choices,
     mode: mode as "lesson" | "free_practice",

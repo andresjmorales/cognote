@@ -195,6 +195,8 @@ All teacher data is protected by **Row Level Security** — a teacher can only s
 
 Migrations live in `supabase/migrations/` and are applied with `npx supabase db reset` (local) or `npx supabase db push` (remote).
 
+**Local:** To apply new migrations (e.g. after pulling changes that add columns), run `npx supabase db reset`. This reapplies all migrations and refreshes the schema cache; it also re-runs the seed, so you’ll get fresh test data. If you see errors like “Could not find column X in the schema cache”, the DB is out of date — run `npx supabase db reset` (with Docker and `npx supabase start` running).
+
 ---
 
 ## API Routes
