@@ -126,10 +126,7 @@ export default async function PlanDetailPage({
                 <div className="text-xs text-muted">Clef</div>
                 <div className="font-semibold capitalize">{plan.clef}</div>
               </Card>
-              <Card padding="sm">
-                <div className="text-xs text-muted">Key Signature</div>
-                <div className="font-semibold">{plan.key_signature}</div>
-              </Card>
+              {/* Key signature not shown for note-ID (staff doesn't display it) */}
             </>
           )}
           {isKeySigPlan && (

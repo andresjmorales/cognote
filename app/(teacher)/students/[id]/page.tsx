@@ -195,7 +195,7 @@ export default async function StudentDetailPage({
                         )}
                         <div className="text-xs text-muted">
                           {isSymbolPlan ? "Symbols & Concepts" : (
-                            <>{sp.plans?.clef} clef · {sp.plans?.key_signature} · {(sp.plans?.notes as string[])?.length ?? 0} notes</>
+                            <>{sp.plans?.clef} clef{sp.plans?.plan_type !== "note_identification" && sp.plans?.key_signature ? ` · ${sp.plans.key_signature}` : ""} · {(sp.plans?.notes as string[])?.length ?? 0} notes</>
                           )}
                         </div>
                         <div className="text-xs text-muted mt-1">
