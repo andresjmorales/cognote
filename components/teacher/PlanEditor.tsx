@@ -9,6 +9,10 @@ import {
   NOTE_PRESETS,
   KEY_SIGNATURE_OPTIONS,
   accidentalOptionsForKey,
+  KEY_SIG_GROUPS,
+  keySigOptionsForScaleMode,
+  displayKeySignatureName,
+  type KeySigScaleMode,
 } from "@/lib/music";
 import {
   MUSICAL_SYMBOLS,
@@ -20,6 +24,7 @@ const CLEF_OPTIONS = ["treble", "bass", "both"] as const;
 const DIFFICULTY_OPTIONS = ["beginner", "intermediate", "advanced"] as const;
 const PLAN_TYPE_OPTIONS = [
   { value: "note_identification", label: "Note Identification" },
+  { value: "key_signature_identification", label: "Key Signature Identification" },
   { value: "symbol_concepts", label: "Musical Symbols & Concepts" },
 ] as const;
 
@@ -48,6 +53,8 @@ interface PlanEditorProps {
     difficulty: string;
     teacher_notes: string;
     show_hints: boolean;
+    key_sig_scale_mode?: KeySigScaleMode;
+    key_signatures?: string[];
   };
 }
 
@@ -74,6 +81,12 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
     initialData?.symbols?.map((s) => s.id) ?? []
   );
   const [showHints, setShowHints] = useState(initialData?.show_hints ?? true);
+  const [keySigScaleMode, setKeySigScaleMode] = useState<KeySigScaleMode>(
+    (initialData?.key_sig_scale_mode as KeySigScaleMode) ?? "major"
+  );
+  const [selectedKeySigs, setSelectedKeySigs] = useState<string[]>(
+    initialData?.key_signatures ?? ["C major", "G major", "D major"]
+  );
 
   const accidentalOpts = accidentalOptionsForKey(keySignature);
 
@@ -81,6 +94,28 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
     if (!accidentalOpts.sharpsEnabled) setIncludeSharps(false);
     if (!accidentalOpts.flatsEnabled) setIncludeFlats(false);
   }, [keySignature, accidentalOpts.sharpsEnabled, accidentalOpts.flatsEnabled]);
+
+  const keySigOptions = keySigOptionsForScaleMode(keySigScaleMode);
+  useEffect(() => {
+    if (planType !== "key_signature_identification") return;
+    setSelectedKeySigs((prev) => prev.filter((k) => keySigOptions.includes(k)));
+  }, [keySigScaleMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleKeySig(keyName: string) {
+    setSelectedKeySigs((prev) =>
+      prev.includes(keyName) ? prev.filter((k) => k !== keyName) : [...prev, keyName]
+    );
+  }
+
+  function toggleKeySigGroup(groupKeys: string[]) {
+    const validInMode = groupKeys.filter((k) => keySigOptions.includes(k));
+    const allSelected = validInMode.every((k) => selectedKeySigs.includes(k));
+    if (allSelected) {
+      setSelectedKeySigs((prev) => prev.filter((k) => !validInMode.includes(k)));
+    } else {
+      setSelectedKeySigs((prev) => [...new Set([...prev, ...validInMode])]);
+    }
+  }
 
   function handlePresetChange(preset: string) {
     setPresetKey(preset);
@@ -115,6 +150,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
     e.preventDefault();
     if (!name.trim()) return;
     if (planType === "note_identification" && selectedNotes.length === 0) return;
+    if (planType === "key_signature_identification" && selectedKeySigs.length === 0) return;
     if (planType === "symbol_concepts" && selectedSymbols.length === 0) return;
 
     setLoading(true);
@@ -150,6 +186,8 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
       answer_choices: answerChoices,
       notes: planType === "note_identification" ? selectedNotes : [],
       symbols: planType === "symbol_concepts" ? symbolData : [],
+      key_sig_scale_mode: planType === "key_signature_identification" ? keySigScaleMode : "major",
+      key_signatures: planType === "key_signature_identification" ? selectedKeySigs : [],
       difficulty,
       teacher_notes: teacherNotes.trim(),
       show_hints: planType === "symbol_concepts" ? showHints : true,
@@ -180,6 +218,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
   }
 
   const isNoteMode = planType === "note_identification";
+  const isKeySigMode = planType === "key_signature_identification";
   const grouped = symbolsByCategory();
 
   return (
@@ -289,12 +328,13 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                 </div>
               </div>
 
-              <div>
+              {/* Key signature hidden for note-ID (staff doesn't show key sig; we still store default "C major") */}
+              <div className="hidden" aria-hidden>
                 <label className="block text-sm text-muted mb-1">Key Signature</label>
                 <select
                   value={keySignature}
                   onChange={(e) => setKeySignature(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background"
                 >
                   {KEY_SIGNATURE_OPTIONS.map((ks) => (
                     <option key={ks} value={ks}>{ks}</option>
@@ -379,6 +419,101 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                       {note}
                     </button>
                   ))}
+                </div>
+          </div>
+        </div>
+      </Card>
+        </>
+      ) : isKeySigMode ? (
+        <>
+          <Card className="mb-4">
+            <h2 className="font-semibold mb-3">Key Signature Settings</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-muted mb-1">Scale</label>
+                <div className="flex gap-2">
+                  {(["major", "minor", "both"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setKeySigScaleMode(m)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                        keySigScaleMode === m
+                          ? "bg-primary text-white"
+                          : "bg-surface-dim text-foreground hover:bg-border"
+                      }`}
+                    >
+                      {m.charAt(0).toUpperCase() + m.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted mt-1">
+                  Major only, minor only, or both (same signature can mean e.g. A major or F♯ minor).
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm text-muted mb-1">Clef</label>
+                <div className="flex gap-2">
+                  {CLEF_OPTIONS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setClef(c)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                        clef === c
+                          ? "bg-primary text-white"
+                          : "bg-surface-dim text-foreground hover:bg-border"
+                      }`}
+                    >
+                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-muted mb-2">
+                  Key signatures to quiz ({selectedKeySigs.length} selected)
+                </label>
+                <div className="space-y-3">
+                  {KEY_SIG_GROUPS.map((group) => {
+                    const keysInGroup = group.keys.filter((k) => keySigOptions.includes(k));
+                    if (keysInGroup.length === 0) return null;
+                    const allSelected = keysInGroup.every((k) => selectedKeySigs.includes(k));
+                    const someSelected = keysInGroup.some((k) => selectedKeySigs.includes(k));
+                    return (
+                      <div key={group.label}>
+                        <button
+                          type="button"
+                          onClick={() => toggleKeySigGroup(keysInGroup)}
+                          className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors mb-1.5 ${
+                            allSelected
+                              ? "bg-primary text-white"
+                              : someSelected
+                                ? "bg-primary/30 text-primary"
+                                : "bg-surface-dim text-muted hover:bg-border"
+                          }`}
+                        >
+                          {allSelected ? "✓ " : ""}{group.label}
+                        </button>
+                        <div className="flex flex-wrap gap-1.5">
+                          {keysInGroup.map((keyName) => (
+                            <button
+                              key={keyName}
+                              type="button"
+                              onClick={() => toggleKeySig(keyName)}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                                selectedKeySigs.includes(keyName)
+                                  ? "bg-primary text-white"
+                                  : "bg-surface-dim text-muted hover:bg-border"
+                              }`}
+                            >
+                              {displayKeySignatureName(keyName)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -493,7 +628,8 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
           disabled={
             loading ||
             (isNoteMode && selectedNotes.length === 0) ||
-            (!isNoteMode && selectedSymbols.length === 0)
+            (isKeySigMode && selectedKeySigs.length === 0) ||
+            (planType === "symbol_concepts" && selectedSymbols.length === 0)
           }
         >
           {loading ? "Saving..." : mode === "edit" ? "Save Changes" : "Create Lesson"}

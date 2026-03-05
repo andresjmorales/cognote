@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 
 interface StaffRendererProps {
-  note: string;
+  /** When omitted, only clef and key signature are drawn (for key-sig ID quiz). */
+  note?: string;
   clef: "treble" | "bass";
   keySignature?: string;
   width?: number;
@@ -48,18 +49,20 @@ export function StaffRenderer({
       }
       stave.setContext(context).draw();
 
-      const { keys, accidental } = parseNoteForVexFlow(note);
-      const staveNote = new StaveNote({
-        keys,
-        duration: "w",
-        clef,
-      });
+      if (note != null && note !== "") {
+        const { keys, accidental } = parseNoteForVexFlow(note);
+        const staveNote = new StaveNote({
+          keys,
+          duration: "w",
+          clef,
+        });
 
-      if (accidental) {
-        staveNote.addModifier(new Accidental(accidental));
+        if (accidental) {
+          staveNote.addModifier(new Accidental(accidental));
+        }
+
+        Formatter.FormatAndDraw(context, stave, [staveNote]);
       }
-
-      Formatter.FormatAndDraw(context, stave, [staveNote]);
 
       const svg = el.querySelector("svg");
       if (svg) {

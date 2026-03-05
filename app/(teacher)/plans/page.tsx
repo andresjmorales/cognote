@@ -8,8 +8,10 @@ export const metadata = { title: "Lessons" };
 
 function PlanCard({ plan, students }: { plan: any; students: { id: string; name: string }[] }) {
   const isSymbolPlan = plan.plan_type === "symbol_concepts";
+  const isKeySigPlan = plan.plan_type === "key_signature_identification";
   const noteCount = (plan.notes as string[])?.length ?? 0;
   const symbolCount = (plan.symbols as any[])?.length ?? 0;
+  const keySigCount = (plan.key_signatures as string[])?.length ?? 0;
   const assignedStudents = (plan.student_plans ?? [])
     .map((sp: any) => sp.students?.name)
     .filter(Boolean);
@@ -24,7 +26,9 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
           <div className="text-xs text-muted mt-1">
             {isSymbolPlan
               ? `${symbolCount} symbol${symbolCount !== 1 ? "s" : ""} · ${plan.questions_per_lesson} questions`
-              : `${plan.clef} clef · ${plan.key_signature} · ${noteCount} note${noteCount !== 1 ? "s" : ""} · ${plan.questions_per_lesson} questions`}
+              : isKeySigPlan
+                ? `${plan.clef} clef · ${keySigCount} key signature${keySigCount !== 1 ? "s" : ""} · ${plan.questions_per_lesson} questions`
+                : `${plan.clef} clef · ${noteCount} note${noteCount !== 1 ? "s" : ""} · ${plan.questions_per_lesson} questions`}
           </div>
           {assignedStudents.length > 0 && (
             <div className="text-xs text-muted mt-1">
@@ -52,7 +56,7 @@ export default async function PlansPage() {
       .select(
         `
         id, name, is_template, clef, key_signature, notes, questions_per_lesson,
-        plan_type, symbols,
+        plan_type, symbols, key_signatures,
         student_plans ( id, students ( id, name ) )
       `
       )

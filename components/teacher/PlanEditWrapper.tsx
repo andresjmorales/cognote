@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlanEditor } from "./PlanEditor";
+import type { KeySigScaleMode } from "@/lib/music";
 
 interface PlanEditWrapperProps {
   planId: string;
@@ -22,6 +23,8 @@ interface PlanEditWrapperProps {
     difficulty: string;
     teacher_notes: string;
     show_hints: boolean;
+    key_sig_scale_mode?: KeySigScaleMode;
+    key_signatures?: string[];
   };
   actionSlot?: React.ReactNode;
   children: React.ReactNode;

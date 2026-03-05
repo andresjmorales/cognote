@@ -152,39 +152,140 @@ export function shuffle<T>(arr: T[]): T[] {
 }
 
 /**
+ * Shuffle array but ensure the first element is not `avoidFirst` (if provided and possible).
+ * Use when refilling a quiz bag so the same item doesn't appear first right after a reshuffle.
+ */
+export function shuffleAvoidingFirst<T>(arr: T[], avoidFirst?: T | null): T[] {
+  const a = shuffle(arr);
+  if (arr.length > 1 && avoidFirst != null && a[0] === avoidFirst) {
+    const swap = Math.floor(Math.random() * (a.length - 1)) + 1;
+    [a[0], a[swap]] = [a[swap], a[0]];
+  }
+  return a;
+}
+
+/**
  * Map key signature names to VexFlow key signature strings.
+ * Includes relative minor names (e.g. "F# minor" → "A") for key-sig ID when scale is "both".
+ * Full circle of fifths: 0–7 sharps and 1–7 flats (15 distinct key signature visuals).
  */
 export const KEY_SIGNATURES: Record<string, string> = {
+  // Major keys: 0–7 sharps, then 1–7 flats
   "C major": "C",
   "G major": "G",
   "D major": "D",
   "A major": "A",
   "E major": "E",
   "B major": "B",
+  "F# major": "F#",
+  "C# major": "C#",
   "F major": "F",
   "Bb major": "Bb",
   "Eb major": "Eb",
   "Ab major": "Ab",
+  "Db major": "Db",
+  "Gb major": "Gb",
+  "Cb major": "Cb",
+  // Minor keys (same 15 key-sig slots)
   "A minor": "Am",
   "E minor": "Em",
   "D minor": "Dm",
   "G minor": "Gm",
   "C minor": "Cm",
+  "F# minor": "A",
+  "B minor": "D",
+  "C# minor": "E",
+  "G# minor": "B",
+  "D# minor": "F#",
+  "A# minor": "C#",
+  "F minor": "Ab",
+  "Bb minor": "Db",
+  "Eb minor": "Gb",
+  "Ab minor": "Cb",
 };
 
-/** All available key signature display names */
-export const KEY_SIGNATURE_OPTIONS = Object.keys(KEY_SIGNATURES);
+/** All available key signature display names (used for note-ID plan key selector) */
+export const KEY_SIGNATURE_OPTIONS = [
+  "C major", "G major", "D major", "A major", "E major", "B major", "F# major", "C# major",
+  "F major", "Bb major", "Eb major", "Ab major", "Db major", "Gb major", "Cb major",
+  "A minor", "E minor", "D minor", "G minor", "C minor",
+  "F# minor", "B minor", "C# minor", "G# minor", "D# minor", "A# minor",
+  "F minor", "Bb minor", "Eb minor", "Ab minor",
+];
 
-/** Which key signatures inherently use sharps */
+/** Key names that are major keys (15: full circle of fifths) */
+export const KEY_SIG_MAJOR_OPTIONS: string[] = [
+  "C major", "G major", "D major", "A major", "E major", "B major", "F# major", "C# major",
+  "F major", "Bb major", "Eb major", "Ab major", "Db major", "Gb major", "Cb major",
+];
+
+/** Key names that are minor keys (15: full circle of fifths) */
+export const KEY_SIG_MINOR_OPTIONS: string[] = [
+  "A minor", "E minor", "D minor", "G minor", "C minor", "F# minor", "B minor", "C# minor",
+  "G# minor", "D# minor", "A# minor",
+  "F minor", "Bb minor", "Eb minor", "Ab minor",
+];
+
+/** All 30 key names used in key-sig ID (15 major + 15 minor; 15 shared visuals) */
+export const KEY_SIG_ID_OPTIONS = [...new Set([...KEY_SIG_MAJOR_OPTIONS, ...KEY_SIG_MINOR_OPTIONS])];
+
+/**
+ * Natural groupings for key signature selection (by accidental count / type).
+ * Used for pill selector in key-sig ID plan editor. Full 1–7 sharps and 1–7 flats.
+ */
+export const KEY_SIG_GROUPS: { label: string; keys: string[] }[] = [
+  { label: "No accidentals", keys: ["C major", "A minor"] },
+  { label: "1–3 sharps", keys: ["G major", "E minor", "D major", "B minor", "A major", "F# minor"] },
+  { label: "4–5 sharps", keys: ["E major", "C# minor", "B major", "G# minor"] },
+  { label: "6–7 sharps", keys: ["F# major", "D# minor", "C# major", "A# minor"] },
+  { label: "1–3 flats", keys: ["F major", "D minor", "Bb major", "G minor", "Eb major", "C minor"] },
+  { label: "4–5 flats", keys: ["Ab major", "F minor", "Db major", "Bb minor"] },
+  { label: "6–7 flats", keys: ["Gb major", "Eb minor", "Cb major", "Ab minor"] },
+];
+
+/** Options for key-sig ID scale mode */
+export type KeySigScaleMode = "major" | "minor" | "both";
+
+/** Get the list of key names to offer for key-sig ID given scale mode */
+export function keySigOptionsForScaleMode(mode: KeySigScaleMode): string[] {
+  if (mode === "major") return KEY_SIG_MAJOR_OPTIONS;
+  if (mode === "minor") return KEY_SIG_MINOR_OPTIONS;
+  return KEY_SIG_ID_OPTIONS;
+}
+
+/**
+ * Build answer choices for key signature ID quiz: 1 correct key name + distractors from pool.
+ */
+export function buildKeySigAnswerChoices(
+  correctKeyName: string,
+  keyPool: string[],
+  totalChoices: number
+): string[] {
+  const others = keyPool.filter((k) => k !== correctKeyName);
+  const distractors = shuffle(others).slice(0, totalChoices - 1);
+  return shuffle([correctKeyName, ...distractors]);
+}
+
+/** Format key signature name for display: "F# minor" → "F♯ minor" */
+export function displayKeySignatureName(keyName: string): string {
+  const i = keyName.indexOf(" ");
+  const keyPart = i >= 0 ? keyName.slice(0, i) : keyName;
+  const rest = i >= 0 ? keyName.slice(i) : "";
+  const formatted =
+    keyPart[0] + (keyPart.length > 1 ? keyPart.slice(1).replace("#", "♯").replace("b", "♭") : "");
+  return rest ? `${formatted}${rest}` : formatted;
+}
+
+/** Which key signatures inherently use sharps (1–7 sharps) */
 export const KEYS_WITH_SHARPS = new Set([
-  "G major", "D major", "A major", "E major", "B major",
-  "E minor", "B minor",
+  "G major", "D major", "A major", "E major", "B major", "F# major", "C# major",
+  "E minor", "B minor", "F# minor", "C# minor", "G# minor", "D# minor", "A# minor",
 ]);
 
-/** Which key signatures inherently use flats */
+/** Which key signatures inherently use flats (1–7 flats) */
 export const KEYS_WITH_FLATS = new Set([
-  "F major", "Bb major", "Eb major", "Ab major",
-  "D minor", "G minor", "C minor",
+  "F major", "Bb major", "Eb major", "Ab major", "Db major", "Gb major", "Cb major",
+  "D minor", "G minor", "C minor", "F minor", "Bb minor", "Eb minor", "Ab minor",
 ]);
 
 /** C major / A minor have neither sharps nor flats in the key signature */
