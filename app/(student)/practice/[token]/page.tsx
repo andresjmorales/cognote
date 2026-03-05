@@ -87,10 +87,37 @@ export default function PracticePage() {
               setFlashcardsLoaded(true);
               return;
             }
-            const isSymbolPlan = data.plan?.plan_type === "symbol_concepts";
+            const planType = data.plan?.plan_type;
 
             let items: FlashcardItem[];
-            if (isSymbolPlan) {
+            if (planType === "key_signature_identification") {
+              const keySignatures: string[] = data.plan?.key_signatures ?? plan?.key_signatures ?? [];
+              const clefs: ("treble" | "bass")[] =
+                plan?.clef === "both"
+                  ? ["treble", "bass"]
+                  : [plan?.clef ?? "treble"];
+
+              items = [];
+              for (const keyName of keySignatures) {
+                for (const clefVal of clefs) {
+                  const existing = data.progress?.find(
+                    (p: any) => p.item_type === "key_signature" && p.note === keyName && p.clef === clefVal
+                  );
+                  items.push({
+                    itemType: "key_signature" as const,
+                    keyName,
+                    clef: clefVal,
+                    state: existing
+                      ? {
+                          easeFactor: existing.ease_factor,
+                          intervalDays: existing.interval_days,
+                          repetitions: existing.repetitions,
+                        }
+                      : defaultFlashcardState(),
+                  });
+                }
+              }
+            } else if (planType === "symbol_concepts") {
               const symbols: SymbolItem[] = data.plan?.symbols ?? plan?.symbols ?? [];
               items = symbols.map((sym) => {
                 const existing = data.progress?.find(
