@@ -224,7 +224,11 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
               <label className="block text-sm text-muted mb-1">Difficulty</label>
               <select
                 value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
+                onChange={(e) => {
+                  const d = e.target.value;
+                  setDifficulty(d);
+                  setShowHints(d === "beginner");
+                }}
                 className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {DIFFICULTY_OPTIONS.map((d) => (
@@ -456,27 +460,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
               <option value={6}>6</option>
             </select>
           </div>
-          {isNoteMode && (
-            <div>
-              <label className="block text-sm text-muted mb-1">Measures Shown</label>
-              <div className="flex gap-2">
-                {[1, 2].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setMeasuresShown(n)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                      measuresShown === n
-                        ? "bg-primary text-white"
-                        : "bg-surface-dim text-foreground hover:bg-border"
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Measures Shown hidden — StaffRenderer currently only supports single-measure display */}
           {!isNoteMode && (
             <div className="col-span-2">
               <label className="flex items-center gap-2 text-sm cursor-pointer">

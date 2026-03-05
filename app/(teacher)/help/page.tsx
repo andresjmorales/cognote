@@ -103,10 +103,10 @@ export default function HelpPage() {
             </p>
             <p className="text-muted mt-1">
               Ratings use kid-friendly labels:&nbsp;
-              <strong>No clue 😵</strong> &bull;&nbsp;
-              <strong>Tricky 😬</strong> &bull;&nbsp;
-              <strong>Got it 😊</strong> &bull;&nbsp;
-              <strong>Easy! 🤩</strong>
+              <strong>No clue 😕</strong> &bull;&nbsp;
+              <strong>Tricky 🤔</strong> &bull;&nbsp;
+              <strong>Got it 👍</strong> &bull;&nbsp;
+              <strong>Easy! ⭐</strong>
             </p>
           </div>
         </div>

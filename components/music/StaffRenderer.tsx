@@ -19,7 +19,7 @@ export function StaffRenderer({
   clef,
   keySignature = "C",
   width = 280,
-  height = 200,
+  height = 230,
 }: StaffRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -41,7 +41,7 @@ export function StaffRenderer({
       renderer.resize(width, height);
       const context = renderer.getContext();
 
-      const stave = new Stave(10, 20, width - 20);
+      const stave = new Stave(10, 40, width - 20);
       stave.addClef(clef);
       if (keySignature && keySignature !== "C" && keySignature !== "Am") {
         stave.addKeySignature(keySignature);
@@ -60,6 +60,11 @@ export function StaffRenderer({
       }
 
       Formatter.FormatAndDraw(context, stave, [staveNote]);
+
+      const svg = el.querySelector("svg");
+      if (svg) {
+        svg.style.overflow = "visible";
+      }
     })();
 
     return () => {
@@ -70,7 +75,7 @@ export function StaffRenderer({
   return (
     <div
       ref={containerRef}
-      className="flex items-center justify-center bg-white rounded-xl border border-border"
+      className="flex items-center justify-center bg-white rounded-xl border border-border overflow-visible"
       style={{ minWidth: width, minHeight: height }}
     />
   );

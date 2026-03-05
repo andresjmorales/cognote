@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { defaultFlashcardState, nextReviewDate } from "@/lib/srs";
-import { shuffle } from "@/lib/music";
+import { shuffle, expandNotesWithAccidentals } from "@/lib/music";
 
 type Mode = "welcome" | "lesson" | "free_practice" | "flashcard";
 
@@ -24,6 +24,8 @@ interface PlanData {
   name: string;
   clef: "treble" | "bass" | "both";
   key_signature: string;
+  include_sharps: boolean;
+  include_flats: boolean;
   questions_per_lesson: number;
   answer_choices: number;
   notes: string[];
@@ -100,24 +102,36 @@ export default function PracticePage() {
               });
             } else {
               const planNotes: string[] = data.plan?.notes ?? plan?.notes ?? [];
-              const clef = plan?.clef === "both" ? "treble" : (plan?.clef ?? "treble");
-              items = planNotes.map((note: string) => {
-                const existing = data.progress?.find(
-                  (p: any) => p.note === note && p.clef === clef && (p.item_type === "note" || !p.item_type)
-                );
-                return {
-                  itemType: "note" as const,
-                  note,
-                  clef: clef as "treble" | "bass",
-                  state: existing
-                    ? {
-                        easeFactor: existing.ease_factor,
-                        intervalDays: existing.interval_days,
-                        repetitions: existing.repetitions,
-                      }
-                    : defaultFlashcardState(),
-                };
-              });
+              const expandedNotes = expandNotesWithAccidentals(
+                planNotes,
+                plan?.include_sharps ?? false,
+                plan?.include_flats ?? false,
+              );
+              const clefs: ("treble" | "bass")[] =
+                plan?.clef === "both"
+                  ? ["treble", "bass"]
+                  : [plan?.clef ?? "treble"];
+
+              items = [];
+              for (const noteVal of expandedNotes) {
+                for (const clefVal of clefs) {
+                  const existing = data.progress?.find(
+                    (p: any) => p.note === noteVal && p.clef === clefVal && (p.item_type === "note" || !p.item_type)
+                  );
+                  items.push({
+                    itemType: "note" as const,
+                    note: noteVal,
+                    clef: clefVal,
+                    state: existing
+                      ? {
+                          easeFactor: existing.ease_factor,
+                          intervalDays: existing.interval_days,
+                          repetitions: existing.repetitions,
+                        }
+                      : defaultFlashcardState(),
+                  });
+                }
+              }
             }
             setFlashcardItems(shuffle(items));
           })
@@ -303,7 +317,11 @@ export default function PracticePage() {
   }
 
   const quizConfig: QuizConfig = {
-    notes: plan.notes,
+    notes: expandNotesWithAccidentals(
+      plan.notes,
+      plan.include_sharps ?? false,
+      plan.include_flats ?? false,
+    ),
     clef: plan.clef,
     keySignature: plan.key_signature,
     questionsPerLesson: plan.questions_per_lesson,
