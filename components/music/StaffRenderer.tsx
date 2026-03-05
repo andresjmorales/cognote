@@ -19,8 +19,8 @@ export function StaffRenderer({
   note,
   clef,
   keySignature = "C",
-  width = 280,
-  height = 230,
+  width = 320,
+  height = 250,
 }: StaffRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 

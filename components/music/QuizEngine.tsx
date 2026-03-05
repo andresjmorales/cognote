@@ -148,7 +148,7 @@ export function QuizEngine({
     const pct = Math.round((correct / total) * 100);
 
     return (
-      <Card padding="lg" className="max-w-md mx-auto text-center font-[family-name:var(--font-nunito)]">
+      <Card padding="lg" className="max-w-lg w-full mx-auto text-center font-[family-name:var(--font-nunito)]">
         <div className="text-6xl mb-4">
           {pct >= 90 ? "🎉" : pct >= 70 ? "⭐" : pct >= 50 ? "👍" : "💪"}
         </div>
@@ -187,7 +187,7 @@ export function QuizEngine({
   }
 
   return (
-    <div className="max-w-md mx-auto font-[family-name:var(--font-nunito)]">
+    <div className="max-w-lg w-full mx-auto font-[family-name:var(--font-nunito)]">
       {isLesson && (
         <ProgressBar
           current={questionIndex + 1}
@@ -232,13 +232,11 @@ export function QuizEngine({
         })}
       </div>
 
-      {!isLesson && (
-        <div className="mt-4 text-center">
-          <Button variant="ghost" size="sm" onClick={onQuit}>
-            I&apos;m Done
-          </Button>
-        </div>
-      )}
+      <div className="mt-4 text-center">
+        <Button variant="ghost" size="sm" onClick={onQuit}>
+          {isLesson ? "Quit Quiz" : "I\u0027m Done"}
+        </Button>
+      </div>
     </div>
   );
 }

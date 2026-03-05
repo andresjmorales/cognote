@@ -51,6 +51,7 @@ export default function PracticePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [flashcardItems, setFlashcardItems] = useState<FlashcardItem[]>([]);
+  const [flashcardsLoaded, setFlashcardsLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -78,14 +79,45 @@ export default function PracticePage() {
     (m: "lesson" | "free_practice" | "flashcard") => {
       if (m === "flashcard") {
         setMode("flashcard");
+        setFlashcardsLoaded(false);
         fetch(`/api/practice/${token}/flashcards`)
           .then((res) => (res.ok ? res.json() : null))
           .then((data) => {
-            if (!data) return;
-            const isSymbolPlan = data.plan?.plan_type === "symbol_concepts";
+            if (!data) {
+              setFlashcardsLoaded(true);
+              return;
+            }
+            const planType = data.plan?.plan_type;
 
             let items: FlashcardItem[];
-            if (isSymbolPlan) {
+            if (planType === "key_signature_identification") {
+              const keySignatures: string[] = data.plan?.key_signatures ?? plan?.key_signatures ?? [];
+              const clefs: ("treble" | "bass")[] =
+                plan?.clef === "both"
+                  ? ["treble", "bass"]
+                  : [plan?.clef ?? "treble"];
+
+              items = [];
+              for (const keyName of keySignatures) {
+                for (const clefVal of clefs) {
+                  const existing = data.progress?.find(
+                    (p: any) => p.item_type === "key_signature" && p.note === keyName && p.clef === clefVal
+                  );
+                  items.push({
+                    itemType: "key_signature" as const,
+                    keyName,
+                    clef: clefVal,
+                    state: existing
+                      ? {
+                          easeFactor: existing.ease_factor,
+                          intervalDays: existing.interval_days,
+                          repetitions: existing.repetitions,
+                        }
+                      : defaultFlashcardState(),
+                  });
+                }
+              }
+            } else if (planType === "symbol_concepts") {
               const symbols: SymbolItem[] = data.plan?.symbols ?? plan?.symbols ?? [];
               items = symbols.map((sym) => {
                 const existing = data.progress?.find(
@@ -140,8 +172,11 @@ export default function PracticePage() {
               }
             }
             setFlashcardItems(shuffle(items));
+            setFlashcardsLoaded(true);
           })
-          .catch(() => {});
+          .catch(() => {
+            setFlashcardsLoaded(true);
+          });
         return;
       }
 
@@ -257,7 +292,7 @@ export default function PracticePage() {
               onClick={() => startSession("lesson")}
               className="w-full"
             >
-              Start Lesson
+              Start Quiz
             </Button>
             <Button
               size="lg"
@@ -282,15 +317,31 @@ export default function PracticePage() {
   }
 
   if (mode === "flashcard") {
-    if (flashcardItems.length === 0) {
+    if (!flashcardsLoaded) {
       return (
         <div className="min-h-screen flex items-center justify-center font-[family-name:var(--font-nunito)]">
           <div className="text-xl text-muted animate-pulse">Loading flashcards...</div>
         </div>
       );
     }
+    if (flashcardItems.length === 0) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-2 font-[family-name:var(--font-nunito)]">
+          <Card padding="lg" className="max-w-sm text-center">
+            <div className="text-5xl mb-4">📇</div>
+            <h2 className="text-2xl font-bold mb-2">No Flashcards Available</h2>
+            <p className="text-muted mb-6">
+              Flashcards aren&apos;t available for this lesson type yet.
+            </p>
+            <Button onClick={() => { setFlashcardItems([]); setMode("welcome"); }}>
+              Go Back
+            </Button>
+          </Card>
+        </div>
+      );
+    }
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-2">
         <FlashcardEngine
           cards={flashcardItems}
           keySignature={plan.key_signature}
@@ -310,7 +361,7 @@ export default function PracticePage() {
       mode: mode as "lesson" | "free_practice",
     };
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-2">
         <KeySignatureQuizEngine
           config={keySigConfig}
           onAttempt={handleAttempt}
@@ -331,7 +382,7 @@ export default function PracticePage() {
     };
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-2">
         <SymbolQuizEngine
           config={symbolConfig}
           onAttempt={handleAttempt}
@@ -356,7 +407,7 @@ export default function PracticePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-2">
       <QuizEngine
         config={quizConfig}
         onAttempt={handleAttempt}

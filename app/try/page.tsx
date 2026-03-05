@@ -64,7 +64,7 @@ export default function TryLessonPage() {
   // --- Quiz / Free Practice ---
   if ((screen === "lesson" || screen === "free_practice") && chosen) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 font-[family-name:var(--font-nunito)]">
+      <div className="min-h-screen flex items-center justify-center p-2 font-[family-name:var(--font-nunito)]">
         <QuizEngine
           config={buildQuizConfig(screen)}
           onQuit={() => setScreen("welcome")}
@@ -76,7 +76,7 @@ export default function TryLessonPage() {
   // --- Flashcards ---
   if (screen === "flashcard" && chosen) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 font-[family-name:var(--font-nunito)]">
+      <div className="min-h-screen flex items-center justify-center p-2 font-[family-name:var(--font-nunito)]">
         <FlashcardEngine
           cards={buildFlashcardItems()}
           keySignature="C major"
@@ -101,7 +101,7 @@ export default function TryLessonPage() {
               onClick={() => setScreen("lesson")}
               className="w-full"
             >
-              Start Lesson
+              Start Quiz
             </Button>
             <Button
               size="lg"

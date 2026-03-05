@@ -10,7 +10,7 @@ import {
   SRS_KID_LABELS,
   nextReviewState,
 } from "@/lib/srs";
-import { noteName, displayNoteName, shuffle, KEY_SIGNATURES } from "@/lib/music";
+import { noteName, displayNoteName, displayKeySignatureName, shuffle, KEY_SIGNATURES } from "@/lib/music";
 import { SymbolDisplay } from "./VexFlowSymbol";
 
 interface NoteCard {
@@ -29,10 +29,17 @@ interface SymbolCard {
   state: FlashcardState;
 }
 
-export type FlashcardItem = NoteCard | SymbolCard;
+interface KeySignatureCard {
+  itemType: "key_signature";
+  keyName: string;
+  clef: "treble" | "bass";
+  state: FlashcardState;
+}
+
+export type FlashcardItem = NoteCard | SymbolCard | KeySignatureCard;
 
 export interface FlashcardReviewData {
-  itemType: "note" | "symbol";
+  itemType: "note" | "symbol" | "key_signature";
   itemId: string;
   clef: "treble" | "bass" | "none";
   rating: SRSRating;
@@ -74,8 +81,11 @@ export function FlashcardEngine({
       const newState = nextReviewState(current.state, rating);
       onReview?.({
         itemType: current.itemType,
-        itemId: current.itemType === "note" ? current.note : current.symbolId,
-        clef: current.itemType === "note" ? current.clef : "none",
+        itemId:
+          current.itemType === "note" ? current.note :
+          current.itemType === "key_signature" ? current.keyName :
+          current.symbolId,
+        clef: current.itemType === "note" || current.itemType === "key_signature" ? current.clef : "none",
         rating,
         newState,
       });
@@ -109,7 +119,7 @@ export function FlashcardEngine({
 
   if (!current || queue.length === 0) {
     return (
-      <Card padding="lg" className="max-w-md mx-auto text-center font-[family-name:var(--font-nunito)]">
+      <Card padding="lg" className="max-w-lg mx-auto text-center font-[family-name:var(--font-nunito)]">
         <div className="text-5xl mb-4">🎶</div>
         <h2 className="text-2xl font-bold mb-2">All done!</h2>
         <p className="text-muted mb-2">
@@ -130,7 +140,7 @@ export function FlashcardEngine({
   }
 
   return (
-    <div className="max-w-md w-full mx-auto font-[family-name:var(--font-nunito)] flex flex-col">
+    <div className="max-w-lg w-full mx-auto font-[family-name:var(--font-nunito)] flex flex-col">
       <div className="flex justify-between items-center text-sm text-muted mb-4">
         <span>Reviewed: {reviewed}</span>
         <span>
@@ -165,6 +175,23 @@ export function FlashcardEngine({
                   </div>
                   <div className="text-sm text-muted mt-1">
                     {displayNoteName(current.note)} — {current.clef} clef
+                  </div>
+                </div>
+              )}
+            </>
+          ) : current.itemType === "key_signature" ? (
+            <>
+              <StaffRenderer
+                clef={current.clef}
+                keySignature={KEY_SIGNATURES[current.keyName] ?? "C"}
+              />
+              {flipped && (
+                <div className="mt-4 text-center">
+                  <div className="text-4xl font-bold text-primary">
+                    {displayKeySignatureName(current.keyName)}
+                  </div>
+                  <div className="text-sm text-muted mt-1">
+                    {current.clef} clef
                   </div>
                 </div>
               )}
