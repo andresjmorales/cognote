@@ -112,6 +112,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Running `npx supabase db reset` loads `supabase/seed.sql` with a test teacher account, sample students, lesson plans, and practice history so you can explore the full dashboard immediately. See `seed.sql` for credentials — these are for **local development only** and should never be used in production.
 
+### Clearing students and plans (e.g. production reset)
+
+To wipe all students and lesson plans (and their assignments, sessions, and progress) while keeping teachers and auth intact, run `supabase/clear-data.sql` in the [Supabase SQL Editor](https://supabase.com/dashboard) or via:
+
+```bash
+psql $DATABASE_URL -f supabase/clear-data.sql
+```
+
+After clearing, **production** is ready for a fresh start. For **local dev**, run `npx supabase db reset` to reapply migrations and seed sample data.
+
 ### Local Dev Tools
 
 | Tool | URL |
@@ -162,7 +172,8 @@ cognote/
 │   └── extract-bravura-glyphs.js  # One-time: extract Bravura → SVG + lib/symbol-paths.ts
 ├── supabase/
 │   ├── migrations/             # SQL schema migrations
-│   └── seed.sql                # Test data for local development
+│   ├── seed.sql                # Test data for local development
+│   └── clear-data.sql          # Wipe students & plans (prod-safe; teachers unchanged)
 └── notes/                      # Design docs and specs
 ```
 

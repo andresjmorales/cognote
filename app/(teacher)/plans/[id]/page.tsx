@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
+import { DeletePlanButton } from "@/components/teacher/DeletePlanButton";
 import { PlanEditWrapper } from "@/components/teacher/PlanEditWrapper";
 
 export async function generateMetadata({
@@ -79,7 +80,12 @@ export default async function PlanDetailPage({
         teacher_notes: plan.teacher_notes ?? "",
         show_hints: plan.show_hints ?? true,
       }}
-      actionSlot={<AssignPlanButton planId={plan.id} students={students ?? []} />}
+      actionSlot={
+        <>
+          <AssignPlanButton planId={plan.id} students={students ?? []} />
+          <DeletePlanButton planId={plan.id} planName={plan.name} />
+        </>
+      }
     >
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
 import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStudentButton";
+import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
 
 export async function generateMetadata({
@@ -128,11 +129,14 @@ export default async function StudentDetailPage({
             <p className="text-muted text-sm">{student.parent_contact}</p>
           )}
         </div>
-        <AssignPlanToStudentButton
-          studentId={id}
-          studentName={student.name}
-          plans={allPlans ?? []}
-        />
+        <div className="flex items-center gap-2">
+          <AssignPlanToStudentButton
+            studentId={id}
+            studentName={student.name}
+            plans={allPlans ?? []}
+          />
+          <RemoveStudentButton studentId={id} studentName={student.name} />
+        </div>
       </div>
 
       {/* Teacher Notes */}
