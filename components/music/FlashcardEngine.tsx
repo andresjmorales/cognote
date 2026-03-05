@@ -109,7 +109,7 @@ export function FlashcardEngine({
 
   if (!current || queue.length === 0) {
     return (
-      <Card padding="lg" className="max-w-md mx-auto text-center font-[family-name:var(--font-nunito)]">
+      <Card padding="lg" className="max-w-lg mx-auto text-center font-[family-name:var(--font-nunito)]">
         <div className="text-5xl mb-4">🎶</div>
         <h2 className="text-2xl font-bold mb-2">All done!</h2>
         <p className="text-muted mb-2">
@@ -130,7 +130,7 @@ export function FlashcardEngine({
   }
 
   return (
-    <div className="max-w-md w-full mx-auto font-[family-name:var(--font-nunito)] flex flex-col">
+    <div className="max-w-lg w-full mx-auto font-[family-name:var(--font-nunito)] flex flex-col">
       <div className="flex justify-between items-center text-sm text-muted mb-4">
         <span>Reviewed: {reviewed}</span>
         <span>
