@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { shuffleAvoidingFirst } from "@/lib/music";
+import { shuffle, shuffleAvoidingFirst } from "@/lib/music";
 import { SymbolDisplay } from "./VexFlowSymbol";
 import type { AttemptResult } from "./QuizEngine";
 
