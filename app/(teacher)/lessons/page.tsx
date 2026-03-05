@@ -19,7 +19,7 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
   return (
     <Card padding="sm">
       <div className="flex justify-between items-start">
-        <Link href={`/plans/${plan.id}`} className="flex-1">
+        <Link href={`/lessons/${plan.id}`} className="flex-1">
           <div className="font-semibold hover:text-primary transition-colors">
             {plan.name}
           </div>
@@ -76,7 +76,7 @@ export default async function PlansPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Lessons</h1>
-        <Link href="/plans/new">
+        <Link href="/lessons/new">
           <Button size="sm">Create Lesson</Button>
         </Link>
       </div>
@@ -87,7 +87,7 @@ export default async function PlansPage() {
         {templates.length === 0 ? (
           <Card className="text-center text-muted">
             <p>No templates yet.</p>
-            <Link href="/plans/new" className="text-primary text-sm hover:underline">
+            <Link href="/lessons/new" className="text-primary text-sm hover:underline">
               Create your first lesson template
             </Link>
           </Card>

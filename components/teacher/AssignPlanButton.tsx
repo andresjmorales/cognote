@@ -38,7 +38,7 @@ export function AssignPlanButton({
     setAssigning(true);
 
     try {
-      const res = await fetch(`/api/plans/${planId}/assign`, {
+      const res = await fetch(`/api/lessons/${planId}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId }),
@@ -61,11 +61,11 @@ export function AssignPlanButton({
         text: `Practice link for ${studentName}`,
       });
       if (result.method === "share") {
-        setToast(`Assigned! Choose how to share with ${studentName}'s parent.`);
+        setToast(`Assigned to ${studentName}! Link shared.`);
       } else if (result.method === "copy") {
-        setToast(`Link copied! Send to ${studentName}'s parent.`);
+        setToast(`Assigned to ${studentName}! Link copied.`);
       } else {
-        setToast(`Assigned! Link: ${fullUrl}`);
+        setToast(`Assigned to ${studentName}! Link: ${fullUrl}`);
       }
       setTimeout(() => setToast(null), 5000);
       router.refresh();
@@ -92,7 +92,7 @@ export function AssignPlanButton({
             students.map((s) => (
               <button
                 key={s.id}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-surface-dim transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-surface-dim active:bg-border transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer"
                 onClick={() => handleAssign(s.id, s.name)}
                 disabled={assigning}
               >

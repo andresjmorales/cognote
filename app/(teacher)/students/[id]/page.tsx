@@ -187,7 +187,7 @@ export default async function StudentDetailPage({
                     <div className="flex justify-between items-start">
                       <div>
                         {sp.plans?.id ? (
-                          <Link href={`/plans/${sp.plans.id}`} className="font-medium hover:text-primary transition-colors">
+                          <Link href={`/lessons/${sp.plans.id}`} className="font-medium hover:text-primary transition-colors">
                             {sp.plans.name}
                           </Link>
                         ) : (

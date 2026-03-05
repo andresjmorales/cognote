@@ -18,14 +18,14 @@ export function DeletePlanButton({
   async function handleDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/plans/${planId}`, { method: "DELETE" });
+      const res = await fetch(`/api/lessons/${planId}`, { method: "DELETE" });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         alert(err?.error ?? "Failed to delete lesson");
         setDeleting(false);
         return;
       }
-      router.push("/plans");
+      router.push("/lessons");
       router.refresh();
     } catch {
       alert("Failed to delete lesson");
