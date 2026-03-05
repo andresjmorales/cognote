@@ -62,7 +62,7 @@ export function AssignPlanToStudentButton({
         text: `Practice link: ${planName}`,
       });
       if (result.method === "share") {
-        setToast(`"${planName}" assigned! Choose how to share (e.g. Copy or Messages).`);
+        setToast(`"${planName}" assigned! Link shared.`);
       } else if (result.method === "copy") {
         setToast(`"${planName}" assigned! Link copied.`);
       } else {
@@ -93,7 +93,7 @@ export function AssignPlanToStudentButton({
             plans.map((p) => (
               <button
                 key={p.id}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-surface-dim transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-surface-dim active:bg-border transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer"
                 onClick={() => handleAssign(p.id, p.name)}
                 disabled={assigning}
               >
