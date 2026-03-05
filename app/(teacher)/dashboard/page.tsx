@@ -49,7 +49,7 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <div className="flex gap-2">
-          <Link href="/plans/new">
+          <Link href="/lessons/new">
             <Button size="sm">New Lesson</Button>
           </Link>
           <Link href="/students">

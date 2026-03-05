@@ -33,7 +33,7 @@ export async function updateSession(request: NextRequest) {
   const isTeacherRoute =
     request.nextUrl.pathname.startsWith("/dashboard") ||
     request.nextUrl.pathname.startsWith("/students") ||
-    request.nextUrl.pathname.startsWith("/plans") ||
+    request.nextUrl.pathname.startsWith("/lessons") ||
     request.nextUrl.pathname.startsWith("/help");
 
   if (!user && isTeacherRoute) {

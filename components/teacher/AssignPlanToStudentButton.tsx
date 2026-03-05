@@ -39,7 +39,7 @@ export function AssignPlanToStudentButton({
     setAssigning(true);
 
     try {
-      const res = await fetch(`/api/plans/${planId}/assign`, {
+      const res = await fetch(`/api/lessons/${planId}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId }),

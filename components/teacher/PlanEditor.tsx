@@ -213,7 +213,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
       return;
     }
 
-    router.push("/plans");
+    router.push("/lessons");
     router.refresh();
   }
 

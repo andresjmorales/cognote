@@ -93,7 +93,7 @@ export default async function PlanDetailPage({
     >
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/plans" className="text-muted hover:text-foreground">
+          <Link href="/lessons" className="text-muted hover:text-foreground">
             ← Lessons
           </Link>
         </div>
