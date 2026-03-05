@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { shareOrCopyUrl } from "@/lib/shareOrCopy";
 
 interface Student {
   id: string;
@@ -55,10 +56,15 @@ export function AssignPlanButton({
       const data = await res.json();
       const fullUrl = `${window.location.origin}/practice/${data.token}`;
 
-      try {
-        await navigator.clipboard.writeText(fullUrl);
+      const result = await shareOrCopyUrl(fullUrl, {
+        title: "Practice link",
+        text: `Practice link for ${studentName}`,
+      });
+      if (result.method === "share") {
+        setToast(`Assigned! Choose how to share with ${studentName}'s parent.`);
+      } else if (result.method === "copy") {
         setToast(`Link copied! Send to ${studentName}'s parent.`);
-      } catch {
+      } else {
         setToast(`Assigned! Link: ${fullUrl}`);
       }
       setTimeout(() => setToast(null), 5000);
