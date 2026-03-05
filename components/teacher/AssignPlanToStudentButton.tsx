@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { shareOrCopyUrl } from "@/lib/shareOrCopy";
 
 interface Plan {
   id: string;
@@ -56,10 +57,15 @@ export function AssignPlanToStudentButton({
       const data = await res.json();
       const fullUrl = `${window.location.origin}/practice/${data.token}`;
 
-      try {
-        await navigator.clipboard.writeText(fullUrl);
+      const result = await shareOrCopyUrl(fullUrl, {
+        title: "Practice link",
+        text: `Practice link: ${planName}`,
+      });
+      if (result.method === "share") {
+        setToast(`"${planName}" assigned! Choose how to share (e.g. Copy or Messages).`);
+      } else if (result.method === "copy") {
         setToast(`"${planName}" assigned! Link copied.`);
-      } catch {
+      } else {
         setToast(`"${planName}" assigned! Link: ${fullUrl}`);
       }
       setTimeout(() => setToast(null), 5000);
