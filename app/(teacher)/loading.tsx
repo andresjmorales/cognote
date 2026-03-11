@@ -5,11 +5,11 @@ export default function TeacherLoading() {
         <img
           src="/icon/cognote.svg"
           alt=""
-          className="h-12 w-12 animate-pulse"
-          width={48}
-          height={48}
+          className="h-16 w-16 animate-pulse"
+          width={64}
+          height={64}
         />
-        <span className="text-sm text-muted animate-pulse font-[family-name:var(--font-nunito)]">
+        <span className="text-base text-muted animate-pulse font-[family-name:var(--font-nunito)]">
           Loading&hellip;
         </span>
       </div>
