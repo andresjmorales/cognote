@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
 import { DeletePlanButton } from "@/components/teacher/DeletePlanButton";
+import { LaunchPlanButton } from "@/components/teacher/LaunchPlanButton";
 import { PlanEditWrapper } from "@/components/teacher/PlanEditWrapper";
 
 export async function generateMetadata({
@@ -86,6 +87,7 @@ export default async function PlanDetailPage({
       }}
       actionSlot={
         <>
+          <LaunchPlanButton planId={plan.id} planName={plan.name} students={students ?? []} />
           <AssignPlanButton planId={plan.id} students={students ?? []} />
           <DeletePlanButton planId={plan.id} planName={plan.name} />
         </>

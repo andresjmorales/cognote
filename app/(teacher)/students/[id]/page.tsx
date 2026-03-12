@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
 import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStudentButton";
+import { LaunchPlanToStudentButton } from "@/components/teacher/LaunchPlanToStudentButton";
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
 
@@ -130,6 +131,11 @@ export default async function StudentDetailPage({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <LaunchPlanToStudentButton
+            studentId={id}
+            studentName={student.name}
+            plans={allPlans ?? []}
+          />
           <AssignPlanToStudentButton
             studentId={id}
             studentName={student.name}
@@ -202,7 +208,17 @@ export default async function StudentDetailPage({
                           {sessions} session{sessions !== 1 && "s"}
                         </div>
                       </div>
-                      <CopyLinkClient url={practiceUrl} />
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={practiceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer select-none bg-surface text-foreground border border-border hover:bg-surface-dim focus:ring-primary/20 px-3 py-1.5 text-sm rounded-lg"
+                        >
+                          Launch
+                        </a>
+                        <CopyLinkClient url={practiceUrl} />
+                      </div>
                     </div>
                   </Card>
                 );

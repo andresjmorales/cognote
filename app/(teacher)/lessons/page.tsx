@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
+import { LaunchPlanButton } from "@/components/teacher/LaunchPlanButton";
 
 export const metadata = { title: "Lessons" };
 
@@ -36,7 +37,10 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
             </div>
           )}
         </Link>
-        <AssignPlanButton planId={plan.id} students={students} />
+        <div className="flex items-center gap-2 shrink-0 ml-3">
+          <LaunchPlanButton planId={plan.id} planName={plan.name} students={students} />
+          <AssignPlanButton planId={plan.id} students={students} />
+        </div>
       </div>
     </Card>
   );

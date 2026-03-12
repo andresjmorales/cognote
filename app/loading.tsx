@@ -4,11 +4,11 @@ export default function RootLoading() {
       <img
         src="/icon/cognote.svg"
         alt="CogNote"
-        className="h-16 w-16 animate-pulse"
-        width={64}
-        height={64}
+        className="h-24 w-24 animate-pulse"
+        width={96}
+        height={96}
       />
-      <div className="text-sm text-muted animate-pulse font-[family-name:var(--font-nunito)]">
+      <div className="text-base text-muted animate-pulse font-[family-name:var(--font-nunito)]">
         Loading&hellip;
       </div>
     </div>
