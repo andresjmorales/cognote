@@ -1,5 +1,8 @@
 "use client";
 
+import { BrandMark } from "@/components/brand/BrandMark";
+import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
+
 export default function GlobalError({
   reset,
 }: {
@@ -22,12 +25,10 @@ export default function GlobalError({
         }}
       >
         <div style={{ textAlign: "center", padding: "2rem" }}>
-          <img
-            src="/icon/cognote.svg"
+          <BrandMark
+            size={BRAND_ICON_SIZE.panel}
             alt="CogNote"
-            width={64}
-            height={64}
-            style={{ marginBottom: "1.5rem" }}
+            className="mb-6"
           />
           <h1
             style={{

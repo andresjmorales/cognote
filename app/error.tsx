@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandMark } from "@/components/brand/BrandMark";
+import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 import Link from "next/link";
 
 export default function Error({
@@ -11,11 +13,9 @@ export default function Error({
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="text-center">
-        <img
-          src="/icon/cognote.svg"
+        <BrandMark
+          size={BRAND_ICON_SIZE.panel}
           alt="CogNote"
-          width={64}
-          height={64}
           className="mx-auto mb-6"
         />
         <h1 className="text-2xl font-bold mb-2">Something went wrong 😕</h1>

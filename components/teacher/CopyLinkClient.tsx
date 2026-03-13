@@ -39,7 +39,7 @@ export function CopyLinkClient({ url, title }: { url: string; title?: string }) 
             : "Copy Link";
 
   return (
-    <Button size="sm" variant="secondary" onClick={handleClick}>
+    <Button size="sm" variant="primary" onClick={handleClick}>
       {buttonLabel}
     </Button>
   );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { AppLoadingScreen } from "@/components/brand/AppLoadingScreen";
 import { createClient } from "@/lib/supabase/client";
 import { QuizEngine, type AttemptResult, type QuizConfig } from "@/components/music/QuizEngine";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@/components/music/FlashcardEngine";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { LOADING_COPY } from "@/lib/ui-constants";
 import { defaultFlashcardState, nextReviewDate } from "@/lib/srs";
 import { shuffle, expandNotesWithAccidentals } from "@/lib/music";
 
@@ -273,11 +275,7 @@ export default function PracticePage() {
 
   function renderContent() {
     if (loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center font-[family-name:var(--font-nunito)]">
-          <div className="text-xl text-muted animate-pulse">Loading...</div>
-        </div>
-      );
+      return <AppLoadingScreen message={LOADING_COPY.default} />;
     }
 
     if (error || !plan) {
@@ -339,11 +337,7 @@ export default function PracticePage() {
 
     if (mode === "flashcard") {
       if (!flashcardsLoaded) {
-        return (
-          <div className="min-h-screen flex items-center justify-center font-[family-name:var(--font-nunito)]">
-            <div className="text-xl text-muted animate-pulse">Loading flashcards...</div>
-          </div>
-        );
+        return <AppLoadingScreen message={LOADING_COPY.flashcards} />;
       }
       if (flashcardItems.length === 0) {
         return (
