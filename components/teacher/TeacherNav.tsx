@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { usePathname, useRouter } from "next/navigation";
+import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
@@ -32,12 +34,9 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
             href="/dashboard"
             className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
           >
-            <img
-              src="/icon/cognote.svg"
-              alt=""
+            <BrandMark
+              size={BRAND_ICON_SIZE.header}
               className="h-8 w-8"
-              width={32}
-              height={32}
             />
             CogNote
           </Link>

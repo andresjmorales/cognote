@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/button";
+import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 
 export default function LandingPage() {
   return (
@@ -8,12 +10,9 @@ export default function LandingPage() {
       <header className="border-b border-border bg-surface shrink-0">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
           <span className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight">
-            <img
-              src="/icon/cognote.svg"
-              alt=""
+            <BrandMark
+              size={BRAND_ICON_SIZE.header}
               className="h-8 w-8"
-              width={32}
-              height={32}
             />
             CogNote
           </span>
