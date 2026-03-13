@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { QuizEngine, type AttemptResult, type QuizConfig } from "@/components/music/QuizEngine";
 import {
   KeySignatureQuizEngine,
@@ -42,6 +44,8 @@ interface PlanData {
 
 export default function PracticePage() {
   const { token } = useParams<{ token: string }>();
+  const searchParams = useSearchParams();
+  const backHref = searchParams.get("back") ?? "/lessons";
   const [studentName, setStudentName] = useState("");
   const [studentPlanId, setStudentPlanId] = useState("");
   const [plan, setPlan] = useState<PlanData | null>(null);
@@ -52,6 +56,13 @@ export default function PracticePage() {
   const [error, setError] = useState<string | null>(null);
   const [flashcardItems, setFlashcardItems] = useState<FlashcardItem[]>([]);
   const [flashcardsLoaded, setFlashcardsLoaded] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(false);
+
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data }) => {
+      setIsTeacher(!!data.session?.user);
+    });
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -251,119 +262,174 @@ export default function PracticePage() {
     [token]
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center font-[family-name:var(--font-nunito)]">
-        <div className="text-xl text-muted animate-pulse">Loading...</div>
-      </div>
-    );
-  }
+  const teacherHomeButton = isTeacher && (
+    <Link
+      href={backHref}
+      className="fixed top-3 left-3 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-border text-sm text-muted hover:text-foreground hover:bg-surface-dim transition-colors shadow-sm"
+    >
+      ← Home
+    </Link>
+  );
 
-  if (error || !plan) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 font-[family-name:var(--font-nunito)]">
-        <Card padding="lg" className="max-w-md text-center">
-          <div className="text-5xl mb-4">😕</div>
-          <h1 className="text-2xl font-bold mb-2">Oops!</h1>
-          <p className="text-muted">{error ?? "Something went wrong."}</p>
-        </Card>
-      </div>
-    );
-  }
-
-  if (mode === "welcome") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 font-[family-name:var(--font-nunito)]">
-        <Card padding="lg" className="max-w-sm text-center w-full">
-          <div className="text-5xl mb-2">🎵</div>
-          <h1 className="text-3xl font-bold mb-1">
-            Hi {studentName}!
-          </h1>
-          <p className="text-muted mb-6">{plan.name}</p>
-          {lastScore && (
-            <p className="text-sm text-muted mb-4">
-              Last time: {lastScore} ✨
-            </p>
-          )}
-
-          <div className="flex flex-col gap-3">
-            <Button
-              size="xl"
-              onClick={() => startSession("lesson")}
-              className="w-full"
-            >
-              Start Quiz
-            </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => startSession("free_practice")}
-              className="w-full"
-            >
-              Free Practice
-            </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => startSession("flashcard")}
-              className="w-full"
-            >
-              Flashcards
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (mode === "flashcard") {
-    if (!flashcardsLoaded) {
+  function renderContent() {
+    if (loading) {
       return (
         <div className="min-h-screen flex items-center justify-center font-[family-name:var(--font-nunito)]">
-          <div className="text-xl text-muted animate-pulse">Loading flashcards...</div>
+          <div className="text-xl text-muted animate-pulse">Loading...</div>
         </div>
       );
     }
-    if (flashcardItems.length === 0) {
+
+    if (error || !plan) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-2 font-[family-name:var(--font-nunito)]">
-          <Card padding="lg" className="max-w-sm text-center">
-            <div className="text-5xl mb-4">📇</div>
-            <h2 className="text-2xl font-bold mb-2">No Flashcards Available</h2>
-            <p className="text-muted mb-6">
-              Flashcards aren&apos;t available for this lesson type yet.
-            </p>
-            <Button onClick={() => { setFlashcardItems([]); setMode("welcome"); }}>
-              Go Back
-            </Button>
+        <div className="min-h-screen flex items-center justify-center p-4 font-[family-name:var(--font-nunito)]">
+          <Card padding="lg" className="max-w-md text-center">
+            <div className="text-5xl mb-4">😕</div>
+            <h1 className="text-2xl font-bold mb-2">Oops!</h1>
+            <p className="text-muted">{error ?? "Something went wrong."}</p>
           </Card>
         </div>
       );
     }
-    return (
-      <div className="min-h-screen flex items-center justify-center p-2">
-        <FlashcardEngine
-          cards={flashcardItems}
-          keySignature={plan.key_signature}
-          onReview={handleFlashcardReview}
-          onQuit={() => { setFlashcardItems([]); setMode("welcome"); }}
-        />
-      </div>
-    );
-  }
 
-  if (plan.plan_type === "key_signature_identification") {
-    const keySigConfig: KeySignatureQuizConfig = {
-      keySignatures: plan.key_signatures ?? [],
+    if (mode === "welcome") {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 font-[family-name:var(--font-nunito)]">
+          <Card padding="lg" className="max-w-sm text-center w-full">
+            <div className="text-5xl mb-2">🎵</div>
+            <h1 className="text-3xl font-bold mb-1">
+              Hi {studentName}!
+            </h1>
+            <p className="text-muted mb-6">{plan.name}</p>
+            {lastScore && (
+              <p className="text-sm text-muted mb-4">
+                Last time: {lastScore} ✨
+              </p>
+            )}
+
+            <div className="flex flex-col gap-3">
+              <Button
+                size="xl"
+                onClick={() => startSession("lesson")}
+                className="w-full"
+              >
+                Start Quiz
+              </Button>
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => startSession("free_practice")}
+                className="w-full"
+              >
+                Free Practice
+              </Button>
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => startSession("flashcard")}
+                className="w-full"
+              >
+                Flashcards
+              </Button>
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    if (mode === "flashcard") {
+      if (!flashcardsLoaded) {
+        return (
+          <div className="min-h-screen flex items-center justify-center font-[family-name:var(--font-nunito)]">
+            <div className="text-xl text-muted animate-pulse">Loading flashcards...</div>
+          </div>
+        );
+      }
+      if (flashcardItems.length === 0) {
+        return (
+          <div className="min-h-screen flex items-center justify-center p-2 font-[family-name:var(--font-nunito)]">
+            <Card padding="lg" className="max-w-sm text-center">
+              <div className="text-5xl mb-4">📇</div>
+              <h2 className="text-2xl font-bold mb-2">No Flashcards Available</h2>
+              <p className="text-muted mb-6">
+                Flashcards aren&apos;t available for this lesson type yet.
+              </p>
+              <Button onClick={() => { setFlashcardItems([]); setMode("welcome"); }}>
+                Go Back
+              </Button>
+            </Card>
+          </div>
+        );
+      }
+      return (
+        <div className="min-h-screen flex items-center justify-center p-2">
+          <FlashcardEngine
+            cards={flashcardItems}
+            keySignature={plan.key_signature}
+            onReview={handleFlashcardReview}
+            onQuit={() => { setFlashcardItems([]); setMode("welcome"); }}
+          />
+        </div>
+      );
+    }
+
+    if (plan.plan_type === "key_signature_identification") {
+      const keySigConfig: KeySignatureQuizConfig = {
+        keySignatures: plan.key_signatures ?? [],
+        clef: plan.clef,
+        questionsPerLesson: plan.questions_per_lesson,
+        answerChoices: Math.min(plan.answer_choices, (plan.key_signatures ?? []).length || 4),
+        mode: mode as "lesson" | "free_practice",
+      };
+      return (
+        <div className="min-h-screen flex items-center justify-center p-2">
+          <KeySignatureQuizEngine
+            config={keySigConfig}
+            onAttempt={handleAttempt}
+            onComplete={handleComplete}
+            onQuit={() => setMode("welcome")}
+          />
+        </div>
+      );
+    }
+
+    if (plan.plan_type === "symbol_concepts") {
+      const symbolConfig: SymbolQuizConfig = {
+        symbols: (plan.symbols ?? []) as SymbolItem[],
+        questionsPerLesson: plan.questions_per_lesson,
+        answerChoices: Math.min(plan.answer_choices, (plan.symbols ?? []).length),
+        mode: mode as "lesson" | "free_practice",
+        showHints: plan.show_hints ?? true,
+      };
+      return (
+        <div className="min-h-screen flex items-center justify-center p-2">
+          <SymbolQuizEngine
+            config={symbolConfig}
+            onAttempt={handleAttempt}
+            onComplete={handleComplete}
+            onQuit={() => setMode("welcome")}
+          />
+        </div>
+      );
+    }
+
+    const quizConfig: QuizConfig = {
+      notes: expandNotesWithAccidentals(
+        plan.notes,
+        plan.include_sharps ?? false,
+        plan.include_flats ?? false,
+      ),
       clef: plan.clef,
+      keySignature: "", // Don't show key signature on staff for note-ID (accidentals still on notes)
       questionsPerLesson: plan.questions_per_lesson,
-      answerChoices: Math.min(plan.answer_choices, (plan.key_signatures ?? []).length || 4),
+      answerChoices: plan.answer_choices,
       mode: mode as "lesson" | "free_practice",
     };
+
     return (
       <div className="min-h-screen flex items-center justify-center p-2">
-        <KeySignatureQuizEngine
-          config={keySigConfig}
+        <QuizEngine
+          config={quizConfig}
           onAttempt={handleAttempt}
           onComplete={handleComplete}
           onQuit={() => setMode("welcome")}
@@ -371,49 +437,11 @@ export default function PracticePage() {
       </div>
     );
   }
-
-  if (plan.plan_type === "symbol_concepts") {
-    const symbolConfig: SymbolQuizConfig = {
-      symbols: (plan.symbols ?? []) as SymbolItem[],
-      questionsPerLesson: plan.questions_per_lesson,
-      answerChoices: Math.min(plan.answer_choices, (plan.symbols ?? []).length),
-      mode: mode as "lesson" | "free_practice",
-      showHints: plan.show_hints ?? true,
-    };
-
-    return (
-      <div className="min-h-screen flex items-center justify-center p-2">
-        <SymbolQuizEngine
-          config={symbolConfig}
-          onAttempt={handleAttempt}
-          onComplete={handleComplete}
-          onQuit={() => setMode("welcome")}
-        />
-      </div>
-    );
-  }
-
-  const quizConfig: QuizConfig = {
-    notes: expandNotesWithAccidentals(
-      plan.notes,
-      plan.include_sharps ?? false,
-      plan.include_flats ?? false,
-    ),
-    clef: plan.clef,
-    keySignature: "", // Don't show key signature on staff for note-ID (accidentals still on notes)
-    questionsPerLesson: plan.questions_per_lesson,
-    answerChoices: plan.answer_choices,
-    mode: mode as "lesson" | "free_practice",
-  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-2">
-      <QuizEngine
-        config={quizConfig}
-        onAttempt={handleAttempt}
-        onComplete={handleComplete}
-        onQuit={() => setMode("welcome")}
-      />
-    </div>
+    <>
+      {teacherHomeButton}
+      {renderContent()}
+    </>
   );
 }

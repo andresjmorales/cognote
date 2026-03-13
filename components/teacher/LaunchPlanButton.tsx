@@ -59,7 +59,7 @@ export function LaunchPlanButton({
       }
 
       const data = await res.json();
-      if (newWindow) newWindow.location.href = `/practice/${data.token}`;
+      if (newWindow) newWindow.location.href = `/practice/${data.token}?back=/students/${studentId}`;
       setToast(`Launched "${planName}" for ${studentName}.`);
       setTimeout(() => setToast(null), 4000);
       router.refresh();
