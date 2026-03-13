@@ -123,7 +123,7 @@ export default async function StudentDetailPage({
         </Link>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-bold">{student.name}</h1>
           {student.parent_contact && (
