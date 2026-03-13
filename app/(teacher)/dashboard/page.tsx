@@ -61,17 +61,27 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <div className="text-sm text-muted">Students</div>
-          <div className="text-3xl font-bold">{students?.length ?? 0}</div>
-        </Card>
-        <Card>
-          <div className="text-sm text-muted">Lessons</div>
-          <div className="text-3xl font-bold">{plans?.length ?? 0}</div>
-        </Card>
+        <Link href="/students">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted">Students</div>
+              <span className="text-muted text-xs group-hover:text-primary transition-colors">View all →</span>
+            </div>
+            <div className="text-3xl font-bold mt-1">{students?.length ?? 0}</div>
+          </Card>
+        </Link>
+        <Link href="/lessons">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted">Lessons</div>
+              <span className="text-muted text-xs group-hover:text-primary transition-colors">View all →</span>
+            </div>
+            <div className="text-3xl font-bold mt-1">{plans?.length ?? 0}</div>
+          </Card>
+        </Link>
         <Card>
           <div className="text-sm text-muted">Sessions This Week</div>
-          <div className="text-3xl font-bold">
+          <div className="text-3xl font-bold mt-1">
             {teacherSessions.filter((s: any) => {
               const d = new Date(s.started_at);
               const weekAgo = new Date();
@@ -93,9 +103,9 @@ export default async function DashboardPage() {
               </Link>
             </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="flex flex-col gap-3">
               {students.map((s) => (
-                <Link key={s.id} href={`/students/${s.id}`}>
+                <Link key={s.id} href={`/students/${s.id}`} className="block">
                   <Card
                     padding="sm"
                     className="hover:border-primary/40 transition-colors cursor-pointer"
@@ -115,41 +125,47 @@ export default async function DashboardPage() {
               <p>No practice sessions yet.</p>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {teacherSessions.slice(0, 5).map((s: any) => {
+            <div className="border border-border rounded-lg overflow-hidden">
+              {teacherSessions.slice(0, 5).map((s: any, i: number) => {
                 const pct =
                   s.total_questions > 0
                     ? Math.round((s.total_correct / s.total_questions) * 100)
                     : 0;
+                const studentId = s.student_plans?.students?.id;
                 return (
-                  <Card key={s.id} padding="sm">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-medium">
+                  <div
+                    key={s.id}
+                    className={`flex justify-between items-center px-3 py-2 text-sm${i > 0 ? " border-t border-border" : ""}`}
+                  >
+                    <div>
+                      {studentId ? (
+                        <Link href={`/students/${studentId}`} className="font-medium hover:text-primary transition-colors">
                           {s.student_plans?.students?.name}
-                        </span>
-                        <span className="text-muted text-sm ml-2">
-                          {s.student_plans?.plans?.name}
-                        </span>
-                      </div>
-                      <div className="text-sm">
-                        <span
-                          className={
-                            pct >= 80
-                              ? "text-success"
-                              : pct >= 50
-                                ? "text-warning"
-                                : "text-error"
-                          }
-                        >
-                          {pct}%
-                        </span>
-                        <span className="text-muted ml-2">
-                          {new Date(s.started_at).toLocaleDateString()}
-                        </span>
-                      </div>
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{s.student_plans?.students?.name}</span>
+                      )}
+                      <span className="text-muted ml-2">
+                        {s.student_plans?.plans?.name}
+                      </span>
                     </div>
-                  </Card>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={
+                          pct >= 80
+                            ? "text-success font-medium"
+                            : pct >= 50
+                              ? "text-warning font-medium"
+                              : "text-error font-medium"
+                        }
+                      >
+                        {pct}%
+                      </span>
+                      <span className="text-muted">
+                        {new Date(s.started_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
                 );
               })}
             </div>

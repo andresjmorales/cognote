@@ -43,7 +43,7 @@ export default async function StudentsPage() {
               <p className="text-sm">Add your first student using the form.</p>
             </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="flex flex-col gap-3">
               {students.map((student: any) => {
                 const allSessions = (student.student_plans ?? []).flatMap(
                   (sp: any) => sp.practice_sessions ?? []
@@ -69,7 +69,7 @@ export default async function StudentsPage() {
                     : null;
 
                 return (
-                  <Link key={student.id} href={`/students/${student.id}`}>
+                  <Link key={student.id} href={`/students/${student.id}`} className="block">
                     <Card
                       padding="sm"
                       className="hover:border-primary/40 transition-colors cursor-pointer"
