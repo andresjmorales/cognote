@@ -38,6 +38,9 @@ export function LaunchPlanToStudentButton({
   async function handleLaunch(planId: string, planName: string) {
     setLaunching(true);
 
+    // Open the window synchronously before any async work so Safari doesn't block it as a popup
+    const newWindow = window.open("", "_blank");
+
     try {
       const res = await fetch(`/api/lessons/${planId}/assign`, {
         method: "POST",
@@ -47,6 +50,7 @@ export function LaunchPlanToStudentButton({
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
+        newWindow?.close();
         setToast(err?.error ?? "Failed to launch lesson");
         setTimeout(() => setToast(null), 4000);
         setLaunching(false);
@@ -55,11 +59,12 @@ export function LaunchPlanToStudentButton({
       }
 
       const data = await res.json();
-      window.open(`/practice/${data.token}`, "_blank", "noopener,noreferrer");
+      if (newWindow) newWindow.location.href = `/practice/${data.token}`;
       setToast(`Launched "${planName}" for ${studentName}.`);
       setTimeout(() => setToast(null), 4000);
       router.refresh();
     } catch {
+      newWindow?.close();
       setToast("Failed to launch lesson");
       setTimeout(() => setToast(null), 4000);
     }
