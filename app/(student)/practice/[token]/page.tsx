@@ -195,6 +195,7 @@ export default function PracticePage() {
       }
 
       setStartingSession(true);
+      setSessionId(null);
       try {
         const res = await fetch(`/api/practice/${token}/session`, {
           method: "POST",
