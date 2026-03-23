@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { StaffRenderer } from "./StaffRenderer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -67,16 +67,21 @@ export function FlashcardEngine({
 }: FlashcardEngineProps) {
   const [queue, setQueue] = useState<FlashcardItem[]>(() => shuffle(initialCards));
   const [flipped, setFlipped] = useState(false);
-  const [reviewed, setReviewed] = useState(0);
   const [graduated, setGraduated] = useState(0);
   const total = initialCards.length;
 
   const vexKeySig = KEY_SIGNATURES[keySignature] ?? "C";
   const current = queue[0] ?? null;
 
+  const ratingLockRef = useRef(false);
+  if (!flipped) {
+    ratingLockRef.current = false;
+  }
+
   const handleRating = useCallback(
     (rating: SRSRating) => {
-      if (!current) return;
+      if (!current || ratingLockRef.current) return;
+      ratingLockRef.current = true;
 
       const newState = nextReviewState(current.state, rating);
       onReview?.({
@@ -89,20 +94,19 @@ export function FlashcardEngine({
         rating,
         newState,
       });
-      setReviewed((r) => r + 1);
       setFlipped(false);
+
+      if (rating >= 3) {
+        setGraduated((g) => g + 1);
+      }
 
       setQueue((prev) => {
         const rest = prev.slice(1);
 
         if (rating >= 3) {
-          // Card graduates — don't put it back
-          setGraduated((g) => g + 1);
           return rest;
         }
 
-        // Card failed — reinsert at a random position in the back half
-        // so the student doesn't see it again immediately
         const updated = { ...current, state: newState };
         const minPos = Math.max(1, Math.floor(rest.length / 2));
         const insertAt =
@@ -121,15 +125,10 @@ export function FlashcardEngine({
     return (
       <Card padding="lg" className="max-w-lg mx-auto text-center font-[family-name:var(--font-nunito)]">
         <div className="text-5xl mb-4">🎶</div>
-        <h2 className="text-2xl font-bold mb-2">All done!</h2>
-        <p className="text-muted mb-2">
-          {graduated} card{graduated !== 1 && "s"} reviewed in {reviewed} flip{reviewed !== 1 && "s"}.
+        <h2 className="text-3xl font-bold mb-2">All done!</h2>
+        <p className="text-lg text-muted mb-6">
+          You finished all {total} card{total !== 1 ? "s" : ""}!
         </p>
-        {reviewed > graduated && (
-          <p className="text-sm text-muted mb-4">
-            You repeated {reviewed - graduated} card{reviewed - graduated !== 1 && "s"} until you got them.
-          </p>
-        )}
         {onQuit && (
           <Button onClick={onQuit} variant="secondary">
             Go Back
@@ -141,11 +140,8 @@ export function FlashcardEngine({
 
   return (
     <div className="max-w-lg w-full mx-auto font-[family-name:var(--font-nunito)] flex flex-col">
-      <div className="flex justify-between items-center text-sm text-muted mb-4">
-        <span>Reviewed: {reviewed}</span>
-        <span>
-          {graduated}/{total} done
-        </span>
+      <div className="text-center text-sm text-muted mb-2">
+        {graduated} of {total}
       </div>
 
       <div className="h-2 bg-surface-dim rounded-full overflow-hidden mb-4">

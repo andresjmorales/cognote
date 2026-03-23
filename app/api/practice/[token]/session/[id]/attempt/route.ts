@@ -32,26 +32,22 @@ export async function POST(
     return NextResponse.json({ error: "Failed to record attempt" }, { status: 500 });
   }
 
-  // Fire-and-forget: update session tallies without blocking the response
-  Promise.resolve(
-    supabase
+  const { data: session } = await supabase
+    .from("practice_sessions")
+    .select("total_correct, total_incorrect, total_questions")
+    .eq("id", sessionId)
+    .single();
+
+  if (session) {
+    await supabase
       .from("practice_sessions")
-      .select("total_correct, total_incorrect, total_questions")
-      .eq("id", sessionId)
-      .single()
-  )
-    .then(({ data: session }) => {
-      if (!session) return;
-      return supabase
-        .from("practice_sessions")
-        .update({
-          total_correct: session.total_correct + (isCorrect ? 1 : 0),
-          total_incorrect: session.total_incorrect + (isCorrect ? 0 : 1),
-          total_questions: session.total_questions + 1,
-        })
-        .eq("id", sessionId);
-    })
-    .catch((err) => console.error("Failed to update session tallies:", err));
+      .update({
+        total_correct: session.total_correct + (isCorrect ? 1 : 0),
+        total_incorrect: session.total_incorrect + (isCorrect ? 0 : 1),
+        total_questions: session.total_questions + 1,
+      })
+      .eq("id", sessionId);
+  }
 
   return NextResponse.json({ ok: true });
 }

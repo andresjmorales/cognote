@@ -34,8 +34,7 @@ export default function LandingPage() {
           </h1>
           <p className="text-lg text-muted max-w-xl mx-auto mb-6">
             CogNote helps piano teachers assign and track note memorization
-            exercises. Students practice through fun quizzes and flashcards —
-            no login required.
+            exercises. Students practice through fun quizzes and flashcards.
           </p>
           <div className="flex gap-3 justify-center">
             <Link href="/login">
