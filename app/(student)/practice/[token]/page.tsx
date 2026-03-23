@@ -58,6 +58,7 @@ export default function PracticePage() {
   const [error, setError] = useState<string | null>(null);
   const [flashcardItems, setFlashcardItems] = useState<FlashcardItem[]>([]);
   const [flashcardsLoaded, setFlashcardsLoaded] = useState(false);
+  const [startingSession, setStartingSession] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export default function PracticePage() {
   }, [token]);
 
   const startSession = useCallback(
-    (m: "lesson" | "free_practice" | "flashcard") => {
+    async (m: "lesson" | "free_practice" | "flashcard") => {
       if (m === "flashcard") {
         setMode("flashcard");
         setFlashcardsLoaded(false);
@@ -193,17 +194,23 @@ export default function PracticePage() {
         return;
       }
 
+      setStartingSession(true);
+      setSessionId(null);
+      try {
+        const res = await fetch(`/api/practice/${token}/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: m }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSessionId(data.sessionId);
+        }
+      } catch {
+        // Session creation failed — quiz still works locally, attempts won't be logged
+      }
+      setStartingSession(false);
       setMode(m);
-      fetch(`/api/practice/${token}/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: m }),
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) setSessionId(data.sessionId);
-        })
-        .catch(() => {});
     },
     [token, plan]
   );
@@ -309,14 +316,16 @@ export default function PracticePage() {
               <Button
                 size="xl"
                 onClick={() => startSession("lesson")}
+                disabled={startingSession}
                 className="w-full"
               >
-                Start Quiz
+                {startingSession ? "Loading..." : "Start Quiz"}
               </Button>
               <Button
                 size="lg"
                 variant="secondary"
                 onClick={() => startSession("free_practice")}
+                disabled={startingSession}
                 className="w-full"
               >
                 Free Practice
@@ -325,6 +334,7 @@ export default function PracticePage() {
                 size="lg"
                 variant="secondary"
                 onClick={() => startSession("flashcard")}
+                disabled={startingSession}
                 className="w-full"
               >
                 Flashcards
