@@ -10,7 +10,8 @@ CogNote is an open-source web app that helps piano teachers assign and track mus
 
 ### For Teachers
 - **Student management** — Add students, track their practice history, and see per-note accuracy breakdowns
-- **Customizable lesson plans** — Two plan types: note identification (clef, key signature, specific notes) and musical symbols & concepts (dynamics, tempo, articulation, note values, and more)
+- **Customizable lesson plans** — Three plan types: note identification (clef, specific notes from C2 up to C7), key signature identification, and musical symbols & concepts (dynamics, tempo, articulation, note values, and more)
+- **Timed quizzes** — Optional per-question time limit (5–60 seconds) on any plan; applies to quiz mode only, and unanswered questions count as incorrect
 - **Reusable templates** — Create lesson plan templates and assign them to multiple students with one click
 - **Share via URL** — Each student gets a unique practice link; copy it to clipboard and send to parents
 - **Analytics dashboard** — See which notes students struggle with, session history, accuracy trends
@@ -246,6 +247,14 @@ npx supabase db push
 
 `db push` applies migrations only — it does **not** run `seed.sql`. Your production database will have the schema but no test data.
 
+**Automated migrations (recommended):** After the initial setup, `.github/workflows/deploy-migrations.yml` runs `supabase db push` automatically whenever a change to `supabase/migrations/` lands on `main`. It only applies migrations not yet recorded in the remote's migration history (tracked in `supabase_migrations.schema_migrations`). Add these repository secrets under **Settings → Secrets and variables → Actions**:
+
+| Secret | Where to get it |
+|--------|-----------------|
+| `SUPABASE_ACCESS_TOKEN` | [supabase.com](https://supabase.com/dashboard/account/tokens) → Account → Access Tokens → Generate new token |
+| `SUPABASE_PROJECT_ID` | Supabase Dashboard → Project Settings → General → Project ID (the ~20-char "ref") |
+| `SUPABASE_DB_PASSWORD` | Supabase Dashboard → Project Settings → Database (the password you set at project creation; can be reset there) |
+
 ### 3. Configure Supabase Auth redirects
 
 If you use email confirmation, Supabase must know where to redirect users after they click the confirmation link:
@@ -294,6 +303,14 @@ npx supabase migration new <description>
 # Edit the generated SQL file in supabase/migrations/
 npx supabase db reset  # Apply it
 ```
+
+**Important:** Since May 2026, Supabase no longer auto-exposes new `public` tables to the Data API ([changelog](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically)). Any migration that creates a table must include an explicit grant alongside its RLS policies, or the app will get `permission denied` (42501) errors:
+
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE your_table TO anon, authenticated, service_role;
+```
+
+RLS policies still control which rows each role can actually touch — the grant only makes the table reachable. See `supabase/migrations/20260702010000_data_api_grants.sql`.
 
 ### Regenerating musical symbol SVGs
 

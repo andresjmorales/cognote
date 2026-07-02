@@ -36,6 +36,7 @@ interface PlanData {
   show_hints: boolean;
   key_sig_scale_mode?: "major" | "minor" | "both";
   key_signatures?: string[];
+  time_limit_seconds?: number;
 }
 
 export type { PlanData };
@@ -170,6 +171,7 @@ export function PlanPreviewPlayer({ plan }: { plan: PlanData }) {
       questionsPerLesson: plan.questions_per_lesson,
       answerChoices: Math.min(plan.answer_choices, (plan.key_signatures ?? []).length || 4),
       mode,
+      timeLimitSeconds: plan.time_limit_seconds ?? 0,
     };
 
     return (
@@ -191,6 +193,7 @@ export function PlanPreviewPlayer({ plan }: { plan: PlanData }) {
       answerChoices: Math.min(plan.answer_choices, (plan.symbols ?? []).length),
       mode,
       showHints: plan.show_hints ?? true,
+      timeLimitSeconds: plan.time_limit_seconds ?? 0,
     };
 
     return (
@@ -216,6 +219,7 @@ export function PlanPreviewPlayer({ plan }: { plan: PlanData }) {
     questionsPerLesson: plan.questions_per_lesson,
     answerChoices: plan.answer_choices,
     mode,
+    timeLimitSeconds: plan.time_limit_seconds ?? 0,
   };
 
   return (

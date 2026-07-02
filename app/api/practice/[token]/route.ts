@@ -25,7 +25,8 @@ export async function GET(
         plans (
           name, clef, key_signature, include_sharps, include_flats,
           measures_shown, questions_per_lesson, answer_choices, notes,
-          plan_type, symbols, show_hints, key_sig_scale_mode, key_signatures
+          plan_type, symbols, show_hints, key_sig_scale_mode, key_signatures,
+          time_limit_seconds
         )
       `
       )
@@ -52,7 +53,8 @@ export async function GET(
           plans (
             name, clef, key_signature, include_sharps, include_flats,
             measures_shown, questions_per_lesson, answer_choices, notes,
-            plan_type, symbols, show_hints, key_sig_scale_mode, key_signatures
+            plan_type, symbols, show_hints, key_sig_scale_mode, key_signatures,
+            time_limit_seconds
           )
         `
         )

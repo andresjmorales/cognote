@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StaffRenderer } from "./StaffRenderer";
+import { QuestionTimer, TIMEOUT_ANSWER } from "./QuestionTimer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -20,6 +21,8 @@ export interface QuizConfig {
   questionsPerLesson: number;
   answerChoices: number;
   mode: "lesson" | "free_practice";
+  /** Seconds allowed per question in lesson mode; 0/undefined = untimed. */
+  timeLimitSeconds?: number;
 }
 
 export interface AttemptResult {
@@ -46,9 +49,10 @@ export function QuizEngine({
   onComplete,
   onQuit,
 }: QuizEngineProps) {
-  const { notes, clef, keySignature, questionsPerLesson, answerChoices, mode } =
+  const { notes, clef, keySignature, questionsPerLesson, answerChoices, mode, timeLimitSeconds } =
     config;
   const isLesson = mode === "lesson";
+  const isTimed = isLesson && (timeLimitSeconds ?? 0) > 0;
 
   const [questionIndex, setQuestionIndex] = useState(0);
   const [results, setResults] = useState<AttemptResult[]>([]);
@@ -196,6 +200,15 @@ export function QuizEngine({
         />
       )}
 
+      {isTimed && (
+        <QuestionTimer
+          key={questionIndex}
+          seconds={timeLimitSeconds!}
+          paused={phase !== "playing"}
+          onExpire={() => handleAnswer(TIMEOUT_ANSWER)}
+        />
+      )}
+
       <div className="flex justify-between items-center text-sm mb-3">
         <span className="text-success font-semibold">✓ {correctCount}</span>
         <span className="text-error font-semibold">✗ {incorrectCount}</span>
@@ -208,6 +221,12 @@ export function QuizEngine({
           keySignature={vexKeySignature}
         />
       </Card>
+
+      {phase === "feedback" && selectedAnswer === TIMEOUT_ANSWER && (
+        <p className="text-center text-error font-semibold mb-3">
+          ⏱️ Time&apos;s up! The answer was {displayNoteName(correctAnswer)}.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {choices.map((choice) => {

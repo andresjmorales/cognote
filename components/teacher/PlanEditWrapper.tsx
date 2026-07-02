@@ -25,6 +25,7 @@ interface PlanEditWrapperProps {
     show_hints: boolean;
     key_sig_scale_mode?: KeySigScaleMode;
     key_signatures?: string[];
+    time_limit_seconds?: number;
   };
   actionSlot?: React.ReactNode;
   children: React.ReactNode;
