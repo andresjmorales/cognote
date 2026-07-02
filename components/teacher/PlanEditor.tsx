@@ -22,6 +22,9 @@ import {
 
 const CLEF_OPTIONS = ["treble", "bass", "both"] as const;
 const DIFFICULTY_OPTIONS = ["beginner", "intermediate", "advanced"] as const;
+/** 0 = untimed; other values are seconds per question (quiz mode only) */
+const TIME_LIMIT_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60] as const;
+const UNTIMED = 0;
 const PLAN_TYPE_OPTIONS = [
   { value: "note_identification", label: "Note Identification" },
   { value: "key_signature_identification", label: "Key Signature Identification" },
@@ -29,9 +32,12 @@ const PLAN_TYPE_OPTIONS = [
 ] as const;
 
 const ALL_NOTES = [
+  "C2", "D2", "E2", "F2", "G2", "A2", "B2",
   "C3", "D3", "E3", "F3", "G3", "A3", "B3",
   "C4", "D4", "E4", "F4", "G4", "A4", "B4",
-  "C5", "D5", "E5", "F5", "G5",
+  "C5", "D5", "E5", "F5", "G5", "A5", "B5",
+  "C6", "D6", "E6", "F6", "G6", "A6", "B6",
+  "C7",
 ];
 
 interface PlanEditorProps {
@@ -55,6 +61,7 @@ interface PlanEditorProps {
     show_hints: boolean;
     key_sig_scale_mode?: KeySigScaleMode;
     key_signatures?: string[];
+    time_limit_seconds?: number;
   };
 }
 
@@ -81,6 +88,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
     initialData?.symbols?.map((s) => s.id) ?? []
   );
   const [showHints, setShowHints] = useState(initialData?.show_hints ?? true);
+  const [timeLimitSeconds, setTimeLimitSeconds] = useState(initialData?.time_limit_seconds ?? UNTIMED);
   const [keySigScaleMode, setKeySigScaleMode] = useState<KeySigScaleMode>(
     (initialData?.key_sig_scale_mode as KeySigScaleMode) ?? "major"
   );
@@ -191,6 +199,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
       difficulty,
       teacher_notes: teacherNotes.trim(),
       show_hints: planType === "symbol_concepts" ? showHints : true,
+      time_limit_seconds: timeLimitSeconds,
     };
 
     let result;
@@ -594,6 +603,23 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
               <option value={4}>4</option>
               <option value={6}>6</option>
             </select>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm text-muted mb-1">Time Limit per Question</label>
+            <select
+              value={timeLimitSeconds}
+              onChange={(e) => setTimeLimitSeconds(parseInt(e.target.value))}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              {TIME_LIMIT_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s === UNTIMED ? "No limit (untimed)" : `${s} seconds`}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted mt-1">
+              Applies to Quiz mode only. If time runs out, the question counts as incorrect. Free Practice and Flashcards are never timed.
+            </p>
           </div>
           {/* Measures Shown hidden — StaffRenderer currently only supports single-measure display */}
           {!isNoteMode && (

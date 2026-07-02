@@ -1,0 +1,43 @@
+name: Deploy Database Migrations
+
+# Pushes new Supabase migrations to the production database whenever a change
+# to supabase/migrations/ lands on main (e.g. via a merged PR).
+#
+# Like Liquibase, `supabase db push` is incremental: Supabase records applied
+# migrations in the remote `supabase_migrations.schema_migrations` table and
+# only runs files from supabase/migrations/ that aren't recorded yet, in
+# timestamp order.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN     Personal access token (supabase.com → Account → Access Tokens)
+#   SUPABASE_PROJECT_ID       Project ref (Dashboard → Project Settings → General)
+#   SUPABASE_DB_PASSWORD      Database password (Dashboard → Project Settings → Database)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Push migrations
+        run: supabase db push

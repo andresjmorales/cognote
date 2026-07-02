@@ -84,6 +84,7 @@ export default async function PlanDetailPage({
         show_hints: plan.show_hints ?? true,
         key_sig_scale_mode: plan.key_sig_scale_mode ?? "major",
         key_signatures: keySignatures,
+        time_limit_seconds: plan.time_limit_seconds ?? 0,
       }}
       actionSlot={
         <>
@@ -150,6 +151,12 @@ export default async function PlanDetailPage({
           <Card padding="sm">
             <div className="text-xs text-muted">Answer Choices</div>
             <div className="font-semibold">{plan.answer_choices}</div>
+          </Card>
+          <Card padding="sm">
+            <div className="text-xs text-muted">Time Limit per Question</div>
+            <div className="font-semibold">
+              {plan.time_limit_seconds ? `${plan.time_limit_seconds} seconds` : "Untimed"}
+            </div>
           </Card>
         </div>
 

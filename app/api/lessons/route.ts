@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       questions_per_lesson: body.questionsPerLesson ?? 10,
       answer_choices: body.answerChoices ?? 4,
       notes: body.notes ?? [],
+      time_limit_seconds: body.timeLimitSeconds ?? 0,
     })
     .select()
     .single();

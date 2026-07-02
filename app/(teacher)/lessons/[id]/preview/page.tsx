@@ -41,7 +41,8 @@ export default async function LessonPreviewPage({
       `
       name, clef, key_signature, include_sharps, include_flats,
       questions_per_lesson, answer_choices, notes, plan_type,
-      symbols, show_hints, key_sig_scale_mode, key_signatures
+      symbols, show_hints, key_sig_scale_mode, key_signatures,
+      time_limit_seconds
     `
     )
     .eq("id", id)
