@@ -45,9 +45,20 @@ describe("encryptToken / decryptToken", () => {
   it("rejects tampered tokens (GCM auth)", () => {
     vi.stubEnv("TOKEN_ENCRYPTION_KEY", TEST_KEY);
     const token = encryptToken(payload);
-    const tampered =
-      token.slice(0, -1) + (token.endsWith("A") ? "B" : "A");
-    expect(() => decryptToken(tampered)).toThrow();
+    // Flip one ciphertext bit in the decoded bytes. (Mutating the base64url
+    // string instead is flaky: the final character carries padding bits that
+    // decode to nothing, so a character swap can leave the bytes unchanged.)
+    const raw = Buffer.from(token, "base64url");
+    raw[raw.length - 1] ^= 0x01;
+    expect(() => decryptToken(raw.toString("base64url"))).toThrow();
+  });
+
+  it("rejects a tampered auth tag", () => {
+    vi.stubEnv("TOKEN_ENCRYPTION_KEY", TEST_KEY);
+    const token = encryptToken(payload);
+    const raw = Buffer.from(token, "base64url");
+    raw[12] ^= 0x01; // first auth-tag byte (after the 12-byte IV)
+    expect(() => decryptToken(raw.toString("base64url"))).toThrow();
   });
 
   it("rejects tokens encrypted with a different key", () => {
