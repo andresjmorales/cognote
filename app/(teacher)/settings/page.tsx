@@ -20,8 +20,9 @@ export default async function SettingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Studio Settings</h1>
         <p className="text-muted text-sm mt-1">
-          Your studio, your rules — everything here is a setting, not a
-          hardcoded policy.
+          Your studio name, timezone, lesson lengths, and cancellation and
+          make-up policies. These settings drive scheduling, make-up credits,
+          and what families see on their portal.
         </p>
       </div>
 

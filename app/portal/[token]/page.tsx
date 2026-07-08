@@ -27,6 +27,38 @@ interface PortalLesson {
   attendance: { status: AttendanceStatus }[] | { status: AttendanceStatus } | null;
 }
 
+function PortalLessonCard({
+  lesson,
+  timezone,
+}: {
+  lesson: PortalLesson;
+  timezone: string;
+}) {
+  const status = oneToOne(lesson.attendance)?.status;
+  const cancelled = status === "teacher_cancel" || status === "student_cancel";
+  return (
+    <Card padding="sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className={`font-medium ${cancelled ? "line-through text-muted" : ""}`}>
+            {formatLessonDate(lesson.starts_at, timezone)} ·{" "}
+            {formatLessonTime(lesson.starts_at, timezone)}
+          </div>
+          <div className="text-xs text-muted">
+            {lesson.duration_minutes} min
+            {lesson.makeup_for && " · make-up"}
+          </div>
+        </div>
+        {cancelled && status && (
+          <span className="text-xs text-error font-medium">
+            {ATTENDANCE_LABELS[status]}
+          </span>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export default async function PortalPage({
   params,
 }: {
@@ -160,35 +192,40 @@ export default async function PortalPage({
           </div>
           {lessons.length === 0 ? (
             <Card className="text-center text-muted">No lessons scheduled.</Card>
-          ) : (
-            <div className="space-y-2">
-              {lessons.map((lesson) => {
-                const status = oneToOne(lesson.attendance)?.status;
-                const cancelled =
-                  status === "teacher_cancel" || status === "student_cancel";
+          ) : students.length > 1 ? (
+            <div className="space-y-5">
+              {students.map((student) => {
+                const studentLessons = lessons.filter(
+                  (lesson) => lesson.student_id === student.id
+                );
+                if (studentLessons.length === 0) return null;
                 return (
-                  <Card key={lesson.id} padding="sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className={`font-medium ${cancelled ? "line-through text-muted" : ""}`}>
-                          {formatLessonDate(lesson.starts_at, policy.timezone)} ·{" "}
-                          {formatLessonTime(lesson.starts_at, policy.timezone)}
-                        </div>
-                        <div className="text-xs text-muted">
-                          {nameById.get(lesson.student_id) ?? "Student"} ·{" "}
-                          {lesson.duration_minutes} min
-                          {lesson.makeup_for && " · make-up"}
-                        </div>
-                      </div>
-                      {cancelled && status && (
-                        <span className="text-xs text-error font-medium">
-                          {ATTENDANCE_LABELS[status]}
-                        </span>
-                      )}
+                  <div key={student.id}>
+                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wide mb-2">
+                      {student.name}
+                    </h3>
+                    <div className="space-y-2">
+                      {studentLessons.map((lesson) => (
+                        <PortalLessonCard
+                          key={lesson.id}
+                          lesson={lesson}
+                          timezone={policy.timezone}
+                        />
+                      ))}
                     </div>
-                  </Card>
+                  </div>
                 );
               })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {lessons.map((lesson) => (
+                <PortalLessonCard
+                  key={lesson.id}
+                  lesson={lesson}
+                  timezone={policy.timezone}
+                />
+              ))}
             </div>
           )}
           <p className="text-xs text-muted mt-2">

@@ -29,8 +29,9 @@ export default async function FamiliesPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Families</h1>
         <p className="text-muted text-sm mt-1">
-          Each family gets one private portal link with practice links and the lesson
-          schedule — parents never need an account. Siblings share a family.
+          Each family gets a private portal link with practice links, the lesson
+          schedule, and your shared notes. No parent accounts needed, and
+          siblings share one family.
         </p>
       </div>
       <FamiliesManager guardians={guardians ?? []} students={students ?? []} />

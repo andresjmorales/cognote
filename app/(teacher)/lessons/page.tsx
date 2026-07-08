@@ -78,9 +78,16 @@ export default async function PlansPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Lessons</h1>
-        <Link href="/lessons/new">
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Lessons</h1>
+          <p className="text-muted text-sm mt-1">
+            Practice lessons students open by link. Each one includes a quiz,
+            flashcards, and free practice built from the notes and symbols you
+            pick.
+          </p>
+        </div>
+        <Link href="/lessons/new" className="shrink-0">
           <Button size="sm">Create Lesson</Button>
         </Link>
       </div>

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "CogNote - %s",
   },
   description:
-    "Music note memorization for piano students — quiz, flashcards, and spaced repetition",
+    "Open-source studio management for private music teachers — scheduling, attendance, family portals, and progress tracking, with quizzes, flashcards, and spaced repetition built in",
   icons: {
     icon: "/icon/cognote.svg",
     apple: "/icon/cognote.svg",
