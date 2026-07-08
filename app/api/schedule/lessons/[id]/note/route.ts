@@ -2,17 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { getPolicy } from "@/lib/server/scheduling";
+import { requestOrigin } from "@/lib/server/http";
 import { formatLessonTime, formatLessonDate } from "@/lib/schedule";
-
-/**
- * Absolute origin for links in outbound email, honoring reverse-proxy
- * headers (Vercel and most self-host setups set x-forwarded-*).
- */
-function requestOrigin(req: NextRequest): string {
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  const proto = req.headers.get("x-forwarded-proto") ?? "https";
-  return host ? `${proto}://${host}` : req.nextUrl.origin;
-}
 
 /**
  * Save the per-lesson note. Emailing the family is an explicit action

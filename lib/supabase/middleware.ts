@@ -37,6 +37,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/families") ||
     request.nextUrl.pathname.startsWith("/schedule") ||
     request.nextUrl.pathname.startsWith("/settings") ||
+    request.nextUrl.pathname.startsWith("/account") ||
     request.nextUrl.pathname.startsWith("/help");
 
   if (!user && isTeacherRoute) {

@@ -221,6 +221,37 @@ export default async function PortalPage({
             </div>
           )}
         </section>
+
+        {/* Studio info & policies */}
+        {(policy.studio_info || policy.studio_website || policy.studio_contact) && (
+          <section>
+            <h2 className="text-lg font-semibold mb-3">
+              About {policy.studio_name || "the Studio"}
+            </h2>
+            <Card padding="sm">
+              {policy.studio_info && (
+                <p className="text-sm whitespace-pre-wrap mb-3">
+                  {policy.studio_info}
+                </p>
+              )}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm">
+                {policy.studio_website && (
+                  <a
+                    href={policy.studio_website}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Visit our website
+                  </a>
+                )}
+                {policy.studio_contact && (
+                  <span className="text-muted">{policy.studio_contact}</span>
+                )}
+              </div>
+            </Card>
+          </section>
+        )}
       </main>
     </div>
   );

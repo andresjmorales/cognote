@@ -13,8 +13,9 @@ CogNote is an open-source web app that helps piano teachers assign and track mus
 - **Customizable lesson plans** — Three plan types: note identification (clef, specific notes from C2 up to C7), key signature identification, and musical symbols & concepts (dynamics, tempo, articulation, note values, and more)
 - **Timed quizzes** — Optional per-question time limit (5–60 seconds) on any plan; applies to quiz mode only, and unanswered questions count as incorrect
 - **Reusable templates** — Create lesson plan templates and assign them to multiple students with one click
-- **Share via URL** — Each student gets a unique practice link; copy it to clipboard and send to parents
+- **Assign via email or link** — Assigning a lesson emails the practice link to the student's family (with their portal link); if no family email is on file, it falls back to the native share sheet / clipboard so you can send it over any messenger
 - **Analytics dashboard** — See which notes students struggle with, session history, accuracy trends
+- **Skills & progress tracking** — Rate each student 1–5 across teacher-defined skill dimensions (Musicianship, Rhythm, Sight Reading, ...); see a radar chart of current levels and trend lines over time, plus an attendance summary and an optional level anchor (RCM, Faber)
 
 ### For Students
 - **Quiz mode** — Multiple-choice note identification or symbol/concept questions with immediate feedback and score tracking
@@ -54,6 +55,7 @@ See [notes/spaced-repetition.md](notes/spaced-repetition.md) for full algorithm 
 | Language | TypeScript |
 | Styling | Tailwind CSS 4 |
 | Music Notation | VexFlow 5 |
+| Charts | Recharts |
 | Database | [Supabase](https://supabase.com/) (PostgreSQL + Auth + Row Level Security) |
 | Hosting | Vercel (recommended) |
 
@@ -211,11 +213,14 @@ Migrations live in `supabase/migrations/` and are applied with `npx supabase db 
 | PUT | `/api/students/[id]` | Update student |
 | DELETE | `/api/students/[id]` | Remove student |
 | GET | `/api/students/[id]/analytics` | Student analytics |
-| GET | `/api/plans` | List teacher's lesson plans |
-| POST | `/api/plans` | Create lesson plan |
-| PUT | `/api/plans/[id]` | Update lesson plan |
-| DELETE | `/api/plans/[id]` | Remove lesson plan |
-| POST | `/api/plans/[id]/assign` | Assign lesson plan to student, get practice URL |
+| POST | `/api/students/[id]/skills` | Record skill ratings (1–5 per dimension) |
+| GET | `/api/lessons` | List teacher's lesson plans |
+| POST | `/api/lessons` | Create lesson plan |
+| PUT | `/api/lessons/[id]` | Update lesson plan |
+| DELETE | `/api/lessons/[id]` | Remove lesson plan |
+| POST | `/api/lessons/[id]/assign` | Assign lesson plan to student; emails the family when an email is on file, otherwise returns the practice URL for share/copy |
+| GET/POST | `/api/skills/dimensions` | List (lazily seeding defaults) / create skill dimensions |
+| PUT/DELETE | `/api/skills/dimensions/[id]` | Rename / delete a skill dimension |
 | GET | `/api/dashboard/summary` | Dashboard metrics |
 
 ### Student-side (token-based, no auth)
@@ -257,14 +262,14 @@ npx supabase db push
 
 ### 3. Configure Supabase Auth redirects
 
-If you use email confirmation, Supabase must know where to redirect users after they click the confirmation link:
+Supabase must know where to redirect users after they click links in auth emails (signup confirmation, **password reset**, and **email change** — the latter two land on `/auth/confirm`):
 
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard) → your project → **Authentication** → **URL Configuration**
 2. Set **Site URL** to your production URL (e.g. `https://your-app.vercel.app`)
 3. Add your production URL to **Redirect URLs** (e.g. `https://your-app.vercel.app/**`)
 4. To support both local and production, add both: `http://localhost:3000/**` and `https://your-app.vercel.app/**`
 
-Without this, confirmation links will redirect to localhost.
+Without this, confirmation and password-reset links will redirect to localhost. Note: password reset links must be opened in the same browser the reset was requested from (PKCE flow).
 
 ### 4. Deploy to Vercel
 
@@ -310,6 +315,18 @@ The landing page "Try a Lesson" button links to `/try`, a standalone practice pa
 4. Copy `.env.example` to `.env.local` and fill in the local credentials
 5. Run `npm run dev`
 6. Full stack is running locally — no cloud accounts needed
+
+### Testing
+
+```bash
+npm test            # unit tests (Vitest), runs in under a second
+npm run test:watch  # watch mode
+npm run typecheck   # tsc --noEmit
+```
+
+Unit tests are colocated with the code they cover (`lib/*.test.ts`) and test pure logic only — no database, browser, or network. The highest-value suites guard the timezone/DST scheduling math (`lib/schedule.test.ts`), the SM-2 algorithm, token encryption, email composition, and quiz answer generation. CI (`.github/workflows/ci.yml`) runs the typecheck and unit tests on every push and PR.
+
+When adding logic with real decision-making (date math, policy derivations, anything that computes money once billing lands), put it in a pure function under `lib/` and test it there — API routes should stay thin wrappers.
 
 ### Adding a new migration
 

@@ -38,7 +38,8 @@ export interface SendEmailResult {
   error?: string;
 }
 
-function fromHeader(fromName?: string): string {
+/** Exported for tests. */
+export function fromHeader(fromName?: string): string {
   const address =
     process.env.EMAIL_FROM_ADDRESS ?? "notifications@cognote.studio";
   const name = fromName?.trim() || "CogNote Studio";
@@ -55,8 +56,9 @@ function escapeHtml(s: string): string {
 }
 
 /** Append the family-portal footer to both bodies (EMAIL_SETUP/ROADMAP: every
- * parent/student email links back to the family's personal portal). */
-function withPortalFooter(args: SendEmailArgs): SendEmailArgs {
+ * parent/student email links back to the family's personal portal).
+ * Exported for tests. */
+export function withPortalFooter(args: SendEmailArgs): SendEmailArgs {
   if (!args.portalUrl) return args;
 
   const text = `${args.text}\n\n—\nYour family portal — schedule, practice links, and lesson notes:\n${args.portalUrl}`;
