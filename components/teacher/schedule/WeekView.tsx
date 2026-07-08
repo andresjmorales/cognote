@@ -44,18 +44,25 @@ export function WeekView({
   timezone,
   lessons,
   students,
+  durationOptions,
 }: {
   weekStart: string;
   today: string;
   timezone: string;
   lessons: WeekLesson[];
   students: { id: string; name: string }[];
+  durationOptions: number[];
 }) {
   const router = useRouter();
   const [openLesson, setOpenLesson] = useState<WeekLesson | null>(null);
   const [showAdHoc, setShowAdHoc] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Optimistic attendance overrides so cards update before the server
+  // round-trip finishes (undefined = no override; null = cleared)
+  const [statusOverrides, setStatusOverrides] = useState<
+    Record<string, AttendanceStatus | null>
+  >({});
 
   function notify(message: string) {
     setToast(message);
@@ -63,6 +70,9 @@ export function WeekView({
   }
 
   async function markAttendance(lesson: WeekLesson, status: AttendanceStatus | null) {
+    const hadOverride = lesson.id in statusOverrides;
+    const previous = statusOverrides[lesson.id];
+    setStatusOverrides((prev) => ({ ...prev, [lesson.id]: status }));
     setBusy(true);
     const res = await fetch(`/api/schedule/lessons/${lesson.id}/attendance`, {
       method: "PUT",
@@ -71,12 +81,23 @@ export function WeekView({
     });
     setBusy(false);
     if (res.ok) {
-      setOpenLesson(null);
       router.refresh();
     } else {
+      setStatusOverrides((prev) => {
+        const next = { ...prev };
+        if (hadOverride) next[lesson.id] = previous;
+        else delete next[lesson.id];
+        return next;
+      });
       const data = await res.json().catch(() => ({}));
       notify(data.error ?? "Failed to save attendance");
     }
+  }
+
+  function effectiveStatus(lesson: WeekLesson): AttendanceStatus | null {
+    return lesson.id in statusOverrides
+      ? statusOverrides[lesson.id]
+      : (lesson.attendance?.status ?? null);
   }
 
   async function deleteAdHoc(lesson: WeekLesson) {
@@ -149,36 +170,39 @@ export function WeekView({
                 {DAY_LABELS[i]} {fmtDate(date)}
               </div>
               <div className="space-y-1.5">
-                {dayLessons.map((lesson) => (
-                  <button
-                    key={lesson.id}
-                    onClick={() => setOpenLesson(lesson)}
-                    className="w-full text-left rounded-lg border border-border bg-background hover:border-primary/50 transition-colors p-2 cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold truncate">
-                      {lesson.studentName}
-                      {lesson.isMakeup && (
-                        <span className="text-primary font-normal"> · make-up</span>
+                {dayLessons.map((lesson) => {
+                  const status = effectiveStatus(lesson);
+                  return (
+                    <button
+                      key={lesson.id}
+                      onClick={() => setOpenLesson(lesson)}
+                      className="w-full text-left rounded-lg border border-border bg-background hover:border-primary/50 transition-colors p-2 cursor-pointer"
+                    >
+                      <div className="text-xs font-semibold truncate">
+                        {lesson.studentName}
+                        {lesson.isMakeup && (
+                          <span className="text-primary font-normal"> · make-up</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted">
+                        {formatLessonTime(lesson.startsAt, timezone)} ·{" "}
+                        {lesson.durationMinutes}m
+                      </div>
+                      {status && (
+                        <div
+                          className={`text-[10px] mt-1 inline-block px-1.5 py-0.5 rounded ${STATUS_STYLES[status]}`}
+                        >
+                          {ATTENDANCE_LABELS[status]}
+                        </div>
                       )}
-                    </div>
-                    <div className="text-xs text-muted">
-                      {formatLessonTime(lesson.startsAt, timezone)} ·{" "}
-                      {lesson.durationMinutes}m
-                    </div>
-                    {lesson.attendance && (
-                      <div
-                        className={`text-[10px] mt-1 inline-block px-1.5 py-0.5 rounded ${STATUS_STYLES[lesson.attendance.status]}`}
-                      >
-                        {ATTENDANCE_LABELS[lesson.attendance.status]}
-                      </div>
-                    )}
-                    {lesson.note && (
-                      <div className="text-[10px] text-muted mt-0.5">
-                        📝 note{lesson.note.sharedWithParent ? " · shared" : ""}
-                      </div>
-                    )}
-                  </button>
-                ))}
+                      {lesson.note && (
+                        <div className="text-[10px] text-muted mt-0.5">
+                          📝 note{lesson.note.sharedWithParent ? " · shared" : ""}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );
@@ -188,6 +212,7 @@ export function WeekView({
       {openLesson && (
         <LessonModal
           lesson={openLesson}
+          currentStatus={effectiveStatus(openLesson)}
           timezone={timezone}
           busy={busy}
           onClose={() => setOpenLesson(null)}
@@ -204,6 +229,7 @@ export function WeekView({
       {showAdHoc && (
         <AdHocModal
           students={students}
+          durationOptions={durationOptions}
           busy={busy}
           setBusy={setBusy}
           onClose={() => setShowAdHoc(false)}
@@ -231,6 +257,7 @@ function fmtDate(dateStr: string): string {
 
 function LessonModal({
   lesson,
+  currentStatus,
   timezone,
   busy,
   onClose,
@@ -240,6 +267,7 @@ function LessonModal({
   notify,
 }: {
   lesson: WeekLesson;
+  currentStatus: AttendanceStatus | null;
   timezone: string;
   busy: boolean;
   onClose: () => void;
@@ -312,7 +340,7 @@ function LessonModal({
         </p>
         <div className="grid grid-cols-2 gap-2 mb-2">
           {statuses.map((status) => {
-            const active = lesson.attendance?.status === status;
+            const active = currentStatus === status;
             return (
               <Button
                 key={status}
@@ -326,7 +354,7 @@ function LessonModal({
             );
           })}
         </div>
-        {lesson.attendance && (
+        {currentStatus && (
           <button
             onClick={() => onMark(null)}
             className="text-xs text-muted hover:text-foreground underline cursor-pointer mb-2"
@@ -394,6 +422,7 @@ function LessonModal({
 
 function AdHocModal({
   students,
+  durationOptions,
   busy,
   setBusy,
   onClose,
@@ -401,6 +430,7 @@ function AdHocModal({
   notify,
 }: {
   students: { id: string; name: string }[];
+  durationOptions: number[];
   busy: boolean;
   setBusy: (busy: boolean) => void;
   onClose: () => void;
@@ -410,7 +440,7 @@ function AdHocModal({
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("16:00");
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState(durationOptions[0] ?? 30);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -466,7 +496,7 @@ function AdHocModal({
               onChange={(e) => setDuration(Number(e.target.value))}
               className={inputClass}
             >
-              {[30, 45, 60].map((minutes) => (
+              {durationOptions.map((minutes) => (
                 <option key={minutes} value={minutes}>
                   {minutes} min
                 </option>

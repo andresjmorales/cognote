@@ -57,8 +57,8 @@ INSERT INTO students (id, teacher_id, name, parent_contact, guardian_id) VALUES
   ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'Sophia', NULL, '50000000-0000-0000-0000-000000000002');
 
 -- Studio policy for the test teacher (defaults, Chicago time)
-INSERT INTO studio_policies (teacher_id, timezone, cancellation_window_hours) VALUES
-  ('00000000-0000-0000-0000-000000000001', 'America/Chicago', 24);
+INSERT INTO studio_policies (teacher_id, studio_name, timezone, cancellation_window_hours, lesson_duration_options) VALUES
+  ('00000000-0000-0000-0000-000000000001', 'Test Piano Studio', 'America/Chicago', 24, '{30,45,60}');
 
 -- Recurring weekly slots: Emma Tue 4pm, Liam Tue 4:30pm, Sophia Thu 5pm
 INSERT INTO lesson_slots (id, teacher_id, student_id, day_of_week, start_time, duration_minutes, start_date) VALUES

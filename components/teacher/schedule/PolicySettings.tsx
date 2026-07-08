@@ -13,9 +13,15 @@ const inputClass =
  * Studio policies are per-teacher settings, not hardcoded rules (ROADMAP §3).
  * These options drive make-up credit derivation now and billing in Phase 3.
  */
-export function PolicySettings({ policy }: { policy: StudioPolicy }) {
+export function PolicySettings({
+  policy,
+  defaultOpen = false,
+}: {
+  policy: StudioPolicy;
+  defaultOpen?: boolean;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 

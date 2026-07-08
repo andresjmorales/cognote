@@ -12,7 +12,7 @@ import type { AttendanceStatus } from "@/lib/supabase/types";
 import { WeekView, type WeekLesson } from "@/components/teacher/schedule/WeekView";
 import { SlotManager } from "@/components/teacher/schedule/SlotManager";
 import { MakeupPanel, type MakeupCredit } from "@/components/teacher/schedule/MakeupPanel";
-import { PolicySettings } from "@/components/teacher/schedule/PolicySettings";
+import Link from "next/link";
 
 export const metadata = { title: "Schedule" };
 
@@ -163,6 +163,7 @@ export default async function SchedulePage({
         timezone={policy.timezone}
         lessons={weekLessons}
         students={studentsRes.data ?? []}
+        durationOptions={policy.lesson_duration_options}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
@@ -173,11 +174,18 @@ export default async function SchedulePage({
               studentName: oneToOne(s.students as { name: string }[] | null)?.name ?? "Student",
             }))}
             students={studentsRes.data ?? []}
+            durationOptions={policy.lesson_duration_options}
           />
         </div>
         <div className="space-y-6">
           <MakeupPanel credits={credits} timezone={policy.timezone} />
-          <PolicySettings policy={policy} />
+          <p className="text-sm text-muted">
+            Cancellation window, make-up rules, and time blocks live in{" "}
+            <Link href="/settings" className="text-primary hover:underline">
+              Studio Settings
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>

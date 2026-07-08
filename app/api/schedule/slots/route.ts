@@ -29,6 +29,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const policy = await getPolicy(supabase, user.id);
+  const today = toLocalDateString(new Date(), policy.timezone);
+
   const { data: slot, error } = await supabase
     .from("lesson_slots")
     .insert({
@@ -37,7 +40,10 @@ export async function POST(req: NextRequest) {
       day_of_week: dayOfWeek,
       start_time: body.startTime,
       duration_minutes: Number(body.durationMinutes) || 30,
-      start_date: body.startDate || undefined,
+      // Explicit local date — the DB default CURRENT_DATE is the *UTC* date,
+      // which is already tomorrow during US evenings, silently skipping a
+      // same-day slot's first occurrence.
+      start_date: body.startDate || today,
       end_date: body.endDate || null,
     })
     .select()
@@ -48,8 +54,6 @@ export async function POST(req: NextRequest) {
   }
 
   // Materialize the standard horizon right away so the new slot shows up
-  const policy = await getPolicy(supabase, user.id);
-  const today = toLocalDateString(new Date(), policy.timezone);
   await materializeLessons(supabase, user.id, today, addDays(today, 56));
 
   return NextResponse.json(slot);

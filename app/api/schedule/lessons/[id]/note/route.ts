@@ -70,11 +70,14 @@ export async function PUT(
     } else {
       const policy = await getPolicy(supabase, user.id);
       const when = `${formatLessonDate(lesson.starts_at, policy.timezone, "long")} at ${formatLessonTime(lesson.starts_at, policy.timezone)}`;
+      const signature = policy.studio_name
+        ? `— ${policy.studio_name} (sent via CogNote Studio)`
+        : "— Sent via CogNote Studio";
 
       const result = await sendEmail({
         to: guardianEmail,
         subject: `Lesson notes for ${student.name} — ${when}`,
-        text: `Hi ${student.guardians!.name},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${body.body.trim()}\n\n— Sent via CogNote Studio`,
+        text: `Hi ${student.guardians!.name},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${body.body.trim()}\n\n${signature}`,
       });
       emailed = result.sent;
       emailError = result.error;

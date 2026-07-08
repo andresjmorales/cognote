@@ -14,7 +14,6 @@ import {
 import type { AttendanceStatus } from "@/lib/supabase/types";
 import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
 
 export const metadata: Metadata = { title: "Family Portal" };
 
@@ -102,7 +101,9 @@ export default async function PortalPage({
       <header className="bg-surface border-b border-border">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-2">
           <BrandMark size={28} className="h-7 w-7" />
-          <span className="text-lg font-bold text-primary tracking-tight">CogNote</span>
+          <span className="text-lg font-bold text-primary tracking-tight">
+            {policy.studio_name || "CogNote"}
+          </span>
           <span className="text-muted text-sm ml-2">Family Portal</span>
         </div>
       </header>
@@ -149,7 +150,13 @@ export default async function PortalPage({
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Upcoming Lessons</h2>
-            <CopyLinkClient url={calendarPath} title="Lesson calendar" />
+            <a
+              href={calendarPath}
+              download
+              className="inline-flex items-center justify-center font-semibold bg-surface border border-border text-foreground hover:border-primary/50 px-3 py-1.5 text-xs rounded-lg transition-colors"
+            >
+              Download Calendar Events
+            </a>
           </div>
           {lessons.length === 0 ? (
             <Card className="text-center text-muted">No lessons scheduled.</Card>
@@ -185,8 +192,9 @@ export default async function PortalPage({
             </div>
           )}
           <p className="text-xs text-muted mt-2">
-            Use the button above to share or copy the calendar link — most calendar apps
-            can subscribe to it so lessons stay up to date automatically.
+            The download gives you an .ics file to import into Google Calendar,
+            Apple Calendar, or Outlook. Most calendar apps can also subscribe to
+            the same link so lessons stay up to date automatically.
           </p>
         </section>
 
