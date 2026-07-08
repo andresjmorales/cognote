@@ -16,20 +16,26 @@ export async function PUT(
   }
 
   const body = await req.json();
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
   const { data, error } = await supabase
-    .from("students")
-    .update({
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.parentContact !== undefined && { parent_contact: body.parentContact }),
-      ...(body.guardianId !== undefined && { guardian_id: body.guardianId || null }),
-      ...(body.level !== undefined && { level: body.level?.trim() || null }),
-    })
+    .from("skill_dimensions")
+    .update({ name })
     .eq("id", id)
     .eq("teacher_id", user.id)
-    .select()
+    .select("id, name, sort_order")
     .single();
 
   if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: `A skill named "${name}" already exists` },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -50,8 +56,9 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Cascades to skill_assessments — the UI confirms before calling.
   const { error } = await supabase
-    .from("students")
+    .from("skill_dimensions")
     .delete()
     .eq("id", id)
     .eq("teacher_id", user.id);

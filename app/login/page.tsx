@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-type Mode = "signin" | "signup" | "waitlist";
+type Mode = "signin" | "signup" | "waitlist" | "forgot";
 
 const inputClass =
   "w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
@@ -15,6 +15,15 @@ export default function LoginPage() {
   const router = useRouter();
   useEffect(() => { document.title = "CogNote - Login"; }, []);
   const [mode, setMode] = useState<Mode>("signin");
+
+  // Surface messages from auth email links (e.g. expired reset links).
+  useEffect(() => {
+    const message = new URLSearchParams(window.location.search).get("message");
+    if (message) {
+      setError(message);
+      window.history.replaceState(null, "", "/login");
+    }
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -45,6 +54,18 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error ?? "Something went wrong");
         setInfo("You're on the list! We'll email you when a spot opens up.");
+        return;
+      }
+
+      if (mode === "forgot") {
+        const supabase = createClient();
+        await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
+        });
+        // Same message regardless of whether the account exists.
+        setInfo(
+          "If an account exists for that email, a password reset link is on its way. Open it in this browser."
+        );
         return;
       }
 
@@ -104,6 +125,7 @@ export default function LoginPage() {
             {mode === "signin" && "Sign in to your dashboard"}
             {mode === "signup" && "Create your teacher account"}
             {mode === "waitlist" && "Join the beta waitlist"}
+            {mode === "forgot" && "Reset your password"}
           </p>
         </div>
 
@@ -126,7 +148,7 @@ export default function LoginPage() {
             className={inputClass}
             required
           />
-          {mode !== "waitlist" && (
+          {mode !== "waitlist" && mode !== "forgot" && (
             <input
               type="password"
               placeholder="Password"
@@ -136,6 +158,23 @@ export default function LoginPage() {
               required
               minLength={6}
             />
+          )}
+          {mode === "signin" && (
+            <p className="text-xs text-right -mt-2">
+              <button
+                type="button"
+                className="text-muted hover:text-primary transition-colors cursor-pointer"
+                onClick={() => switchMode("forgot")}
+              >
+                Forgot password?
+              </button>
+            </p>
+          )}
+          {mode === "forgot" && (
+            <p className="text-xs text-muted -mt-2">
+              Enter your account email and we&apos;ll send you a link to choose a
+              new password.
+            </p>
           )}
           {mode === "signup" && (
             <div>
@@ -175,7 +214,9 @@ export default function LoginPage() {
                 ? "Sign In"
                 : mode === "signup"
                   ? "Create Account"
-                  : "Join Waitlist"}
+                  : mode === "forgot"
+                    ? "Send Reset Link"
+                    : "Join Waitlist"}
           </Button>
         </form>
 

@@ -10,6 +10,9 @@ import type { AttendanceStatus } from "@/lib/supabase/types";
 
 export interface StudioPolicy {
   studio_name: string;
+  studio_website: string;
+  studio_contact: string;
+  studio_info: string;
   timezone: string;
   lesson_duration_options: number[];
   cancellation_window_hours: number;
@@ -22,6 +25,9 @@ export interface StudioPolicy {
 
 export const DEFAULT_POLICY: StudioPolicy = {
   studio_name: "",
+  studio_website: "",
+  studio_contact: "",
+  studio_info: "",
   timezone: "America/Chicago",
   lesson_duration_options: [30, 45, 60],
   cancellation_window_hours: 24,

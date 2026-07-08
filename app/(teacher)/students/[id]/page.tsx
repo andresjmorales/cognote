@@ -8,6 +8,9 @@ import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStud
 import { LaunchPlanToStudentButton } from "@/components/teacher/LaunchPlanToStudentButton";
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
+import { StudentLevelEditor } from "@/components/teacher/StudentLevelEditor";
+import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
+import { getOrSeedDimensions } from "@/lib/server/skills";
 
 export async function generateMetadata({
   params,
@@ -37,18 +40,24 @@ export default async function StudentDetailPage({
 
   if (!user) return null;
 
-  const [{ data: student }, { data: studentPlans }, { data: allPlans }] =
-    await Promise.all([
-      supabase
-        .from("students")
-        .select("*, guardians ( id, name, email )")
-        .eq("id", id)
-        .eq("teacher_id", user.id)
-        .single(),
-      supabase
-        .from("student_plans")
-        .select(
-          `
+  const [
+    { data: student },
+    { data: studentPlans },
+    { data: allPlans },
+    dimensions,
+    { data: assessments },
+    { data: attendedLessons },
+  ] = await Promise.all([
+    supabase
+      .from("students")
+      .select("*, guardians ( id, name, email )")
+      .eq("id", id)
+      .eq("teacher_id", user.id)
+      .single(),
+    supabase
+      .from("student_plans")
+      .select(
+        `
           id, token, assigned_at, due_date,
           plans ( id, name, clef, key_signature, notes, plan_type ),
           practice_sessions (
@@ -56,17 +65,43 @@ export default async function StudentDetailPage({
             total_correct, total_incorrect, total_questions
           )
         `
-        )
-        .eq("student_id", id)
-        .order("assigned_at", { ascending: false }),
-      supabase
-        .from("plans")
-        .select("id, name")
-        .eq("teacher_id", user.id)
-        .order("name"),
-    ]);
+      )
+      .eq("student_id", id)
+      .order("assigned_at", { ascending: false }),
+    supabase
+      .from("plans")
+      .select("id, name")
+      .eq("teacher_id", user.id)
+      .order("name"),
+    getOrSeedDimensions(supabase, user.id),
+    supabase
+      .from("skill_assessments")
+      .select("id, dimension_id, rating, assessed_on, created_at")
+      .eq("student_id", id)
+      .order("assessed_on")
+      .order("created_at"),
+    supabase
+      .from("lessons")
+      // attendance!lesson_id disambiguates from the lessons.makeup_for FK
+      .select("id, lesson_date, attendance!lesson_id ( status )")
+      .eq("student_id", id)
+      .order("lesson_date", { ascending: false }),
+  ]);
 
   if (!student) notFound();
+
+  // Attendance summary — only lessons that have been marked count.
+  const attendanceCounts: Record<string, number> = {};
+  (attendedLessons ?? []).forEach((l: any) => {
+    const status = (Array.isArray(l.attendance) ? l.attendance[0] : l.attendance)
+      ?.status;
+    if (status) attendanceCounts[status] = (attendanceCounts[status] ?? 0) + 1;
+  });
+  const markedLessons = Object.values(attendanceCounts).reduce((a, b) => a + b, 0);
+  const attendanceRate =
+    markedLessons > 0
+      ? Math.round(((attendanceCounts.attended ?? 0) / markedLessons) * 100)
+      : null;
 
   const allSessions = (studentPlans ?? []).flatMap(
     (sp: any) => sp.practice_sessions ?? []
@@ -125,7 +160,10 @@ export default async function StudentDetailPage({
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold">{student.name}</h1>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold">{student.name}</h1>
+            <StudentLevelEditor studentId={id} initialLevel={student.level ?? null} />
+          </div>
           {(student.guardians as { name: string } | null)?.name ? (
             <p className="text-muted text-sm">
               Family:{" "}
@@ -183,6 +221,61 @@ export default async function StudentDetailPage({
         <Card padding="sm">
           <div className="text-xs text-muted">Questions</div>
           <div className="text-2xl font-bold">{totalQuestions}</div>
+        </Card>
+      </div>
+
+      {/* Progress: skills + attendance */}
+      <h2 className="text-lg font-semibold mb-3">Progress</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <SkillsPanel
+          studentId={id}
+          dimensions={dimensions}
+          assessments={assessments ?? []}
+        />
+        <Card padding="sm">
+          <h3 className="font-semibold mb-3">Attendance</h3>
+          {markedLessons === 0 ? (
+            <p className="text-sm text-muted text-center py-6">
+              No attendance marked yet. Mark lessons on the{" "}
+              <Link href="/schedule" className="text-primary hover:underline">
+                Schedule
+              </Link>{" "}
+              page.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="rounded-lg bg-surface-dim/60 p-3">
+                  <div className="text-xs text-muted">Attended</div>
+                  <div className="text-xl font-bold text-success">
+                    {attendanceCounts.attended ?? 0}
+                    <span className="text-sm font-normal text-muted">
+                      {" "}
+                      / {markedLessons}
+                    </span>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-surface-dim/60 p-3">
+                  <div className="text-xs text-muted">Attendance Rate</div>
+                  <div className="text-xl font-bold">
+                    {attendanceRate !== null ? `${attendanceRate}%` : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1 text-sm">
+                {[
+                  ["student_cancel", "Student cancellations"],
+                  ["teacher_cancel", "Teacher cancellations"],
+                  ["no_show", "No-shows"],
+                ].map(([key, label]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="text-muted">{label}</span>
+                    <span className="font-medium">{attendanceCounts[key] ?? 0}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </Card>
       </div>
 

@@ -17,6 +17,9 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
   const [message, setMessage] = useState<string | null>(null);
 
   const [studioName, setStudioName] = useState(policy.studio_name);
+  const [studioWebsite, setStudioWebsite] = useState(policy.studio_website);
+  const [studioContact, setStudioContact] = useState(policy.studio_contact);
+  const [studioInfo, setStudioInfo] = useState(policy.studio_info);
   const [blocks, setBlocks] = useState<number[]>(
     [...policy.lesson_duration_options].sort((a, b) => a - b)
   );
@@ -58,6 +61,9 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         studioName,
+        studioWebsite,
+        studioContact,
+        studioInfo,
         lessonDurationOptions: blocks,
       }),
     });
@@ -90,6 +96,54 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
           />
           <span className="block text-xs text-muted mt-1">
             Shown to families on their portal and in emailed lesson notes.
+          </span>
+        </label>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="text-sm">
+            <span className="block text-xs font-semibold text-muted mb-1">
+              Studio website
+            </span>
+            <input
+              type="url"
+              value={studioWebsite}
+              onChange={(e) => setStudioWebsite(e.target.value)}
+              placeholder="https://your-studio.com"
+              maxLength={300}
+              className={`${inputClass} w-full`}
+            />
+          </label>
+          <label className="text-sm">
+            <span className="block text-xs font-semibold text-muted mb-1">
+              Contact info
+            </span>
+            <input
+              type="text"
+              value={studioContact}
+              onChange={(e) => setStudioContact(e.target.value)}
+              placeholder="e.g. (555) 123-4567 · hello@your-studio.com"
+              maxLength={300}
+              className={`${inputClass} w-full`}
+            />
+          </label>
+        </div>
+
+        <label className="text-sm">
+          <span className="block text-xs font-semibold text-muted mb-1">
+            Studio info &amp; policies
+          </span>
+          <textarea
+            value={studioInfo}
+            onChange={(e) => setStudioInfo(e.target.value)}
+            placeholder={
+              "Anything families should know — cancellation policy, make-up rules, tuition, recital dates..."
+            }
+            rows={4}
+            maxLength={5000}
+            className={`${inputClass} w-full resize-y`}
+          />
+          <span className="block text-xs text-muted mt-1">
+            Shown on the family portal along with your website and contact info.
           </span>
         </label>
 

@@ -41,7 +41,7 @@ export function AssignPlanButton({
       const res = await fetch(`/api/lessons/${planId}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId }),
+        body: JSON.stringify({ studentId, notifyFamily: true }),
       });
 
       if (!res.ok) {
@@ -54,18 +54,24 @@ export function AssignPlanButton({
       }
 
       const data = await res.json();
-      const fullUrl = `${window.location.origin}/practice/${data.token}`;
 
-      const result = await shareOrCopyUrl(fullUrl, {
-        title: "Practice link",
-        text: `Practice link for ${studentName}`,
-      });
-      if (result.method === "share") {
-        setToast(`Assigned to ${studentName}! Link shared.`);
-      } else if (result.method === "copy") {
-        setToast(`Assigned to ${studentName}! Link copied.`);
+      if (data.emailed) {
+        setToast(`Assigned to ${studentName}! Emailed the family.`);
       } else {
-        setToast(`Assigned to ${studentName}! Link: ${fullUrl}`);
+        // No family email on file (or email not configured) — fall back to
+        // the native share sheet / clipboard.
+        const fullUrl = `${window.location.origin}/practice/${data.token}`;
+        const result = await shareOrCopyUrl(fullUrl, {
+          title: "Practice link",
+          text: `Practice link for ${studentName}`,
+        });
+        if (result.method === "share") {
+          setToast(`Assigned to ${studentName}! Link shared.`);
+        } else if (result.method === "copy") {
+          setToast(`Assigned to ${studentName}! Link copied.`);
+        } else {
+          setToast(`Assigned to ${studentName}! Link: ${fullUrl}`);
+        }
       }
       setTimeout(() => setToast(null), 5000);
       router.refresh();

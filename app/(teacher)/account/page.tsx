@@ -26,7 +26,7 @@ export default async function AccountPage() {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <div className="text-xs text-muted">Email</div>
-            <div className="font-medium">{teacher?.email ?? user.email}</div>
+            <div className="font-medium">{user.email ?? teacher?.email}</div>
           </div>
           <div>
             <div className="text-xs text-muted">Member Since</div>
@@ -41,7 +41,10 @@ export default async function AccountPage() {
         </div>
       </Card>
 
-      <AccountSettings initialName={teacher?.display_name ?? ""} />
+      <AccountSettings
+        initialName={teacher?.display_name ?? ""}
+        currentEmail={user.email ?? teacher?.email ?? ""}
+      />
     </div>
   );
 }

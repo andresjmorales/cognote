@@ -62,6 +62,15 @@ export async function PUT(req: NextRequest) {
         ...(body.studioName !== undefined && {
           studio_name: String(body.studioName).trim().slice(0, 120),
         }),
+        ...(body.studioWebsite !== undefined && {
+          studio_website: String(body.studioWebsite).trim().slice(0, 300),
+        }),
+        ...(body.studioContact !== undefined && {
+          studio_contact: String(body.studioContact).trim().slice(0, 300),
+        }),
+        ...(body.studioInfo !== undefined && {
+          studio_info: String(body.studioInfo).trim().slice(0, 5000),
+        }),
         ...(durationOptions !== undefined && {
           lesson_duration_options: durationOptions,
         }),

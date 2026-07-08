@@ -6,12 +6,22 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export function AccountSettings({ initialName }: { initialName: string }) {
+export function AccountSettings({
+  initialName,
+  currentEmail,
+}: {
+  initialName: string;
+  currentEmail: string;
+}) {
   const router = useRouter();
 
   const [name, setName] = useState(initialName);
   const [nameSaving, setNameSaving] = useState(false);
   const [nameMessage, setNameMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [newEmail, setNewEmail] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -43,6 +53,39 @@ export function AccountSettings({ initialName }: { initialName: string }) {
       setNameMessage({ type: "error", text: "Something went wrong" });
     } finally {
       setNameSaving(false);
+    }
+  }
+
+  async function handleEmailChange(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailMessage(null);
+
+    const email = newEmail.trim();
+    if (!email || email === currentEmail) {
+      setEmailMessage({ type: "error", text: "Enter a new email address" });
+      return;
+    }
+
+    setEmailSaving(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser(
+        { email },
+        { emailRedirectTo: `${window.location.origin}/auth/confirm?next=/account` }
+      );
+      if (error) {
+        setEmailMessage({ type: "error", text: error.message });
+      } else {
+        setEmailMessage({
+          type: "success",
+          text: "Confirmation links sent — check both your current and new inboxes to complete the change.",
+        });
+        setNewEmail("");
+      }
+    } catch {
+      setEmailMessage({ type: "error", text: "Something went wrong" });
+    } finally {
+      setEmailSaving(false);
     }
   }
 
@@ -119,6 +162,39 @@ export function AccountSettings({ initialName }: { initialName: string }) {
           )}
           <Button type="submit" size="sm" disabled={nameSaving || name.trim() === initialName}>
             {nameSaving ? "Saving..." : "Save Name"}
+          </Button>
+        </form>
+      </Card>
+
+      {/* Change Email */}
+      <Card padding="lg">
+        <h2 className="text-lg font-semibold mb-4">Change Email</h2>
+        <form onSubmit={handleEmailChange} className="space-y-3">
+          <div>
+            <label htmlFor="newEmail" className="text-sm font-medium block mb-1">
+              New Email
+            </label>
+            <input
+              id="newEmail"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder={currentEmail}
+              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              required
+            />
+            <p className="text-xs text-muted mt-1.5">
+              You&apos;ll get confirmation links at both your current and new
+              addresses; the change completes once confirmed.
+            </p>
+          </div>
+          {emailMessage && (
+            <p className={`text-sm ${emailMessage.type === "success" ? "text-success" : "text-error"}`}>
+              {emailMessage.text}
+            </p>
+          )}
+          <Button type="submit" size="sm" disabled={emailSaving || !newEmail.trim()}>
+            {emailSaving ? "Sending..." : "Change Email"}
           </Button>
         </form>
       </Card>
