@@ -41,7 +41,7 @@ export default async function StudentDetailPage({
     await Promise.all([
       supabase
         .from("students")
-        .select("*")
+        .select("*, guardians ( id, name, email )")
         .eq("id", id)
         .eq("teacher_id", user.id)
         .single(),
@@ -126,8 +126,21 @@ export default async function StudentDetailPage({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-bold">{student.name}</h1>
-          {student.parent_contact && (
+          {(student.guardians as { name: string } | null)?.name ? (
+            <p className="text-muted text-sm">
+              Family:{" "}
+              <Link href="/families" className="hover:text-primary transition-colors">
+                {(student.guardians as { name: string }).name}
+              </Link>
+            </p>
+          ) : student.parent_contact ? (
             <p className="text-muted text-sm">{student.parent_contact}</p>
+          ) : (
+            <p className="text-muted text-sm">
+              <Link href="/families" className="hover:text-primary transition-colors">
+                No family linked — set one up
+              </Link>
+            </p>
           )}
         </div>
         <div className="flex items-center gap-2">
