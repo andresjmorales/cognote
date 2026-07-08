@@ -1,0 +1,217 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+interface Slot {
+  id: string;
+  student_id: string;
+  studentName: string;
+  day_of_week: number;
+  start_time: string;
+  duration_minutes: number;
+  end_date: string | null;
+  active: boolean;
+}
+
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const inputClass =
+  "w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm";
+
+export function SlotManager({
+  slots,
+  students,
+}: {
+  slots: Slot[];
+  students: { id: string; name: string }[];
+}) {
+  const router = useRouter();
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [studentId, setStudentId] = useState(students[0]?.id ?? "");
+  const [dayOfWeek, setDayOfWeek] = useState(2);
+  const [startTime, setStartTime] = useState("16:00");
+  const [duration, setDuration] = useState(30);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/schedule/slots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentId,
+        dayOfWeek,
+        startTime,
+        durationMinutes: duration,
+      }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setAdding(false);
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Failed to add slot");
+    }
+  }
+
+  async function toggleActive(slot: Slot) {
+    setBusy(true);
+    await fetch(`/api/schedule/slots/${slot.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !slot.active }),
+    });
+    setBusy(false);
+    router.refresh();
+  }
+
+  async function handleDelete(slot: Slot) {
+    if (
+      !window.confirm(
+        `Delete ${slot.studentName}'s ${DAY_NAMES[slot.day_of_week]} slot? Past lessons are kept; upcoming unmarked ones are removed.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    await fetch(`/api/schedule/slots/${slot.id}`, { method: "DELETE" });
+    setBusy(false);
+    router.refresh();
+  }
+
+  return (
+    <Card padding="sm">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-semibold">Weekly Slots</h2>
+        {!adding && (
+          <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
+            Add Slot
+          </Button>
+        )}
+      </div>
+
+      {adding && (
+        <form onSubmit={handleAdd} className="flex flex-col gap-3 mb-4 pb-4 border-b border-border">
+          <select
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+            className={inputClass}
+            required
+          >
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <div className="grid grid-cols-3 gap-3">
+            <select
+              value={dayOfWeek}
+              onChange={(e) => setDayOfWeek(Number(e.target.value))}
+              className={inputClass}
+            >
+              {DAY_NAMES.map((day, i) => (
+                <option key={day} value={i}>
+                  {day}
+                </option>
+              ))}
+            </select>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={inputClass}
+              required
+            />
+            <select
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              className={inputClass}
+            >
+              {[30, 45, 60].map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {minutes} min
+                </option>
+              ))}
+            </select>
+          </div>
+          {error && <p className="text-error text-xs">{error}</p>}
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={busy || !studentId}>
+              {busy ? "Adding..." : "Add Slot"}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setAdding(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {slots.length === 0 ? (
+        <p className="text-sm text-muted">
+          No recurring slots yet. Add one and lessons appear on the schedule
+          automatically, week after week.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {slots.map((slot) => (
+            <div
+              key={slot.id}
+              className={`flex items-center justify-between gap-2 text-sm ${
+                slot.active ? "" : "opacity-50"
+              }`}
+            >
+              <div>
+                <span className="font-medium">{slot.studentName}</span>{" "}
+                <span className="text-muted">
+                  · {DAY_NAMES[slot.day_of_week]}s {formatTime(slot.start_time)} ·{" "}
+                  {slot.duration_minutes} min
+                  {!slot.active && " · paused"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => toggleActive(slot)}
+                  disabled={busy}
+                  className="text-xs text-muted hover:text-foreground underline cursor-pointer"
+                >
+                  {slot.active ? "Pause" : "Resume"}
+                </button>
+                <button
+                  onClick={() => handleDelete(slot)}
+                  disabled={busy}
+                  className="text-xs text-error hover:underline cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function formatTime(time: string): string {
+  const [hh, mm] = time.split(":").map(Number);
+  const period = hh >= 12 ? "PM" : "AM";
+  const hour = hh % 12 === 0 ? 12 : hh % 12;
+  return `${hour}:${String(mm).padStart(2, "0")} ${period}`;
+}

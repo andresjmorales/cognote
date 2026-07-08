@@ -43,11 +43,47 @@ INSERT INTO auth.identities (
 INSERT INTO teachers (id, email, display_name) VALUES
   ('00000000-0000-0000-0000-000000000001', 'teacher@example.com', 'Ms. Johnson');
 
+-- Sample guardians (families) — Emma and Liam are siblings sharing one guardian
+INSERT INTO guardians (id, teacher_id, name, email, portal_token) VALUES
+  ('50000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+   'Jordan Parent', 'jordan.parent@example.com', 'dev-portal-jordan'),
+  ('50000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001',
+   'Sam Guardian', 'sam.guardian@example.com', 'dev-portal-sam');
+
 -- Sample students
-INSERT INTO students (id, teacher_id, name, parent_contact) VALUES
-  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Emma', 'emma.parent@example.com'),
-  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Liam', 'liam.parent@example.com'),
-  ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'Sophia', NULL);
+INSERT INTO students (id, teacher_id, name, parent_contact, guardian_id) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Emma', 'emma.parent@example.com', '50000000-0000-0000-0000-000000000001'),
+  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Liam', 'liam.parent@example.com', '50000000-0000-0000-0000-000000000001'),
+  ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'Sophia', NULL, '50000000-0000-0000-0000-000000000002');
+
+-- Studio policy for the test teacher (defaults, Chicago time)
+INSERT INTO studio_policies (teacher_id, timezone, cancellation_window_hours) VALUES
+  ('00000000-0000-0000-0000-000000000001', 'America/Chicago', 24);
+
+-- Recurring weekly slots: Emma Tue 4pm, Liam Tue 4:30pm, Sophia Thu 5pm
+INSERT INTO lesson_slots (id, teacher_id, student_id, day_of_week, start_time, duration_minutes, start_date) VALUES
+  ('60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+   '10000000-0000-0000-0000-000000000001', 2, '16:00', 30, CURRENT_DATE - 14),
+  ('60000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001',
+   '10000000-0000-0000-0000-000000000002', 2, '16:30', 30, CURRENT_DATE - 14),
+  ('60000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001',
+   '10000000-0000-0000-0000-000000000003', 4, '17:00', 45, CURRENT_DATE - 14);
+
+-- One past materialized lesson for Emma (last week's Tuesday), attended, with a shared note
+INSERT INTO lessons (id, teacher_id, student_id, slot_id, lesson_date, starts_at, duration_minutes) VALUES
+  ('70000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+   '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001',
+   CURRENT_DATE - ((EXTRACT(dow FROM CURRENT_DATE)::int + 5) % 7 + 1),
+   ((CURRENT_DATE - ((EXTRACT(dow FROM CURRENT_DATE)::int + 5) % 7 + 1)) + time '16:00') AT TIME ZONE 'America/Chicago',
+   30);
+
+INSERT INTO attendance (id, lesson_id, status) VALUES
+  ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001', 'attended');
+
+INSERT INTO lesson_notes (lesson_id, body, shared_with_parent) VALUES
+  ('70000000-0000-0000-0000-000000000001',
+   'Great work on Middle C position today. This week: practice the C major five-finger pattern, hands separately, 10 minutes a day.',
+   true);
 
 -- Sample plans
 INSERT INTO plans (id, teacher_id, name, is_template, clef, key_signature, questions_per_lesson, answer_choices, notes) VALUES

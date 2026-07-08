@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-export function AddStudentForm() {
+export function AddStudentForm({
+  guardians = [],
+}: {
+  guardians?: { id: string; name: string }[];
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [parentContact, setParentContact] = useState("");
+  const [guardianId, setGuardianId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,14 +37,14 @@ export function AddStudentForm() {
     const { error: insertError } = await supabase.from("students").insert({
       teacher_id: user.id,
       name: name.trim(),
-      parent_contact: parentContact.trim() || null,
+      guardian_id: guardianId || null,
     });
 
     if (insertError) {
       setError(insertError.message);
     } else {
       setName("");
-      setParentContact("");
+      setGuardianId("");
       router.refresh();
     }
 
@@ -57,13 +61,18 @@ export function AddStudentForm() {
         className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
         required
       />
-      <input
-        type="text"
-        placeholder="Parent contact (optional)"
-        value={parentContact}
-        onChange={(e) => setParentContact(e.target.value)}
+      <select
+        value={guardianId}
+        onChange={(e) => setGuardianId(e.target.value)}
         className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
-      />
+      >
+        <option value="">No family yet (link later)</option>
+        {guardians.map((g) => (
+          <option key={g.id} value={g.id}>
+            {g.name}
+          </option>
+        ))}
+      </select>
       {error && <p className="text-error text-xs">{error}</p>}
       <Button type="submit" size="sm" disabled={loading}>
         {loading ? "Adding..." : "Add Student"}

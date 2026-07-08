@@ -8,6 +8,11 @@ export type Json =
 
 export type ClefType = "treble" | "bass" | "both";
 export type PracticeMode = "lesson" | "free_practice" | "flashcard";
+export type AttendanceStatus =
+  | "attended"
+  | "teacher_cancel"
+  | "student_cancel"
+  | "no_show";
 
 export interface Database {
   public: {
@@ -37,6 +42,8 @@ export interface Database {
           teacher_id: string;
           name: string;
           parent_contact: string | null;
+          guardian_id: string | null;
+          teacher_notes: string;
           created_at: string;
         };
         Insert: {
@@ -44,11 +51,179 @@ export interface Database {
           teacher_id: string;
           name: string;
           parent_contact?: string | null;
+          guardian_id?: string | null;
+          teacher_notes?: string;
           created_at?: string;
         };
         Update: {
           name?: string;
           parent_contact?: string | null;
+          guardian_id?: string | null;
+          teacher_notes?: string;
+        };
+      };
+      guardians: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          name: string;
+          email: string | null;
+          phone: string | null;
+          portal_token: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          name: string;
+          email?: string | null;
+          phone?: string | null;
+          portal_token: string;
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          email?: string | null;
+          phone?: string | null;
+          portal_token?: string;
+        };
+      };
+      studio_policies: {
+        Row: {
+          teacher_id: string;
+          timezone: string;
+          cancellation_window_hours: number;
+          timely_cancel_earns_makeup: boolean;
+          late_cancel_earns_makeup: boolean;
+          no_show_earns_makeup: boolean;
+          teacher_cancel_earns_makeup: boolean;
+          makeup_credit_expiry_days: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          teacher_id: string;
+          timezone?: string;
+          cancellation_window_hours?: number;
+          timely_cancel_earns_makeup?: boolean;
+          late_cancel_earns_makeup?: boolean;
+          no_show_earns_makeup?: boolean;
+          teacher_cancel_earns_makeup?: boolean;
+          makeup_credit_expiry_days?: number | null;
+        };
+        Update: {
+          timezone?: string;
+          cancellation_window_hours?: number;
+          timely_cancel_earns_makeup?: boolean;
+          late_cancel_earns_makeup?: boolean;
+          no_show_earns_makeup?: boolean;
+          teacher_cancel_earns_makeup?: boolean;
+          makeup_credit_expiry_days?: number | null;
+        };
+      };
+      lesson_slots: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          student_id: string;
+          day_of_week: number;
+          start_time: string;
+          duration_minutes: number;
+          start_date: string;
+          end_date: string | null;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          student_id: string;
+          day_of_week: number;
+          start_time: string;
+          duration_minutes?: number;
+          start_date?: string;
+          end_date?: string | null;
+          active?: boolean;
+        };
+        Update: {
+          day_of_week?: number;
+          start_time?: string;
+          duration_minutes?: number;
+          start_date?: string;
+          end_date?: string | null;
+          active?: boolean;
+        };
+      };
+      lessons: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          student_id: string;
+          slot_id: string | null;
+          lesson_date: string;
+          starts_at: string;
+          duration_minutes: number;
+          makeup_for: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          student_id: string;
+          slot_id?: string | null;
+          lesson_date: string;
+          starts_at: string;
+          duration_minutes: number;
+          makeup_for?: string | null;
+        };
+        Update: {
+          lesson_date?: string;
+          starts_at?: string;
+          duration_minutes?: number;
+          makeup_for?: string | null;
+        };
+      };
+      attendance: {
+        Row: {
+          id: string;
+          lesson_id: string;
+          status: AttendanceStatus;
+          notice_at: string | null;
+          marked_at: string;
+        };
+        Insert: {
+          id?: string;
+          lesson_id: string;
+          status: AttendanceStatus;
+          notice_at?: string | null;
+          marked_at?: string;
+        };
+        Update: {
+          status?: AttendanceStatus;
+          notice_at?: string | null;
+          marked_at?: string;
+        };
+      };
+      lesson_notes: {
+        Row: {
+          id: string;
+          lesson_id: string;
+          body: string;
+          shared_with_parent: boolean;
+          emailed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lesson_id: string;
+          body: string;
+          shared_with_parent?: boolean;
+          emailed_at?: string | null;
+        };
+        Update: {
+          body?: string;
+          shared_with_parent?: boolean;
+          emailed_at?: string | null;
         };
       };
       plans: {

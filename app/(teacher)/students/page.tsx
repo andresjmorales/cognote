@@ -13,20 +13,28 @@ export default async function StudentsPage() {
 
   if (!user) return null;
 
-  const { data: students } = await supabase
-    .from("students")
-    .select(
+  const [{ data: students }, { data: guardians }] = await Promise.all([
+    supabase
+      .from("students")
+      .select(
+        `
+        id, name, parent_contact, created_at,
+        guardians ( name ),
+        student_plans (
+          id,
+          plans ( name ),
+          practice_sessions ( id, total_correct, total_questions, started_at, completed_at )
+        )
       `
-      id, name, parent_contact, created_at,
-      student_plans (
-        id,
-        plans ( name ),
-        practice_sessions ( id, total_correct, total_questions, started_at, completed_at )
       )
-    `
-    )
-    .eq("teacher_id", user.id)
-    .order("name");
+      .eq("teacher_id", user.id)
+      .order("name"),
+    supabase
+      .from("guardians")
+      .select("id, name")
+      .eq("teacher_id", user.id)
+      .order("name"),
+  ]);
 
   return (
     <div>
@@ -79,9 +87,9 @@ export default async function StudentsPage() {
                           <div className="font-semibold text-lg">
                             {student.name}
                           </div>
-                          {student.parent_contact && (
+                          {(student.guardians?.name || student.parent_contact) && (
                             <div className="text-sm text-muted">
-                              {student.parent_contact}
+                              {student.guardians?.name ?? student.parent_contact}
                             </div>
                           )}
                         </div>
@@ -123,7 +131,7 @@ export default async function StudentsPage() {
         <div>
           <Card>
             <h2 className="font-semibold mb-3">Add Student</h2>
-            <AddStudentForm />
+            <AddStudentForm guardians={guardians ?? []} />
           </Card>
         </div>
       </div>
