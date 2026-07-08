@@ -316,6 +316,18 @@ The landing page "Try a Lesson" button links to `/try`, a standalone practice pa
 5. Run `npm run dev`
 6. Full stack is running locally — no cloud accounts needed
 
+### Testing
+
+```bash
+npm test            # unit tests (Vitest), runs in under a second
+npm run test:watch  # watch mode
+npm run typecheck   # tsc --noEmit
+```
+
+Unit tests are colocated with the code they cover (`lib/*.test.ts`) and test pure logic only — no database, browser, or network. The highest-value suites guard the timezone/DST scheduling math (`lib/schedule.test.ts`), the SM-2 algorithm, token encryption, email composition, and quiz answer generation. CI (`.github/workflows/ci.yml`) runs the typecheck and unit tests on every push and PR.
+
+When adding logic with real decision-making (date math, policy derivations, anything that computes money once billing lands), put it in a pure function under `lib/` and test it there — API routes should stay thin wrappers.
+
 ### Adding a new migration
 
 ```bash

@@ -1,0 +1,31 @@
+name: CI
+
+# Typecheck + unit tests on every push and PR. The unit suite is pure-logic
+# (lib/**/*.test.ts) and runs in under a second — no database or browser
+# needed, so this stays fast enough to never be worth skipping.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
