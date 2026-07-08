@@ -78,6 +78,11 @@ export async function PUT(
         to: guardianEmail,
         subject: `Lesson notes for ${student.name} — ${when}`,
         text: `Hi ${student.guardians!.name},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${body.body.trim()}\n\n${signature}`,
+        fromName: policy.studio_name
+          ? `${policy.studio_name} (via CogNote)`
+          : undefined,
+        // Parent replies go to the teacher, never to the platform.
+        replyTo: user.email,
       });
       emailed = result.sent;
       emailError = result.error;
