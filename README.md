@@ -276,10 +276,25 @@ Connect your GitHub repo to [Vercel](https://vercel.com) and set these environme
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Settings → API → anon (public) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API → service_role key (click Reveal) |
 | `TOKEN_ENCRYPTION_KEY` | Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `EMAIL_PROVIDER` | `resend` in production, `smtp` for local Mailpit, `none`/unset to disable email (app still works; sends are logged and skipped) |
+| `RESEND_API_KEY` | Resend Dashboard → API Keys (only needed when `EMAIL_PROVIDER=resend`) |
+| `EMAIL_FROM_ADDRESS` | Optional; defaults to `notifications@cognote.studio`. Must be on a Resend-verified domain |
+
+For local dev with Mailpit, set `EMAIL_PROVIDER=smtp` in `.env.local` — emails appear in the Mailpit UI ([http://127.0.0.1:54324](http://127.0.0.1:54324)). `SMTP_HOST`/`SMTP_PORT` default to `127.0.0.1:54325` (the port exposed in `supabase/config.toml`; rerun `npx supabase start` after changing it).
 
 **Important:** Use the keys from your **cloud** Supabase project, not from `.env.local` (which has local Docker keys). Only `TOKEN_ENCRYPTION_KEY` can be copied from local — or generate a new one for production.
 
 Variables without the `NEXT_PUBLIC_` prefix (like `SUPABASE_SERVICE_ROLE_KEY`) are server-only and never exposed to the browser.
+
+### 4b. Production email (optional, $0)
+
+Email degrades gracefully — with `EMAIL_PROVIDER` unset the app runs fine and just logs skipped sends. To actually deliver email (lesson notes to families, and later invoices):
+
+1. **Outbound:** create a free [Resend](https://resend.com) account, add **your own domain**, and add the DKIM/SPF records it shows you at your DNS host. Once verified, create an API key and set `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, and `EMAIL_FROM_ADDRESS=notifications@your-domain.com`. The from-*name* and reply-to are per-teacher automatically (parents see "{Studio Name} (via CogNote)" and replies go to the teacher).
+2. **Inbound (optional):** Resend only sends. A free way to *receive* mail on the same domain is [Cloudflare Email Routing](https://developers.cloudflare.com/email-routing/) — point the domain's DNS at Cloudflare (free plan), enable Email Routing, and set a catch-all forward to your inbox. If your site is on Vercel, keep every Cloudflare record **DNS only** (grey cloud) — proxying on top of Vercel causes redirect loops.
+3. **Recommended DNS extras:** a DMARC record (`TXT` at `_dmarc`, value `v=DMARC1; p=none; rua=mailto:dmarc@your-domain.com`) starts deliverability monitoring without affecting sends.
+
+Any SMTP relay also works instead of Resend (`EMAIL_PROVIDER=smtp` + `SMTP_HOST`/`SMTP_PORT`), though the bundled SMTP client is minimal (no auth/TLS) — it's intended for Mailpit-style local relays, not the open internet.
 
 ### 5. Try a Lesson
 
