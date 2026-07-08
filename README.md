@@ -1,34 +1,75 @@
 # CogNote
 
-**Music note memorization for piano students — quizzes, flashcards, and spaced repetition.**
+**Open-source studio management for private music teachers — with a real practice and learning platform built in.**
 
-CogNote is an open-source web app that helps piano teachers assign and track music exercises for their students. Teachers create customizable lesson plans — note identification drills, musical symbol quizzes, or both — share them via unique URLs, and monitor progress through an analytics dashboard. Students — primarily children ages 5–14 — open a link and immediately start practicing. No login, no signup.
+CogNote runs a private music studio end to end: students and families, recurring lesson scheduling, attendance and make-up credits, lesson notes emailed home, and skill/progress tracking — plus the thing pure admin tools don't have: **quizzes, flashcards, and spaced repetition** that students actually use between lessons. It's free to self-host (MIT), and built by a working piano studio for its own daily use.
+
+Two surfaces, one platform:
+
+- **For teachers** — a full studio back office: CRM, schedule, attendance, policies, analytics, and assessments.
+- **For students and parents** — zero-friction links. Students open a practice URL and tap Start; parents get a single no-login portal with the schedule, practice links, and notes from the teacher. No accounts, no passwords, nothing to forget.
+
+---
+
+## What Sets CogNote Apart
+
+1. **It teaches, not just administrates** — most studio software stops at scheduling and billing. CogNote ships a genuine learning layer: note identification and musical-symbol quizzes (optionally timed), free practice, and SM-2 spaced-repetition flashcards, with per-note accuracy analytics feeding back to the teacher.
+2. **One link per family** — the parent portal is a single unguessable, revocable URL. Schedule, practice links, lesson notes, calendar feed, studio info — no login, ever.
+3. **Make-up lessons that follow *your* policy** — cancellation windows, which cancellations bank a make-up credit, credit expiry: all per-studio settings, never hardcoded rules. Make-ups link back to the cancellation that earned them, so credits are derivable and nothing double-counts.
+4. **Your data is never hostage** — MIT-licensed and fully self-hostable. The entire stack runs locally in Docker with no cloud accounts. Every integration (email, and payments later) degrades gracefully when unconfigured.
+5. **Kid-friendly learning** — the practice side is built for young students: large buttons, friendly feedback, real staff notation sized for tablets, and emoji-rated flashcards.
 
 ---
 
 ## Features
 
-### For Teachers
-- **Student management** — Add students, track their practice history, and see per-note accuracy breakdowns
-- **Customizable lesson plans** — Three plan types: note identification (clef, specific notes from C2 up to C7), key signature identification, and musical symbols & concepts (dynamics, tempo, articulation, note values, and more)
-- **Timed quizzes** — Optional per-question time limit (5–60 seconds) on any plan; applies to quiz mode only, and unanswered questions count as incorrect
-- **Reusable templates** — Create lesson plan templates and assign them to multiple students with one click
-- **Assign via email or link** — Assigning a lesson emails the practice link to the student's family (with their portal link); if no family email is on file, it falls back to the native share sheet / clipboard so you can send it over any messenger
-- **Analytics dashboard** — See which notes students struggle with, session history, accuracy trends
-- **Skills & progress tracking** — Rate each student 1–5 across teacher-defined skill dimensions (Musicianship, Rhythm, Sight Reading, ...); see a radar chart of current levels and trend lines over time, plus an attendance summary and an optional level anchor (RCM, Faber)
+### Studio Management (Teachers)
 
-### For Students
-- **Quiz mode** — Multiple-choice note identification or symbol/concept questions with immediate feedback and score tracking
-- **Free practice** — Unlimited questions with no pressure, practice at your own pace
-- **Flashcard mode** — Spaced repetition (SM-2 algorithm) for both notes and symbols, with kid-friendly emoji ratings
-- **Zero friction** — Open the link, tap "Start", begin practicing. No account needed
-- **Kid-friendly UI** — Large buttons, friendly fonts, gentle feedback animations
+- **Students & families** — student CRM with structured guardian/family records; siblings share one family and one portal link
+- **Scheduling & attendance** — recurring weekly lesson slots with a weekly teacher view; tap a lesson to mark attendance (attended / teacher cancel / student cancel / no-show) and jot a note. Slots store local time + studio timezone, so a 4:00 PM Tuesday lesson stays 4:00 PM across DST shifts
+- **Policy-driven make-ups** — make-up credits derive from attendance × your studio policy (cancellation window, which statuses earn credit, expiry); rescheduling links each make-up to its originating cancellation
+- **Lesson notes home** — "Save & Email Family" sends the note via email and posts it to the family portal
+- **Studio settings, not code** — studio name, timezone, lesson time blocks, cancellation/make-up policy, and an "About the Studio" section (free-text policies, website, contact) shown on the portal
+- **Skills & progress tracking** — rate students 1–5 across teacher-defined skill dimensions (Musicianship, Rhythm, Sight Reading, ...); radar chart of current levels, trend lines over time, attendance summary, and an optional level anchor (RCM, Faber)
+- **Customizable lesson plans** — three plan types: note identification (C2–C7, both clefs), key signature identification, and musical symbols & concepts; reusable templates assigned in one click
+- **Timed quizzes** — optional per-question time limit (5–60 seconds) on any plan
+- **Assign via email or link** — assigning a lesson emails the practice link to the family (with their portal link); with no family email on file it falls back to the native share sheet / clipboard
+- **Analytics dashboard** — per-note accuracy, session history, and practice trends per student
+- **Calendar feeds** — .ics download and a subscribable calendar URL per family; cancelled lessons drop out automatically
+
+### Practice & Learning (Students)
+
+- **Quiz mode** — multiple-choice note identification or symbol/concept questions with immediate feedback and score tracking
+- **Free practice** — unlimited questions, no pressure, no timer
+- **Flashcard mode** — spaced repetition (SM-2, same algorithm as Anki) for both notes and symbols, with kid-friendly emoji ratings
+- **Zero friction** — open the link, tap "Start", begin practicing. No account needed
+
+### Family Portal (Parents)
+
+- **One private link per family** — practice links, upcoming lessons, notes from the teacher, calendar download/subscription, and studio info
+- **Revocable** — teachers can rotate a family's portal link at any time
+- **Parent-facing by design** — students only ever see practice pages; family details stay behind the portal token and teacher-only access
 
 ### Music Notation
+
 - Real staff rendering with [VexFlow](https://www.vexflow.com/) — treble and bass clefs, key signatures, accidentals, ledger lines
 - Clean, large notation sized for tablet screens
-- **Standalone symbol SVGs** — Clefs, notes, rests, dynamics, articulations, and more are rendered from pre-extracted Bravura (SMuFL) vector paths in `public/symbols/`. No runtime font loading; consistent on all devices including iOS (no “tofu” from missing Unicode music fonts).
+- **Standalone symbol SVGs** — clefs, notes, rests, dynamics, articulations, and more are rendered from pre-extracted Bravura (SMuFL) vector paths in `public/symbols/`. No runtime font loading; consistent on all devices including iOS (no "tofu" from missing Unicode music fonts)
 - Built-in library of 40+ musical symbols and concepts across 7 categories
+
+---
+
+## Roadmap
+
+CogNote is under active development toward a complete studio suite. Coming next (in rough order):
+
+- **Billing & invoicing** — invoices derived from attendance × your studio policy; sent invoices freeze so policy changes never rewrite an already-sent bill; manual "mark as paid" by default (Zelle/Venmo/cash — zero fees), plus a payments-received CSV export for your accounting tool
+- **Stripe, bring-your-own-keys** — optional payment links on invoices using *your* Stripe account; the platform never touches the money and takes no cut
+- **Sheet music** — PDF upload, per-student assignment with practice notes, portal downloads
+- **Reminders & automation** — lesson reminders, overdue-invoice nudges, practice-inactivity alerts
+- **Recitals & events** — RSVP links and per-student repertoire
+- **More learning tools** — ear training (interval/chord recognition), practice streaks and badges
+- **AI-drafted progress reports** — optional, bring-your-own API key, off by default; the teacher always edits before sending
 
 ---
 
@@ -56,6 +97,8 @@ See [notes/spaced-repetition.md](notes/spaced-repetition.md) for full algorithm 
 | Styling | Tailwind CSS 4 |
 | Music Notation | VexFlow 5 |
 | Charts | Recharts |
+| Calendar | [ics](https://www.npmjs.com/package/ics) (.ics files + subscribable feeds) |
+| Email | Provider interface — [Resend](https://resend.com) in production, SMTP/Mailpit locally, no-op when unset |
 | Database | [Supabase](https://supabase.com/) (PostgreSQL + Auth + Row Level Security) |
 | Hosting | Vercel (recommended) |
 
@@ -72,7 +115,7 @@ See [notes/spaced-repetition.md](notes/spaced-repetition.md) for full algorithm 
 
 ```bash
 # Clone the repo
-git clone https://github.com/youruser/cognote.git
+git clone https://github.com/andresjmorales/cognote.git
 cd cognote
 
 # Install dependencies
@@ -143,27 +186,45 @@ cognote/
 │   ├── (teacher)/              # Teacher pages (auth required)
 │   │   ├── dashboard/          # Overview with stats and recent activity
 │   │   ├── students/           # Student list + detail views
-│   │   │   └── [id]/           # Per-student analytics
-│   │   └── plans/              # Lesson plan list, editor, detail views
+│   │   │   └── [id]/           # Per-student analytics, skills, progress
+│   │   ├── families/           # Guardian/family management + portal links
+│   │   ├── schedule/           # Weekly view, attendance, make-ups, notes
+│   │   ├── settings/           # Studio settings + policy editor
+│   │   ├── account/            # Display name, email, password
+│   │   └── lessons/            # Lesson plan list, editor, detail views
 │   │       ├── [id]/
 │   │       └── new/
 │   ├── (student)/              # Student pages (no auth)
 │   │   └── practice/
 │   │       └── [token]/        # Quiz, free practice, flashcard modes
+│   ├── portal/
+│   │   └── [token]/            # No-login family portal (schedule, notes, links)
 │   ├── api/                    # API routes
-│   │   ├── auth/               # Teacher account setup
+│   │   ├── auth/               # Signup (beta gate), waitlist, profile
 │   │   ├── dashboard/          # Dashboard summary
-│   │   ├── plans/              # Lesson plan CRUD + assignment
+│   │   ├── guardians/          # Family CRUD + portal token rotation
+│   │   ├── lessons/            # Lesson plan CRUD + assignment
+│   │   ├── portal/             # Family calendar feed (.ics)
 │   │   ├── practice/           # Student session + attempt tracking
-│   │   └── students/           # Student CRUD + analytics
-│   ├── login/                  # Teacher login/signup
+│   │   ├── schedule/           # Slots, lessons, attendance, notes
+│   │   ├── settings/           # Studio policy settings
+│   │   ├── skills/             # Skill dimension management
+│   │   └── students/           # Student CRUD + analytics + skill ratings
+│   ├── login/                  # Teacher login/signup/waitlist
+│   ├── try/                    # Public demo lesson (no data required)
 │   └── page.tsx                # Landing page
 ├── components/
 │   ├── music/                  # VexFlow renderer, quiz engine, flashcards
 │   ├── teacher/                # Teacher-specific components
+│   │   ├── schedule/           # Weekly grid, lesson dialog, policy editor
+│   │   ├── settings/           # Studio settings forms
+│   │   └── skills/             # Radar chart, trends, assessment panel
 │   └── ui/                     # Shared primitives (Button, Card, etc.)
 ├── lib/
 │   ├── supabase/               # Client, server, and middleware helpers
+│   ├── server/                 # Server-only helpers (scheduling, SMTP, skills)
+│   ├── email.ts                # Email provider interface (resend | smtp | none)
+│   ├── schedule.ts             # Timezone/DST-safe scheduling + make-up credit math
 │   ├── music.ts                # Note utilities, answer generation, presets
 │   ├── symbol-paths.ts         # Auto-generated: Bravura SVG path data (do not edit)
 │   ├── symbols.ts              # Musical symbols & concepts library
@@ -186,19 +247,31 @@ cognote/
 
 ```
 teachers
-  ├── students (one-to-many)
-  ├── plans (one-to-many)
-  └── student_plans (students ↔ plans, many-to-many)
-        └── practice_sessions (one-to-many)
-        │     └── note_attempts (one-to-many)
-        └── flashcard_progress (one-to-many, per note or symbol)
+  ├── studio_policies              (per-teacher settings: timezone, cancellation
+  │                                 window, make-up credit rules, studio info)
+  ├── guardians (families)         (name, email, revocable portal_token)
+  ├── students                     (guardian_id FK → guardians)
+  │     ├── lesson_slots           (recurring weekly schedule, local time)
+  │     │     └── lessons          (materialized occurrences, DST-correct)
+  │     │           ├── attendance     (attended | teacher_cancel | student_cancel | no_show)
+  │     │           │     └── makeup FK ← make-up lessons link to the cancellation
+  │     │           └── lesson_notes   (body, shared_with_parent, emailed_at)
+  │     └── skill_assessments      (rating 1–5 per dimension, timestamped)
+  ├── skill_dimensions             (teacher-extensible: Musicianship, Rhythm, ...)
+  ├── plans
+  └── student_plans                (students ↔ plans, many-to-many)
+        ├── practice_sessions
+        │     └── note_attempts
+        └── flashcard_progress     (per note or symbol)
+
+waitlist                           (beta signups, no FK)
 ```
 
-All teacher data is protected by **Row Level Security** — a teacher can only see their own students, lesson plans, and analytics. Student practice endpoints use token-based access with no authentication.
+All teacher data is protected by **Row Level Security** — a teacher can only see their own students, families, schedule, lesson plans, and analytics. Student practice pages and the family portal use unguessable token links with no authentication; portal tokens are revocable, and students never see family or schedule details.
 
 Migrations live in `supabase/migrations/` and are applied with `npx supabase db reset` (local) or `npx supabase db push` (remote).
 
-**Local:** To apply new migrations (e.g. after pulling changes that add columns), run `npx supabase db reset`. This reapplies all migrations and refreshes the schema cache; it also re-runs the seed, so you’ll get fresh test data. If you see errors like “Could not find column X in the schema cache”, the DB is out of date — run `npx supabase db reset` (with Docker and `npx supabase start` running).
+**Local:** To apply new migrations (e.g. after pulling changes that add columns), run `npx supabase db reset`. This reapplies all migrations and refreshes the schema cache; it also re-runs the seed, so you'll get fresh test data. If you see errors like "Could not find column X in the schema cache", the DB is out of date — run `npx supabase db reset` (with Docker and `npx supabase start` running).
 
 ---
 
@@ -208,22 +281,28 @@ Migrations live in `supabase/migrations/` and are applied with `npx supabase db 
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| GET | `/api/students` | List teacher's students |
-| POST | `/api/students` | Create student |
-| PUT | `/api/students/[id]` | Update student |
-| DELETE | `/api/students/[id]` | Remove student |
+| GET/POST | `/api/students` | List / create students |
+| PUT/DELETE | `/api/students/[id]` | Update / remove student |
 | GET | `/api/students/[id]/analytics` | Student analytics |
 | POST | `/api/students/[id]/skills` | Record skill ratings (1–5 per dimension) |
-| GET | `/api/lessons` | List teacher's lesson plans |
-| POST | `/api/lessons` | Create lesson plan |
-| PUT | `/api/lessons/[id]` | Update lesson plan |
-| DELETE | `/api/lessons/[id]` | Remove lesson plan |
-| POST | `/api/lessons/[id]/assign` | Assign lesson plan to student; emails the family when an email is on file, otherwise returns the practice URL for share/copy |
+| GET/POST | `/api/guardians` | List / create families |
+| PUT/DELETE | `/api/guardians/[id]` | Update / remove family |
+| POST | `/api/guardians/[id]/rotate-token` | Revoke + reissue a family's portal link |
+| GET/POST | `/api/lessons` | List / create lesson plans |
+| PUT/DELETE | `/api/lessons/[id]` | Update / remove lesson plan |
+| POST | `/api/lessons/[id]/assign` | Assign plan to student; emails the family when an email is on file, otherwise returns the practice URL for share/copy |
+| POST | `/api/schedule/slots` | Create recurring lesson slot |
+| PUT/DELETE | `/api/schedule/slots/[id]` | Update / end a slot |
+| POST | `/api/schedule/lessons` | Create ad-hoc or make-up lesson |
+| DELETE | `/api/schedule/lessons/[id]` | Remove a lesson occurrence |
+| PUT | `/api/schedule/lessons/[id]/attendance` | Mark attendance |
+| PUT | `/api/schedule/lessons/[id]/note` | Save lesson note (optionally email family) |
+| GET/PUT | `/api/settings/policy` | Read / update studio policy settings |
 | GET/POST | `/api/skills/dimensions` | List (lazily seeding defaults) / create skill dimensions |
 | PUT/DELETE | `/api/skills/dimensions/[id]` | Rename / delete a skill dimension |
 | GET | `/api/dashboard/summary` | Dashboard metrics |
 
-### Student-side (token-based, no auth)
+### Student & family (token-based, no auth)
 
 | Method | Route | Purpose |
 |--------|-------|---------|
@@ -231,8 +310,8 @@ Migrations live in `supabase/migrations/` and are applied with `npx supabase db 
 | POST | `/api/practice/[token]/session` | Start a practice session |
 | POST | `/api/practice/[token]/session/[id]/attempt` | Record a note attempt |
 | PUT | `/api/practice/[token]/session/[id]/complete` | Mark session complete |
-| GET | `/api/practice/[token]/flashcards` | Get flashcard state (notes or symbols) |
-| PUT | `/api/practice/[token]/flashcards` | Update flashcard after review (notes or symbols) |
+| GET/PUT | `/api/practice/[token]/flashcards` | Get / update flashcard state (notes or symbols) |
+| GET | `/api/portal/[token]/calendar` | Family .ics calendar (download or subscribe) |
 
 ---
 
@@ -284,6 +363,7 @@ Connect your GitHub repo to [Vercel](https://vercel.com) and set these environme
 | `EMAIL_PROVIDER` | `resend` in production, `smtp` for local Mailpit, `none`/unset to disable email (app still works; sends are logged and skipped) |
 | `RESEND_API_KEY` | Resend Dashboard → API Keys (only needed when `EMAIL_PROVIDER=resend`) |
 | `EMAIL_FROM_ADDRESS` | Optional; defaults to `notifications@cognote.studio`. Must be on a Resend-verified domain |
+| `BETA_ACCESS_CODE` | Optional; when set, sign-ups require this code and everyone else can join the waitlist. Leave unset for open sign-ups (self-hosting) |
 
 For local dev with Mailpit, set `EMAIL_PROVIDER=smtp` in `.env.local` — emails appear in the Mailpit UI ([http://127.0.0.1:54324](http://127.0.0.1:54324)). `SMTP_HOST`/`SMTP_PORT` default to `127.0.0.1:54325` (the port exposed in `supabase/config.toml`; rerun `npx supabase start` after changing it).
 
@@ -315,6 +395,8 @@ The landing page "Try a Lesson" button links to `/try`, a standalone practice pa
 4. Copy `.env.example` to `.env.local` and fill in the local credentials
 5. Run `npm run dev`
 6. Full stack is running locally — no cloud accounts needed
+
+Please stick to **permissive-licensed dependencies only** (no GPL/AGPL) so the project stays cleanly MIT.
 
 ### Testing
 
@@ -359,4 +441,6 @@ Edit the `GLYPHS` map in `scripts/extract-bravura-glyphs.js` to add SMuFL code p
 
 ## License
 
-[MIT](LICENSE)
+The code is licensed under [MIT](LICENSE).
+
+**CogNote** and the CogNote logo are trademarks of Andres Jaime Morales. The MIT license covers the code, not the name or brand.

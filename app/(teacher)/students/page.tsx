@@ -38,8 +38,12 @@ export default async function StudentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Students</h1>
+        <p className="text-muted text-sm mt-1">
+          Click a student to see their progress: practice accuracy, skill
+          ratings, attendance, and assigned lessons.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

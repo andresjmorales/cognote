@@ -23,6 +23,7 @@ export async function PUT(
       ...(body.parentContact !== undefined && { parent_contact: body.parentContact }),
       ...(body.guardianId !== undefined && { guardian_id: body.guardianId || null }),
       ...(body.level !== undefined && { level: body.level?.trim() || null }),
+      ...(body.birthdate !== undefined && { birthdate: body.birthdate || null }),
     })
     .eq("id", id)
     .eq("teacher_id", user.id)

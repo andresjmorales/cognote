@@ -152,8 +152,8 @@ export default async function SchedulePage({
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Schedule</h1>
         <p className="text-muted text-sm mt-1">
-          Weekly lessons materialized from recurring slots — tap a lesson to mark
-          attendance and jot notes for the family.
+          Tap a lesson to mark attendance and jot a note for the family. Weekly
+          lessons come from the recurring slots below.
         </p>
       </div>
 

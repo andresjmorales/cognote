@@ -8,7 +8,7 @@ import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStud
 import { LaunchPlanToStudentButton } from "@/components/teacher/LaunchPlanToStudentButton";
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
-import { StudentLevelEditor } from "@/components/teacher/StudentLevelEditor";
+import { StudentInfoCard } from "@/components/teacher/StudentInfoCard";
 import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
 import { getOrSeedDimensions } from "@/lib/server/skills";
 
@@ -160,10 +160,7 @@ export default async function StudentDetailPage({
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold">{student.name}</h1>
-            <StudentLevelEditor studentId={id} initialLevel={student.level ?? null} />
-          </div>
+          <h1 className="text-2xl font-bold">{student.name}</h1>
           {(student.guardians as { name: string } | null)?.name ? (
             <p className="text-muted text-sm">
               Family:{" "}
@@ -195,6 +192,13 @@ export default async function StudentDetailPage({
           <RemoveStudentButton studentId={id} studentName={student.name} />
         </div>
       </div>
+
+      {/* Level + birthday */}
+      <StudentInfoCard
+        studentId={id}
+        initialLevel={student.level ?? null}
+        initialBirthdate={student.birthdate ?? null}
+      />
 
       {/* Teacher Notes */}
       <StudentNotesEditor

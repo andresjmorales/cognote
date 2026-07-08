@@ -44,6 +44,8 @@ export interface Database {
           parent_contact: string | null;
           guardian_id: string | null;
           teacher_notes: string;
+          level: string | null;
+          birthdate: string | null;
           created_at: string;
         };
         Insert: {
@@ -53,6 +55,8 @@ export interface Database {
           parent_contact?: string | null;
           guardian_id?: string | null;
           teacher_notes?: string;
+          level?: string | null;
+          birthdate?: string | null;
           created_at?: string;
         };
         Update: {
@@ -60,6 +64,8 @@ export interface Database {
           parent_contact?: string | null;
           guardian_id?: string | null;
           teacher_notes?: string;
+          level?: string | null;
+          birthdate?: string | null;
         };
       };
       guardians: {
