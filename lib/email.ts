@@ -25,6 +25,12 @@ export interface SendEmailArgs {
   replyTo?: string;
   /** Per-teacher: display name, e.g. `"Morales Piano Studio (via CogNote)"`. */
   fromName?: string;
+  /**
+   * The recipient family's portal link. When set, a footer with the
+   * hyperlinked portal is appended (and an HTML body is generated if none
+   * was provided). Pass it on every parent/student-facing email.
+   */
+  portalUrl?: string;
 }
 
 export interface SendEmailResult {
@@ -40,7 +46,37 @@ function fromHeader(fromName?: string): string {
   return `"${name.replace(/["\r\n]/g, "")}" <${address}>`;
 }
 
-export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Append the family-portal footer to both bodies (EMAIL_SETUP/ROADMAP: every
+ * parent/student email links back to the family's personal portal). */
+function withPortalFooter(args: SendEmailArgs): SendEmailArgs {
+  if (!args.portalUrl) return args;
+
+  const text = `${args.text}\n\n—\nYour family portal — schedule, practice links, and lesson notes:\n${args.portalUrl}`;
+
+  // Emails so far are plain text; if an HTML body ever exists, append to it,
+  // otherwise generate one from the text so the footer link is clickable.
+  const baseHtml =
+    args.html ??
+    `<div style="font-family:sans-serif;white-space:pre-wrap;">${escapeHtml(args.text)}</div>`;
+  const html = `${baseHtml}
+<hr style="margin:24px 0 12px;border:none;border-top:1px solid #ddd;">
+<p style="font-family:sans-serif;font-size:13px;color:#555;">
+  <a href="${escapeHtml(args.portalUrl)}">Your family portal</a> — schedule, practice links, and lesson notes.
+</p>`;
+
+  return { ...args, text, html };
+}
+
+export async function sendEmail(rawArgs: SendEmailArgs): Promise<SendEmailResult> {
+  const args = withPortalFooter(rawArgs);
   const provider = process.env.EMAIL_PROVIDER ?? "none";
 
   switch (provider) {
