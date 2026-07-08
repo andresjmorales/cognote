@@ -91,7 +91,9 @@ export interface Database {
       studio_policies: {
         Row: {
           teacher_id: string;
+          studio_name: string;
           timezone: string;
+          lesson_duration_options: number[];
           cancellation_window_hours: number;
           timely_cancel_earns_makeup: boolean;
           late_cancel_earns_makeup: boolean;
@@ -102,7 +104,9 @@ export interface Database {
         };
         Insert: {
           teacher_id: string;
+          studio_name?: string;
           timezone?: string;
+          lesson_duration_options?: number[];
           cancellation_window_hours?: number;
           timely_cancel_earns_makeup?: boolean;
           late_cancel_earns_makeup?: boolean;
@@ -111,7 +115,9 @@ export interface Database {
           makeup_credit_expiry_days?: number | null;
         };
         Update: {
+          studio_name?: string;
           timezone?: string;
+          lesson_duration_options?: number[];
           cancellation_window_hours?: number;
           timely_cancel_earns_makeup?: boolean;
           late_cancel_earns_makeup?: boolean;
@@ -201,6 +207,21 @@ export interface Database {
           status?: AttendanceStatus;
           notice_at?: string | null;
           marked_at?: string;
+        };
+      };
+      waitlist: {
+        Row: {
+          id: string;
+          email: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          created_at?: string;
+        };
+        Update: {
+          email?: string;
         };
       };
       lesson_notes: {

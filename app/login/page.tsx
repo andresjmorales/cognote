@@ -6,46 +6,67 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+type Mode = "signin" | "signup" | "waitlist";
+
+const inputClass =
+  "w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
+
 export default function LoginPage() {
   const router = useRouter();
   useEffect(() => { document.title = "CogNote - Login"; }, []);
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setInfo(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     setLoading(true);
 
-    const supabase = createClient();
-
     try {
-      if (isSignUp) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { display_name: displayName } },
-        });
-        if (signUpError) throw signUpError;
-
-        // In local dev, Supabase auto-confirms. Sign in to get a session.
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
-
-        // Create (or adopt) the teacher row server-side
-        await fetch("/api/auth/setup-teacher", {
+      if (mode === "waitlist") {
+        const res = await fetch("/api/auth/waitlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ displayName: displayName || email.split("@")[0] }),
+          body: JSON.stringify({ email }),
         });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? "Something went wrong");
+        setInfo("You're on the list! We'll email you when a spot opens up.");
+        return;
+      }
+
+      if (mode === "signup") {
+        const res = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password,
+            displayName: displayName || email.split("@")[0],
+            accessCode,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? "Something went wrong");
+        if (data.needsConfirmation) {
+          setInfo("Check your email and click the confirmation link to activate your account.");
+          return;
+        }
       } else {
+        const supabase = createClient();
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -80,18 +101,20 @@ export default function LoginPage() {
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-primary">CogNote</h1>
           <p className="text-muted text-sm mt-1">
-            {isSignUp ? "Create your teacher account" : "Sign in to your dashboard"}
+            {mode === "signin" && "Sign in to your dashboard"}
+            {mode === "signup" && "Create your teacher account"}
+            {mode === "waitlist" && "Join the beta waitlist"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {isSignUp && (
+          {mode === "signup" && (
             <input
               type="text"
               placeholder="Your name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className={inputClass}
               required
             />
           )}
@@ -100,40 +123,86 @@ export default function LoginPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className={inputClass}
             required
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-            required
-            minLength={6}
-          />
-
-          {error && (
-            <p className="text-error text-sm text-center">{error}</p>
+          {mode !== "waitlist" && (
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              required
+              minLength={6}
+            />
+          )}
+          {mode === "signup" && (
+            <div>
+              <input
+                type="text"
+                placeholder="Beta access code"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                className={inputClass}
+              />
+              <p className="text-xs text-muted mt-1.5">
+                No code?{" "}
+                <button
+                  type="button"
+                  className="text-primary font-semibold hover:underline cursor-pointer"
+                  onClick={() => switchMode("waitlist")}
+                >
+                  Join the waitlist
+                </button>
+              </p>
+            </div>
+          )}
+          {mode === "waitlist" && (
+            <p className="text-xs text-muted -mt-2">
+              CogNote Studio is in private beta. Leave your email and we&apos;ll
+              reach out when a spot opens up.
+            </p>
           )}
 
+          {error && <p className="text-error text-sm text-center">{error}</p>}
+          {info && <p className="text-primary text-sm text-center">{info}</p>}
+
           <Button type="submit" size="lg" disabled={loading} className="w-full">
-            {loading ? "..." : isSignUp ? "Create Account" : "Sign In"}
+            {loading
+              ? "..."
+              : mode === "signin"
+                ? "Sign In"
+                : mode === "signup"
+                  ? "Create Account"
+                  : "Join Waitlist"}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted mt-4">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-          <button
-            type="button"
-            className="text-primary font-semibold hover:underline cursor-pointer"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError(null);
-            }}
-          >
-            {isSignUp ? "Sign in" : "Sign up"}
-          </button>
+          {mode === "signin" ? (
+            <>
+              Don&apos;t have an account?{" "}
+              <button
+                type="button"
+                className="text-primary font-semibold hover:underline cursor-pointer"
+                onClick={() => switchMode("signup")}
+              >
+                Sign up
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <button
+                type="button"
+                className="text-primary font-semibold hover:underline cursor-pointer"
+                onClick={() => switchMode("signin")}
+              >
+                Sign in
+              </button>
+            </>
+          )}
         </p>
       </Card>
     </div>

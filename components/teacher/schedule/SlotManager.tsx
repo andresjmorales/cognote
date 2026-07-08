@@ -32,9 +32,11 @@ const inputClass =
 export function SlotManager({
   slots,
   students,
+  durationOptions,
 }: {
   slots: Slot[];
   students: { id: string; name: string }[];
+  durationOptions: number[];
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
@@ -44,7 +46,7 @@ export function SlotManager({
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");
   const [dayOfWeek, setDayOfWeek] = useState(2);
   const [startTime, setStartTime] = useState("16:00");
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState(durationOptions[0] ?? 30);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -144,7 +146,7 @@ export function SlotManager({
               onChange={(e) => setDuration(Number(e.target.value))}
               className={inputClass}
             >
-              {[30, 45, 60].map((minutes) => (
+              {durationOptions.map((minutes) => (
                 <option key={minutes} value={minutes}>
                   {minutes} min
                 </option>

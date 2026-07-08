@@ -34,11 +34,37 @@ export async function PUT(req: NextRequest) {
     }
   }
 
+  let durationOptions: number[] | undefined;
+  if (body.lessonDurationOptions !== undefined) {
+    if (!Array.isArray(body.lessonDurationOptions)) {
+      return NextResponse.json(
+        { error: "lessonDurationOptions must be an array" },
+        { status: 400 }
+      );
+    }
+    const cleaned = (body.lessonDurationOptions as unknown[])
+      .map((v) => Number(v))
+      .filter((v) => Number.isInteger(v) && v >= 5 && v <= 240);
+    durationOptions = [...new Set(cleaned)].sort((a, b) => a - b);
+    if (durationOptions.length === 0) {
+      return NextResponse.json(
+        { error: "At least one time block between 5 and 240 minutes is required" },
+        { status: 400 }
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("studio_policies")
     .upsert(
       {
         teacher_id: user.id,
+        ...(body.studioName !== undefined && {
+          studio_name: String(body.studioName).trim().slice(0, 120),
+        }),
+        ...(durationOptions !== undefined && {
+          lesson_duration_options: durationOptions,
+        }),
         ...(body.timezone !== undefined && { timezone: body.timezone }),
         ...(body.cancellationWindowHours !== undefined && {
           cancellation_window_hours: Number(body.cancellationWindowHours),

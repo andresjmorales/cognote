@@ -26,6 +26,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // During the private beta, teacher rows are only created via /api/auth/signup
+  // (which checks the access code) — this route must not be a backdoor.
+  if (process.env.BETA_ACCESS_CODE?.trim()) {
+    return NextResponse.json(
+      { error: "CogNote Studio is in private beta — sign up with an access code." },
+      { status: 403 }
+    );
+  }
+
   // Create a new teacher row tied to the authenticated user's ID
   const { error } = await serviceClient.from("teachers").insert({
     id: user.id,
