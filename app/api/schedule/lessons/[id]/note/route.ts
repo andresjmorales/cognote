@@ -5,6 +5,16 @@ import { getPolicy } from "@/lib/server/scheduling";
 import { formatLessonTime, formatLessonDate } from "@/lib/schedule";
 
 /**
+ * Absolute origin for links in outbound email, honoring reverse-proxy
+ * headers (Vercel and most self-host setups set x-forwarded-*).
+ */
+function requestOrigin(req: NextRequest): string {
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  return host ? `${proto}://${host}` : req.nextUrl.origin;
+}
+
+/**
  * Save the per-lesson note. Emailing the family is an explicit action
  * (sendEmail: true), never a side effect of saving — no surprise emails
  * on every edit.
@@ -26,7 +36,7 @@ export async function PUT(
   const { data: lesson } = await supabase
     .from("lessons")
     .select(
-      "id, lesson_date, starts_at, students ( name, guardians ( name, email ) )"
+      "id, lesson_date, starts_at, students ( name, guardians ( name, email, portal_token ) )"
     )
     .eq("id", id)
     .eq("teacher_id", user.id)
@@ -61,7 +71,11 @@ export async function PUT(
   if (body.sendEmail && shared) {
     const student = lesson.students as unknown as {
       name: string;
-      guardians: { name: string; email: string | null } | null;
+      guardians: {
+        name: string;
+        email: string | null;
+        portal_token: string | null;
+      } | null;
     } | null;
     const guardianEmail = student?.guardians?.email;
 
@@ -74,6 +88,7 @@ export async function PUT(
         ? `— ${policy.studio_name} (sent via CogNote Studio)`
         : "— Sent via CogNote Studio";
 
+      const portalToken = student.guardians?.portal_token;
       const result = await sendEmail({
         to: guardianEmail,
         subject: `Lesson notes for ${student.name} — ${when}`,
@@ -83,6 +98,9 @@ export async function PUT(
           : undefined,
         // Parent replies go to the teacher, never to the platform.
         replyTo: user.email,
+        portalUrl: portalToken
+          ? `${requestOrigin(req)}/portal/${portalToken}`
+          : undefined,
       });
       emailed = result.sent;
       emailError = result.error;
