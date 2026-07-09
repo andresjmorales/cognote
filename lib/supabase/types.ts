@@ -74,6 +74,7 @@ export interface Database {
           id: string;
           teacher_id: string;
           name: string;
+          family_name: string | null;
           email: string | null;
           phone: string | null;
           secondary_name: string | null;
@@ -87,6 +88,7 @@ export interface Database {
           id?: string;
           teacher_id: string;
           name: string;
+          family_name?: string | null;
           email?: string | null;
           phone?: string | null;
           secondary_name?: string | null;
@@ -98,6 +100,7 @@ export interface Database {
         };
         Update: {
           name?: string;
+          family_name?: string | null;
           email?: string | null;
           phone?: string | null;
           secondary_name?: string | null;

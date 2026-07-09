@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { AddStudentForm } from "@/components/teacher/AddStudentForm";
+import { familyDisplayName } from "@/lib/guardians";
+import { ageFromBirthdate } from "@/lib/students";
 
 export const metadata = { title: "Students" };
 
@@ -18,8 +20,8 @@ export default async function StudentsPage() {
       .from("students")
       .select(
         `
-        id, name, parent_contact, created_at,
-        guardians ( name ),
+        id, name, birthdate, parent_contact, created_at,
+        guardians ( name, family_name ),
         student_plans (
           id,
           plans ( name ),
@@ -31,10 +33,15 @@ export default async function StudentsPage() {
       .order("name"),
     supabase
       .from("guardians")
-      .select("id, name")
+      .select("id, name, family_name")
       .eq("teacher_id", user.id)
       .order("name"),
   ]);
+
+  const guardianOptions = (guardians ?? []).map((g) => ({
+    id: g.id,
+    name: familyDisplayName(g),
+  }));
 
   return (
     <div>
@@ -79,6 +86,16 @@ export default async function StudentsPage() {
                   overallTotal > 0
                     ? Math.round((overallCorrect / overallTotal) * 100)
                     : null;
+                const age =
+                  student.birthdate != null
+                    ? ageFromBirthdate(student.birthdate)
+                    : null;
+                const familyLine = student.guardians
+                  ? familyDisplayName(student.guardians)
+                  : student.parent_contact || null;
+                const subtitle = [familyLine, age !== null ? `age ${age}` : null]
+                  .filter(Boolean)
+                  .join(" · ");
 
                 return (
                   <Link key={student.id} href={`/students/${student.id}`} className="block">
@@ -91,10 +108,8 @@ export default async function StudentsPage() {
                           <div className="font-semibold text-lg">
                             {student.name}
                           </div>
-                          {(student.guardians?.name || student.parent_contact) && (
-                            <div className="text-sm text-muted">
-                              {student.guardians?.name ?? student.parent_contact}
-                            </div>
+                          {subtitle && (
+                            <div className="text-sm text-muted">{subtitle}</div>
                           )}
                         </div>
                         <div className="text-right text-sm">
@@ -135,7 +150,7 @@ export default async function StudentsPage() {
         <div>
           <Card>
             <h2 className="font-semibold mb-3">Add Student</h2>
-            <AddStudentForm guardians={guardians ?? []} />
+            <AddStudentForm guardians={guardianOptions} />
           </Card>
         </div>
       </div>

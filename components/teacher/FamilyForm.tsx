@@ -9,6 +9,7 @@ import type { EmailRecipients } from "@/lib/supabase/types";
 export interface FamilyGuardian {
   id: string;
   name: string;
+  family_name: string | null;
   email: string | null;
   phone: string | null;
   secondary_name: string | null;
@@ -52,6 +53,7 @@ export function FamilyForm({
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState(guardian?.name ?? "");
+  const [familyName, setFamilyName] = useState(guardian?.family_name ?? "");
   const [email, setEmail] = useState(guardian?.email ?? "");
   const [phone, setPhone] = useState(guardian?.phone ?? "");
   const [secondaryName, setSecondaryName] = useState(guardian?.secondary_name ?? "");
@@ -90,6 +92,7 @@ export function FamilyForm({
 
     const payload = {
       name: name.trim(),
+      familyName: familyName.trim(),
       email: email.trim(),
       phone: phone.trim(),
       secondaryName: secondaryName.trim(),
@@ -130,6 +133,19 @@ export function FamilyForm({
     <Card padding="sm" className="mb-4">
       <form onSubmit={handleSave} className="flex flex-col gap-3">
         <h3 className="font-semibold">{guardian ? "Edit Family" : "New Family"}</h3>
+
+        <div>
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
+            Family Name
+          </p>
+          <input
+            type="text"
+            placeholder="e.g. The Parker Family (optional — defaults to the guardian's name)"
+            value={familyName}
+            onChange={(e) => setFamilyName(e.target.value)}
+            className={inputClass}
+          />
+        </div>
 
         <div>
           <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">

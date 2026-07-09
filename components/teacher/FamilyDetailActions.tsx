@@ -10,6 +10,7 @@ import {
   type FamilyGuardian,
   type FamilyStudent,
 } from "@/components/teacher/FamilyForm";
+import { familyDisplayName } from "@/lib/guardians";
 
 /**
  * Action row + inline edit form for the family detail page. Server
@@ -88,7 +89,9 @@ export function FamilyDetailActions({
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-sm w-full">
-            <h3 className="font-semibold mb-2">Delete {guardian.name}?</h3>
+            <h3 className="font-semibold mb-2">
+              Delete {familyDisplayName(guardian)}?
+            </h3>
             <p className="text-sm text-muted mb-4">
               The portal link stops working and students are unlinked from this
               family. Students and their practice history are kept.

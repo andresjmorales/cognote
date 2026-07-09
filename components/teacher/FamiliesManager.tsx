@@ -11,6 +11,7 @@ import {
   type FamilyGuardian,
   type FamilyStudent,
 } from "@/components/teacher/FamilyForm";
+import { familyDisplayName } from "@/lib/guardians";
 
 export function FamiliesManager({
   guardians,
@@ -67,8 +68,12 @@ export function FamiliesManager({
         <div className="flex flex-col gap-3">
           {guardians.map((g) => {
             const members = students.filter((s) => s.guardian_id === g.id);
+            const primaryContact = [g.email, g.phone].filter(Boolean).join(" · ");
             const contacts = [
-              [g.email, g.phone].filter(Boolean).join(" · "),
+              // With an explicit family name, say who the primary contact is
+              g.family_name
+                ? `${g.name}${primaryContact ? ` — ${primaryContact}` : ""}`
+                : primaryContact,
               g.secondary_name
                 ? `${g.secondary_name}${
                     [g.secondary_email, g.secondary_phone].filter(Boolean).length > 0
@@ -85,7 +90,7 @@ export function FamiliesManager({
                       href={`/families/${g.id}`}
                       className="font-semibold text-lg hover:text-primary transition-colors"
                     >
-                      {g.name}
+                      {familyDisplayName(g)}
                     </Link>
                     {contacts.length > 0 ? (
                       contacts.map((line, i) => (
@@ -130,7 +135,9 @@ export function FamiliesManager({
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-sm w-full">
-            <h3 className="font-semibold mb-2">Delete {confirmDelete.name}?</h3>
+            <h3 className="font-semibold mb-2">
+              Delete {familyDisplayName(confirmDelete)}?
+            </h3>
             <p className="text-sm text-muted mb-4">
               The portal link stops working and students are unlinked from this family.
               Students and their practice history are kept.

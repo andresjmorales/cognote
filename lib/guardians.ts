@@ -14,6 +14,17 @@ export interface FamilyContact {
 }
 
 /**
+ * Display name for a family: the explicit family name when set, otherwise
+ * the primary guardian's name (pre-family_name behavior).
+ */
+export function familyDisplayName(family: {
+  family_name?: string | null;
+  name: string;
+}): string {
+  return family.family_name?.trim() || family.name;
+}
+
+/**
  * Resolve the email addresses a family email should go to, honoring the
  * family's email_recipients setting. Guardians without an email on file are
  * skipped; if the preferred guardian has no email we fall back to the other

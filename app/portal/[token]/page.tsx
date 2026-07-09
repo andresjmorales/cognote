@@ -14,6 +14,7 @@ import {
 import type { AttendanceStatus } from "@/lib/supabase/types";
 import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { familyDisplayName } from "@/lib/guardians";
 
 export const metadata: Metadata = { title: "Family Portal" };
 
@@ -69,7 +70,7 @@ export default async function PortalPage({
 
   const { data: guardian } = await supabase
     .from("guardians")
-    .select("id, name, teacher_id, students ( id, name )")
+    .select("id, name, family_name, teacher_id, students ( id, name )")
     .eq("portal_token", token)
     .single();
 
@@ -142,7 +143,9 @@ export default async function PortalPage({
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">Welcome, {guardian.name}</h1>
+          <h1 className="text-2xl font-bold">
+            Welcome, {familyDisplayName(guardian)}
+          </h1>
           <p className="text-muted text-sm mt-1">
             Practice links, lesson schedule, and notes for your family — no login needed.
             Keep this link private.

@@ -21,6 +21,8 @@ export async function PUT(
     email: body.email?.trim() || null,
     phone: body.phone?.trim() || null,
   };
+  if (body.familyName !== undefined)
+    update.family_name = body.familyName?.trim() || null;
   if (body.secondaryName !== undefined)
     update.secondary_name = body.secondaryName?.trim() || null;
   if (body.secondaryEmail !== undefined)

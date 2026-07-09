@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { FamilyDetailActions } from "@/components/teacher/FamilyDetailActions";
 import type { FamilyGuardian } from "@/components/teacher/FamilyForm";
+import { familyDisplayName } from "@/lib/guardians";
 
 export async function generateMetadata({
   params,
@@ -15,10 +16,10 @@ export async function generateMetadata({
   const supabase = await createClient();
   const { data: guardian } = await supabase
     .from("guardians")
-    .select("name")
+    .select("name, family_name")
     .eq("id", id)
     .single();
-  return { title: guardian?.name ?? "Family" };
+  return { title: guardian ? familyDisplayName(guardian) : "Family" };
 }
 
 const DAY_NAMES = [
@@ -68,7 +69,7 @@ export default async function FamilyDetailPage({
     supabase
       .from("guardians")
       .select(
-        "id, name, email, phone, secondary_name, secondary_email, secondary_phone, email_recipients, portal_token, created_at"
+        "id, name, family_name, email, phone, secondary_name, secondary_email, secondary_phone, email_recipients, portal_token, created_at"
       )
       .eq("id", id)
       .eq("teacher_id", user.id)
@@ -137,7 +138,7 @@ export default async function FamilyDetailPage({
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold">{guardian.name}</h1>
+          <h1 className="text-2xl font-bold">{familyDisplayName(guardian)}</h1>
           <p className="text-muted text-sm">
             {members.length > 0
               ? `${members.length} student${members.length !== 1 ? "s" : ""}`

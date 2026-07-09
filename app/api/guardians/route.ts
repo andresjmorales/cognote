@@ -14,7 +14,9 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("guardians")
-    .select("id, name, email, phone, portal_token, created_at, students ( id, name )")
+    .select(
+      "id, name, family_name, email, phone, secondary_name, secondary_email, secondary_phone, email_recipients, portal_token, created_at, students ( id, name )"
+    )
     .eq("teacher_id", user.id)
     .order("name");
 
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
     .insert({
       teacher_id: user.id,
       name: body.name.trim(),
+      family_name: body.familyName?.trim() || null,
       email: body.email?.trim() || null,
       phone: body.phone?.trim() || null,
       secondary_name: body.secondaryName?.trim() || null,
