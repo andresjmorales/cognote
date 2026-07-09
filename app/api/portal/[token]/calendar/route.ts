@@ -3,6 +3,7 @@ import { createEvents, type EventAttributes } from "ics";
 import { createServiceClient } from "@/lib/supabase/server";
 import { materializeLessons, getPolicy } from "@/lib/server/scheduling";
 import { addDays, toLocalDateString, oneToOne } from "@/lib/schedule";
+import { familyDisplayName } from "@/lib/guardians";
 
 /**
  * Per-family .ics feed (webcal-subscribable). Token-based like the rest of
@@ -19,7 +20,7 @@ export async function GET(
 
   const { data: guardian } = await supabase
     .from("guardians")
-    .select("id, name, teacher_id, students ( id, name )")
+    .select("id, name, family_name, teacher_id, students ( id, name )")
     .eq("portal_token", token)
     .single();
 
@@ -29,7 +30,7 @@ export async function GET(
 
   const students = (guardian.students ?? []) as { id: string; name: string }[];
   if (students.length === 0) {
-    return icsResponse([], guardian.name);
+    return icsResponse([], familyDisplayName(guardian));
   }
 
   const policy = await getPolicy(supabase, guardian.teacher_id);
@@ -72,7 +73,7 @@ export async function GET(
       };
     });
 
-  return icsResponse(events, guardian.name);
+  return icsResponse(events, familyDisplayName(guardian));
 }
 
 function icsResponse(events: EventAttributes[], familyName: string) {

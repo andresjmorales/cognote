@@ -11,6 +11,7 @@ import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
 import { StudentInfoCard } from "@/components/teacher/StudentInfoCard";
 import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
 import { getOrSeedDimensions } from "@/lib/server/skills";
+import { familyDisplayName } from "@/lib/guardians";
 
 export async function generateMetadata({
   params,
@@ -50,7 +51,7 @@ export default async function StudentDetailPage({
   ] = await Promise.all([
     supabase
       .from("students")
-      .select("*, guardians ( id, name, email )")
+      .select("*, guardians ( id, name, family_name, email )")
       .eq("id", id)
       .eq("teacher_id", user.id)
       .single(),
@@ -168,7 +169,9 @@ export default async function StudentDetailPage({
                 href={`/families/${(student.guardians as { id: string }).id}`}
                 className="hover:text-primary transition-colors"
               >
-                {(student.guardians as { name: string }).name}
+                {familyDisplayName(
+                  student.guardians as { name: string; family_name: string | null }
+                )}
               </Link>
             </p>
           ) : student.parent_contact ? (
