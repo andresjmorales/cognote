@@ -9,6 +9,7 @@ import { LaunchPlanButton } from "@/components/teacher/LaunchPlanButton";
 import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { PlanEditWrapper } from "@/components/teacher/PlanEditWrapper";
 import { oneToOne } from "@/lib/schedule";
+import { isActiveStudentPlan } from "@/lib/student-plans";
 
 export async function generateMetadata({
   params,
@@ -52,8 +53,10 @@ export default async function PlanDetailPage({
     .select("id, token, assigned_at, unassigned_at, students ( id, name ), practice_sessions ( id )")
     .eq("plan_id", id);
 
-  const activeStudentPlans = (studentPlans ?? []).filter((sp) => !sp.unassigned_at);
-  const pastStudentPlans = (studentPlans ?? []).filter((sp) => sp.unassigned_at);
+  const activeStudentPlans = (studentPlans ?? []).filter(isActiveStudentPlan);
+  const pastStudentPlans = (studentPlans ?? []).filter(
+    (sp) => !isActiveStudentPlan(sp)
+  );
 
   const { data: students } = await supabase
     .from("students")

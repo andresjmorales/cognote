@@ -37,8 +37,6 @@ export function UnassignLessonButton({
     setBusy(false);
   }
 
-  const hasHistory = sessionCount > 0;
-
   return (
     <>
       <Button
@@ -61,10 +59,8 @@ export function UnassignLessonButton({
           >
             <h3 className="font-semibold text-lg mb-1">Unassign lesson?</h3>
             <p className="text-muted text-sm mb-4">
-              Remove &quot;{lessonName}&quot; from active assignments.
-              {hasHistory
-                ? ` ${sessionCount} practice session${sessionCount !== 1 ? "s" : ""} will be kept under Past Lessons.`
-                : " No practice has started, so this assignment will be removed entirely."}
+              Remove &quot;{lessonName}&quot; from active assignments. Practice
+              history is kept — it moves to Past Lessons.
             </p>
             <div className="flex justify-end gap-2">
               <Button

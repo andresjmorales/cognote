@@ -13,6 +13,7 @@ import { StudentInfoCard } from "@/components/teacher/StudentInfoCard";
 import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
 import { getOrSeedDimensions } from "@/lib/server/skills";
 import { familyDisplayName } from "@/lib/guardians";
+import { isActiveStudentPlan } from "@/lib/student-plans";
 
 export async function generateMetadata({
   params,
@@ -92,8 +93,8 @@ export default async function StudentDetailPage({
 
   if (!student) notFound();
 
-  const activePlans = (studentPlans ?? []).filter((sp) => !sp.unassigned_at);
-  const pastPlans = (studentPlans ?? []).filter((sp) => sp.unassigned_at);
+  const activePlans = (studentPlans ?? []).filter(isActiveStudentPlan);
+  const pastPlans = (studentPlans ?? []).filter((sp) => !isActiveStudentPlan(sp));
 
   // Attendance summary — only lessons that have been marked count.
   const attendanceCounts: Record<string, number> = {};
