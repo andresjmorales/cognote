@@ -109,8 +109,11 @@ export default async function StudentDetailPage({
       ? Math.round(((attendanceCounts.attended ?? 0) / markedLessons) * 100)
       : null;
 
-  const allSessions = (studentPlans ?? []).flatMap(
-    (sp: any) => sp.practice_sessions ?? []
+  const allSessions = (studentPlans ?? []).flatMap((sp: any) =>
+    (sp.practice_sessions ?? []).map((session: any) => ({
+      ...session,
+      plan: sp.plans,
+    }))
   );
   const totalSessions = allSessions.length;
   const completedSessions = allSessions.filter(
@@ -484,6 +487,9 @@ export default async function StudentDetailPage({
                       <div className="flex justify-between text-sm">
                         <div>
                           <span className="capitalize">{s.mode.replace("_", " ")}</span>
+                          {s.plan?.name && (
+                            <span className="text-muted ml-2">· {s.plan.name}</span>
+                          )}
                           <span className="text-muted ml-2">
                             {s.total_correct}/{s.total_questions}
                           </span>

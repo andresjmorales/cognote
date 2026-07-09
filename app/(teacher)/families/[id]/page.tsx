@@ -39,19 +39,6 @@ function formatSlotTime(time: string): string {
   return `${hour}:${String(mm).padStart(2, "0")} ${period}`;
 }
 
-function ageFromBirthdate(birthdate: string): number | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthdate);
-  if (!match) return null;
-  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  const now = new Date();
-  let age = now.getFullYear() - year;
-  const hadBirthdayThisYear =
-    now.getMonth() + 1 > month ||
-    (now.getMonth() + 1 === month && now.getDate() >= day);
-  if (!hadBirthdayThisYear) age--;
-  return age >= 0 && age < 130 ? age : null;
-}
-
 export default async function FamilyDetailPage({
   params,
 }: {
@@ -76,7 +63,7 @@ export default async function FamilyDetailPage({
       .single(),
     supabase
       .from("students")
-      .select("id, name, guardian_id, level, birthdate")
+      .select("id, name, guardian_id")
       .eq("teacher_id", user.id)
       .order("name"),
   ]);
@@ -203,9 +190,6 @@ export default async function FamilyDetailPage({
         <div className="flex flex-col gap-3">
           {members.map((student) => {
             const studentSlots = slotsByStudent.get(student.id) ?? [];
-            const age = student.birthdate
-              ? ageFromBirthdate(student.birthdate)
-              : null;
             return (
               <Link
                 key={student.id}
@@ -217,17 +201,7 @@ export default async function FamilyDetailPage({
                   className="hover:border-primary/40 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-semibold">{student.name}</div>
-                      <div className="text-sm text-muted">
-                        {[
-                          student.level,
-                          age !== null ? `age ${age}` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || "No level or birthday set"}
-                      </div>
-                    </div>
+                    <div className="font-semibold">{student.name}</div>
                     <div className="text-right text-sm text-muted">
                       {studentSlots.length > 0 ? (
                         studentSlots.map((slot, i) => (
