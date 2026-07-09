@@ -17,11 +17,11 @@ export async function POST(
 
   const { data: sp } = await supabase
     .from("student_plans")
-    .select("id")
+    .select("id, unassigned_at")
     .eq("token", token)
     .single();
 
-  if (!sp) {
+  if (!sp || sp.unassigned_at) {
     return NextResponse.json({ error: "Invalid token" }, { status: 404 });
   }
 

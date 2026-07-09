@@ -8,7 +8,8 @@ import {
 } from "@/lib/guardians";
 import { getPolicy } from "@/lib/server/scheduling";
 import { requestOrigin } from "@/lib/server/http";
-import { formatLessonTime, formatLessonDate } from "@/lib/schedule";
+import { formatLessonTime, formatLessonDate, ATTENDANCE_LABELS, oneToOne } from "@/lib/schedule";
+import type { AttendanceStatus } from "@/lib/supabase/types";
 
 /**
  * Save the per-lesson note. Emailing the family is an explicit action
@@ -32,7 +33,7 @@ export async function PUT(
   const { data: lesson } = await supabase
     .from("lessons")
     .select(
-      "id, lesson_date, starts_at, students ( name, guardians ( name, email, secondary_name, secondary_email, email_recipients, portal_token ) )"
+      "id, lesson_date, starts_at, students ( name, guardians ( name, email, secondary_name, secondary_email, email_recipients, portal_token ) ), attendance!lesson_id ( status )"
     )
     .eq("id", id)
     .eq("teacher_id", user.id)
@@ -82,10 +83,16 @@ export async function PUT(
         : "— Sent via CogNote Studio";
 
       const portalToken = family.portal_token;
+      const attendance = oneToOne(
+        lesson.attendance as { status: AttendanceStatus }[] | { status: AttendanceStatus } | null
+      );
+      const statusLine = attendance
+        ? `Status: ${ATTENDANCE_LABELS[attendance.status]}\n\n`
+        : "";
       const result = await sendEmail({
         to: recipients,
         subject: `Lesson notes for ${student.name} — ${when}`,
-        text: `Hi ${familyGreetingNames(family)},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${body.body.trim()}\n\n${signature}`,
+        text: `Hi ${familyGreetingNames(family)},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${statusLine}${body.body.trim()}\n\n${signature}`,
         fromName: policy.studio_name
           ? `${policy.studio_name} (via CogNote)`
           : undefined,

@@ -6,7 +6,9 @@ import { Card } from "@/components/ui/card";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
 import { DeletePlanButton } from "@/components/teacher/DeletePlanButton";
 import { LaunchPlanButton } from "@/components/teacher/LaunchPlanButton";
+import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { PlanEditWrapper } from "@/components/teacher/PlanEditWrapper";
+import { oneToOne } from "@/lib/schedule";
 
 export async function generateMetadata({
   params,
@@ -47,8 +49,11 @@ export default async function PlanDetailPage({
 
   const { data: studentPlans } = await supabase
     .from("student_plans")
-    .select("id, token, assigned_at, students ( id, name )")
+    .select("id, token, assigned_at, unassigned_at, students ( id, name ), practice_sessions ( id )")
     .eq("plan_id", id);
+
+  const activeStudentPlans = (studentPlans ?? []).filter((sp) => !sp.unassigned_at);
+  const pastStudentPlans = (studentPlans ?? []).filter((sp) => sp.unassigned_at);
 
   const { data: students } = await supabase
     .from("students")
@@ -222,26 +227,71 @@ export default async function PlanDetailPage({
 
         <Card>
           <h2 className="font-semibold mb-3">Assigned Students</h2>
-          {!studentPlans?.length ? (
+          {!activeStudentPlans.length ? (
             <p className="text-muted text-sm">No students assigned yet.</p>
           ) : (
             <div className="space-y-2">
-              {(studentPlans as any[]).map((sp) => (
-                <div key={sp.id} className="flex justify-between items-center py-1.5">
-                  <Link
-                    href={`/students/${sp.students?.id}`}
-                    className="text-sm font-medium hover:text-primary"
-                  >
-                    {sp.students?.name}
-                  </Link>
-                  <span className="text-xs text-muted">
-                    {new Date(sp.assigned_at).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
+              {activeStudentPlans.map((sp) => {
+                const sessionCount = (sp.practice_sessions as { id: string }[] | null)?.length ?? 0;
+                const student = oneToOne(
+                  sp.students as { id: string; name: string }[] | { id: string; name: string } | null
+                );
+                return (
+                  <div key={sp.id} className="flex justify-between items-center gap-2 py-1.5">
+                    <div>
+                      <Link
+                        href={`/students/${student?.id}`}
+                        className="text-sm font-medium hover:text-primary"
+                      >
+                        {student?.name}
+                      </Link>
+                      <div className="text-xs text-muted">
+                        Assigned {new Date(sp.assigned_at).toLocaleDateString()}
+                        {sessionCount > 0 && ` · ${sessionCount} session${sessionCount !== 1 ? "s" : ""}`}
+                      </div>
+                    </div>
+                    <UnassignLessonButton
+                      studentPlanId={sp.id}
+                      lessonName={plan.name}
+                      sessionCount={sessionCount}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </Card>
+
+        {pastStudentPlans.length > 0 && (
+          <Card className="mt-4">
+            <h2 className="font-semibold mb-3">Past Students</h2>
+            <div className="space-y-2">
+              {pastStudentPlans.map((sp) => {
+                const sessionCount = (sp.practice_sessions as { id: string }[] | null)?.length ?? 0;
+                const student = oneToOne(
+                  sp.students as { id: string; name: string }[] | { id: string; name: string } | null
+                );
+                return (
+                  <div key={sp.id} className="flex justify-between items-center py-1.5 opacity-80">
+                    <div>
+                      <Link
+                        href={`/students/${student?.id}`}
+                        className="text-sm font-medium hover:text-primary"
+                      >
+                        {student?.name}
+                      </Link>
+                      <div className="text-xs text-muted">
+                        {sessionCount} session{sessionCount !== 1 ? "s" : ""}
+                        {sp.unassigned_at &&
+                          ` · unassigned ${new Date(sp.unassigned_at).toLocaleDateString()}`}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
       </div>
     </PlanEditWrapper>
   );

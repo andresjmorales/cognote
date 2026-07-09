@@ -10,11 +10,11 @@ export async function GET(
 
   const { data: sp } = await supabase
     .from("student_plans")
-    .select("id, plans ( notes, clef, plan_type, symbols, key_signature, key_signatures, include_sharps, include_flats )")
+    .select("id, unassigned_at, plans ( notes, clef, plan_type, symbols, key_signature, key_signatures, include_sharps, include_flats )")
     .eq("token", token)
     .single();
 
-  if (!sp) {
+  if (!sp || sp.unassigned_at) {
     return NextResponse.json({ error: "Invalid token" }, { status: 404 });
   }
 
@@ -52,11 +52,11 @@ export async function PUT(
 
   const { data: sp } = await supabase
     .from("student_plans")
-    .select("id")
+    .select("id, unassigned_at")
     .eq("token", token)
     .single();
 
-  if (!sp) {
+  if (!sp || sp.unassigned_at) {
     return NextResponse.json({ error: "Invalid token" }, { status: 404 });
   }
 

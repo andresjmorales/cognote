@@ -7,6 +7,7 @@ import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
 import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStudentButton";
 import { LaunchPlanToStudentButton } from "@/components/teacher/LaunchPlanToStudentButton";
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
+import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
 import { StudentInfoCard } from "@/components/teacher/StudentInfoCard";
 import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
@@ -59,7 +60,7 @@ export default async function StudentDetailPage({
       .from("student_plans")
       .select(
         `
-          id, token, assigned_at, due_date,
+          id, token, assigned_at, due_date, unassigned_at,
           plans ( id, name, clef, key_signature, notes, plan_type ),
           practice_sessions (
             id, mode, started_at, completed_at,
@@ -90,6 +91,9 @@ export default async function StudentDetailPage({
   ]);
 
   if (!student) notFound();
+
+  const activePlans = (studentPlans ?? []).filter((sp) => !sp.unassigned_at);
+  const pastPlans = (studentPlans ?? []).filter((sp) => sp.unassigned_at);
 
   // Attendance summary — only lessons that have been marked count.
   const attendanceCounts: Record<string, number> = {};
@@ -293,20 +297,20 @@ export default async function StudentDetailPage({
         {/* Assigned Plans */}
         <div>
           <h2 className="text-lg font-semibold mb-3">Assigned Lessons</h2>
-          {!studentPlans?.length ? (
+          {!activePlans.length ? (
             <Card className="text-center text-muted">
               <p>No lessons assigned yet.</p>
               <p className="text-sm mt-1">Use the &quot;Assign Lesson&quot; button above.</p>
             </Card>
           ) : (
             <div className="space-y-2">
-              {(studentPlans as any[]).map((sp) => {
+              {(activePlans as any[]).map((sp) => {
                 const sessions = sp.practice_sessions?.length ?? 0;
                 const practiceUrl = `/practice/${sp.token}`;
                 const isSymbolPlan = sp.plans?.plan_type === "symbol_concepts";
                 return (
                   <Card key={sp.id} padding="sm">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-2">
                       <div>
                         {sp.plans?.id ? (
                           <Link href={`/lessons/${sp.plans.id}`} className="font-medium hover:text-primary transition-colors">
@@ -324,7 +328,7 @@ export default async function StudentDetailPage({
                           {sessions} session{sessions !== 1 && "s"}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <a
                           href={practiceUrl}
                           target="_blank"
@@ -334,12 +338,52 @@ export default async function StudentDetailPage({
                           Launch
                         </a>
                         <CopyLinkClient url={practiceUrl} />
+                        <UnassignLessonButton
+                          studentPlanId={sp.id}
+                          lessonName={sp.plans?.name ?? "Lesson"}
+                          sessionCount={sessions}
+                        />
                       </div>
                     </div>
                   </Card>
                 );
               })}
             </div>
+          )}
+
+          {pastPlans.length > 0 && (
+            <>
+              <h2 className="text-lg font-semibold mb-3 mt-6">Past Lessons</h2>
+              <div className="space-y-2">
+                {(pastPlans as any[]).map((sp) => {
+                  const sessions = sp.practice_sessions?.length ?? 0;
+                  const isSymbolPlan = sp.plans?.plan_type === "symbol_concepts";
+                  return (
+                    <Card key={sp.id} padding="sm" className="opacity-80">
+                      <div>
+                        {sp.plans?.id ? (
+                          <Link href={`/lessons/${sp.plans.id}`} className="font-medium hover:text-primary transition-colors">
+                            {sp.plans.name}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{sp.plans?.name ?? "Unknown Lesson"}</span>
+                        )}
+                        <div className="text-xs text-muted">
+                          {isSymbolPlan ? "Symbols & Concepts" : (
+                            <>{sp.plans?.clef} clef · {(sp.plans?.notes as string[])?.length ?? 0} notes</>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted mt-1">
+                          {sessions} session{sessions !== 1 && "s"}
+                          {sp.unassigned_at &&
+                            ` · unassigned ${new Date(sp.unassigned_at).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
 

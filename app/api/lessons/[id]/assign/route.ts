@@ -61,12 +61,19 @@ export async function POST(
   const serviceClient = createServiceClient();
   const { data: existing } = await serviceClient
     .from("student_plans")
-    .select("id, token")
+    .select("id, token, unassigned_at")
     .eq("student_id", studentId)
     .eq("plan_id", planId)
     .single();
 
   let token = existing?.token ?? null;
+
+  if (existing?.unassigned_at) {
+    await serviceClient
+      .from("student_plans")
+      .update({ unassigned_at: null, assigned_at: new Date().toISOString() })
+      .eq("id", existing.id);
+  }
 
   if (!token) {
     // Generate short token (8 chars); retry on collision
