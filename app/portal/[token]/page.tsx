@@ -15,6 +15,7 @@ import type { AttendanceStatus } from "@/lib/supabase/types";
 import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { familyDisplayName } from "@/lib/guardians";
+import { isActiveStudentPlan } from "@/lib/student-plans";
 
 export const metadata: Metadata = { title: "Family Portal" };
 
@@ -87,6 +88,7 @@ export default async function PortalPage({
     id: string;
     token: string;
     student_id: string;
+    unassigned_at: string | null;
     plans: { name: string } | null;
   }[] = [];
   let sharedNotes: {
@@ -110,9 +112,8 @@ export default async function PortalPage({
         .order("starts_at"),
       supabase
         .from("student_plans")
-        .select("id, token, student_id, plans ( name )")
+        .select("id, token, student_id, unassigned_at, plans ( name )")
         .in("student_id", studentIds)
-        .is("unassigned_at", null)
         .order("assigned_at", { ascending: false }),
       supabase
         .from("lesson_notes")
@@ -123,7 +124,7 @@ export default async function PortalPage({
         .limit(6),
     ]);
     lessons = (lessonsRes.data ?? []) as unknown as PortalLesson[];
-    practiceLinks = (linksRes.data ?? []) as unknown as typeof practiceLinks;
+    practiceLinks = (linksRes.data ?? []).filter(isActiveStudentPlan) as unknown as typeof practiceLinks;
     sharedNotes = (notesRes.data ?? []) as unknown as typeof sharedNotes;
   }
 

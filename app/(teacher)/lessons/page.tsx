@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AssignPlanButton } from "@/components/teacher/AssignPlanButton";
 import { LaunchPlanButton } from "@/components/teacher/LaunchPlanButton";
+import { isActiveStudentPlan } from "@/lib/student-plans";
 
 export const metadata = { title: "Lessons" };
 
@@ -14,6 +15,7 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
   const symbolCount = (plan.symbols as any[])?.length ?? 0;
   const keySigCount = (plan.key_signatures as string[])?.length ?? 0;
   const assignedStudents = (plan.student_plans ?? [])
+    .filter(isActiveStudentPlan)
     .map((sp: any) => sp.students?.name)
     .filter(Boolean);
 
@@ -61,7 +63,7 @@ export default async function PlansPage() {
         `
         id, name, is_template, clef, key_signature, notes, questions_per_lesson,
         plan_type, symbols, key_signatures,
-        student_plans ( id, students ( id, name ) )
+        student_plans ( id, unassigned_at, students ( id, name ) )
       `
       )
       .eq("teacher_id", user.id)
