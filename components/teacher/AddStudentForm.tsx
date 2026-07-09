@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
+const inputClass =
+  "w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm";
+
 export function AddStudentForm({
   guardians = [],
 }: {
@@ -13,6 +16,7 @@ export function AddStudentForm({
   const router = useRouter();
   const [name, setName] = useState("");
   const [guardianId, setGuardianId] = useState("");
+  const [birthdate, setBirthdate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +42,7 @@ export function AddStudentForm({
       teacher_id: user.id,
       name: name.trim(),
       guardian_id: guardianId || null,
+      birthdate: birthdate || null,
     });
 
     if (insertError) {
@@ -45,6 +50,7 @@ export function AddStudentForm({
     } else {
       setName("");
       setGuardianId("");
+      setBirthdate("");
       router.refresh();
     }
 
@@ -58,13 +64,13 @@ export function AddStudentForm({
         placeholder="Student name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
+        className={inputClass}
         required
       />
       <select
         value={guardianId}
         onChange={(e) => setGuardianId(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
+        className={inputClass}
       >
         <option value="">No family yet (link later)</option>
         {guardians.map((g) => (
@@ -73,6 +79,15 @@ export function AddStudentForm({
           </option>
         ))}
       </select>
+      <label className="flex flex-col gap-1 text-xs text-muted">
+        Birthday (optional)
+        <input
+          type="date"
+          value={birthdate}
+          onChange={(e) => setBirthdate(e.target.value)}
+          className={inputClass}
+        />
+      </label>
       {error && <p className="text-error text-xs">{error}</p>}
       <Button type="submit" size="sm" disabled={loading}>
         {loading ? "Adding..." : "Add Student"}

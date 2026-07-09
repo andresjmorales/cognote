@@ -1,107 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
-
-interface Guardian {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  portal_token: string;
-}
-
-interface Student {
-  id: string;
-  name: string;
-  guardian_id: string | null;
-}
-
-const inputClass =
-  "w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm";
+import {
+  FamilyForm,
+  type FamilyGuardian,
+  type FamilyStudent,
+} from "@/components/teacher/FamilyForm";
 
 export function FamiliesManager({
   guardians,
   students,
 }: {
-  guardians: Guardian[];
-  students: Student[];
+  guardians: FamilyGuardian[];
+  students: FamilyStudent[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<string | "new" | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<Guardian | null>(null);
-
-  // Form state (used for both create and edit)
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [memberIds, setMemberIds] = useState<string[]>([]);
-
-  function startCreate() {
-    setEditing("new");
-    setName("");
-    setEmail("");
-    setPhone("");
-    setMemberIds([]);
-    setError(null);
-  }
-
-  function startEdit(g: Guardian) {
-    setEditing(g.id);
-    setName(g.name);
-    setEmail(g.email ?? "");
-    setPhone(g.phone ?? "");
-    setMemberIds(students.filter((s) => s.guardian_id === g.id).map((s) => s.id));
-    setError(null);
-  }
-
-  function toggleMember(studentId: string) {
-    setMemberIds((ids) =>
-      ids.includes(studentId)
-        ? ids.filter((id) => id !== studentId)
-        : [...ids, studentId]
-    );
-  }
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setBusy(true);
-    setError(null);
-
-    const payload = {
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      studentIds: memberIds,
-    };
-    const res =
-      editing === "new"
-        ? await fetch("/api/guardians", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
-        : await fetch(`/api/guardians/${editing}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Something went wrong");
-    } else {
-      setEditing(null);
-      router.refresh();
-    }
-    setBusy(false);
-  }
+  const [confirmDelete, setConfirmDelete] = useState<FamilyGuardian | null>(null);
 
   async function handleDelete() {
     if (!confirmDelete) return;
@@ -114,107 +35,25 @@ export function FamiliesManager({
     if (res.ok) router.refresh();
   }
 
-  async function handleRotate(guardianId: string) {
-    setBusy(true);
-    const res = await fetch(`/api/guardians/${guardianId}/rotate-token`, {
-      method: "POST",
-    });
-    setBusy(false);
-    if (res.ok) router.refresh();
-  }
-
-  const form = (
-    <Card padding="sm" className="mb-4">
-      <form onSubmit={handleSave} className="flex flex-col gap-3">
-        <h3 className="font-semibold">
-          {editing === "new" ? "New Family" : "Edit Family"}
-        </h3>
-        <input
-          type="text"
-          placeholder="Guardian name (e.g. Jordan Parent)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={inputClass}
-          required
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="email"
-            placeholder="Email (for lesson notes & invoices)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
-          />
-          <input
-            type="tel"
-            placeholder="Phone (optional)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        {students.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-              Students in this family
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {students.map((s) => {
-                const selected = memberIds.includes(s.id);
-                const inOtherFamily =
-                  s.guardian_id && s.guardian_id !== editing && !selected;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => toggleMember(s.id)}
-                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors cursor-pointer ${
-                      selected
-                        ? "bg-primary/10 border-primary text-primary font-medium"
-                        : "border-border text-muted hover:text-foreground hover:bg-surface-dim"
-                    }`}
-                    title={
-                      inOtherFamily
-                        ? "Currently in another family — selecting moves them here"
-                        : undefined
-                    }
-                  >
-                    {s.name}
-                    {inOtherFamily && " *"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        {error && <p className="text-error text-xs">{error}</p>}
-        <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={busy}>
-            {busy ? "Saving..." : "Save Family"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setEditing(null)}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
-
   return (
     <div>
       {editing === null ? (
         <div className="mb-4">
-          <Button size="sm" onClick={startCreate}>
+          <Button size="sm" onClick={() => setEditing("new")}>
             Add Family
           </Button>
         </div>
       ) : (
-        form
+        <FamilyForm
+          key={editing}
+          guardian={
+            editing === "new"
+              ? null
+              : (guardians.find((g) => g.id === editing) ?? null)
+          }
+          students={students}
+          onClose={() => setEditing(null)}
+        />
       )}
 
       {guardians.length === 0 && editing === null ? (
@@ -228,14 +67,35 @@ export function FamiliesManager({
         <div className="flex flex-col gap-3">
           {guardians.map((g) => {
             const members = students.filter((s) => s.guardian_id === g.id);
+            const contacts = [
+              [g.email, g.phone].filter(Boolean).join(" · "),
+              g.secondary_name
+                ? `${g.secondary_name}${
+                    [g.secondary_email, g.secondary_phone].filter(Boolean).length > 0
+                      ? ` — ${[g.secondary_email, g.secondary_phone].filter(Boolean).join(" · ")}`
+                      : ""
+                  }`
+                : null,
+            ].filter(Boolean);
             return (
               <Card key={g.id} padding="sm">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <div className="font-semibold text-lg">{g.name}</div>
-                    <div className="text-sm text-muted">
-                      {[g.email, g.phone].filter(Boolean).join(" · ") || "No contact info"}
-                    </div>
+                    <Link
+                      href={`/families/${g.id}`}
+                      className="font-semibold text-lg hover:text-primary transition-colors"
+                    >
+                      {g.name}
+                    </Link>
+                    {contacts.length > 0 ? (
+                      contacts.map((line, i) => (
+                        <div key={i} className="text-sm text-muted">
+                          {line}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-muted">No contact info</div>
+                    )}
                     <div className="text-xs text-muted mt-1">
                       {members.length > 0
                         ? `Students: ${members.map((m) => m.name).join(", ")}`
@@ -243,18 +103,13 @@ export function FamiliesManager({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <CopyLinkClient url={`/portal/${g.portal_token}`} title="Family portal link" />
-                    <Button size="sm" variant="secondary" onClick={() => startEdit(g)}>
+                    <CopyLinkClient
+                      url={`/portal/${g.portal_token}`}
+                      title="Family portal link"
+                      label="Portal Link"
+                    />
+                    <Button size="sm" variant="secondary" onClick={() => setEditing(g.id)}>
                       Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => handleRotate(g.id)}
-                      title="Generate a new portal link — the old one stops working"
-                    >
-                      Reset Link
                     </Button>
                     <Button
                       size="sm"

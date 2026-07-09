@@ -161,10 +161,13 @@ export default async function StudentDetailPage({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-bold">{student.name}</h1>
-          {(student.guardians as { name: string } | null)?.name ? (
+          {(student.guardians as { id: string; name: string } | null)?.name ? (
             <p className="text-muted text-sm">
               Family:{" "}
-              <Link href="/families" className="hover:text-primary transition-colors">
+              <Link
+                href={`/families/${(student.guardians as { id: string }).id}`}
+                className="hover:text-primary transition-colors"
+              >
                 {(student.guardians as { name: string }).name}
               </Link>
             </p>

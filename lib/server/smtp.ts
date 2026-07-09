@@ -14,7 +14,7 @@ export interface SmtpMessage {
   from: string;
   /** RFC 5322 From header, e.g. `"Studio (via CogNote)" <notifications@...>`. */
   fromHeader: string;
-  to: string;
+  to: string | string[];
   subject: string;
   text: string;
   html?: string;
@@ -73,7 +73,9 @@ export async function sendViaSmtp(msg: SmtpMessage): Promise<void> {
     await readReply(220); // server greeting
     await send("EHLO localhost", 250);
     await send(`MAIL FROM:<${msg.from}>`, 250);
-    await send(`RCPT TO:<${msg.to}>`, 250);
+    for (const recipient of Array.isArray(msg.to) ? msg.to : [msg.to]) {
+      await send(`RCPT TO:<${recipient}>`, 250);
+    }
     await send("DATA", 354);
     await send(buildData(msg), 250);
     await send("QUIT", 221).catch(() => {}); // best-effort; message accepted
@@ -86,7 +88,7 @@ export async function sendViaSmtp(msg: SmtpMessage): Promise<void> {
 function buildData(msg: SmtpMessage): string {
   const headers = [
     `From: ${msg.fromHeader}`,
-    `To: ${msg.to}`,
+    `To: ${Array.isArray(msg.to) ? msg.to.join(", ") : msg.to}`,
     ...(msg.replyTo ? [`Reply-To: ${msg.replyTo}`] : []),
     `Subject: ${msg.subject}`,
     `Date: ${new Date().toUTCString()}`,

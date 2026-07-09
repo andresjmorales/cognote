@@ -17,7 +17,8 @@ import { Resend } from "resend";
 import { sendViaSmtp } from "@/lib/server/smtp";
 
 export interface SendEmailArgs {
-  to: string;
+  /** One or more recipients (e.g. both guardians of a family). */
+  to: string | string[];
   subject: string;
   text: string;
   html?: string;
@@ -81,6 +82,12 @@ export async function sendEmail(rawArgs: SendEmailArgs): Promise<SendEmailResult
   const args = withPortalFooter(rawArgs);
   const provider = process.env.EMAIL_PROVIDER ?? "none";
 
+  const recipients = (Array.isArray(args.to) ? args.to : [args.to]).filter(Boolean);
+  if (recipients.length === 0) {
+    return { sent: false, error: "No recipient email address" };
+  }
+  args.to = recipients;
+
   switch (provider) {
     case "resend":
       return sendWithResend(args);
@@ -88,7 +95,7 @@ export async function sendEmail(rawArgs: SendEmailArgs): Promise<SendEmailResult
       return sendWithSmtp(args);
     default:
       console.log(
-        `[email no-op — EMAIL_PROVIDER=${provider}] to=${args.to} subject="${args.subject}"`
+        `[email no-op — EMAIL_PROVIDER=${provider}] to=${recipients.join(", ")} subject="${args.subject}"`
       );
       return { sent: false, error: "Email is not configured" };
   }

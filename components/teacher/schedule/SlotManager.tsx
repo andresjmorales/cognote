@@ -40,6 +40,7 @@ export function SlotManager({
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +48,15 @@ export function SlotManager({
   const [dayOfWeek, setDayOfWeek] = useState(2);
   const [startTime, setStartTime] = useState("16:00");
   const [duration, setDuration] = useState(durationOptions[0] ?? 30);
+
+  function startEdit(slot: Slot) {
+    setAdding(false);
+    setEditingId(slot.id);
+    setDayOfWeek(slot.day_of_week);
+    setStartTime(slot.start_time.slice(0, 5));
+    setDuration(slot.duration_minutes);
+    setError(null);
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +79,30 @@ export function SlotManager({
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Failed to add slot");
+    }
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/schedule/slots/${editingId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dayOfWeek,
+        startTime,
+        durationMinutes: duration,
+      }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setEditingId(null);
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Failed to update slot");
     }
   }
 
@@ -97,12 +131,53 @@ export function SlotManager({
     router.refresh();
   }
 
+  const dayTimeDurationFields = (
+    <div className="grid grid-cols-3 gap-3">
+      <select
+        value={dayOfWeek}
+        onChange={(e) => setDayOfWeek(Number(e.target.value))}
+        className={inputClass}
+      >
+        {DAY_NAMES.map((day, i) => (
+          <option key={day} value={i}>
+            {day}
+          </option>
+        ))}
+      </select>
+      <input
+        type="time"
+        value={startTime}
+        onChange={(e) => setStartTime(e.target.value)}
+        className={inputClass}
+        required
+      />
+      <select
+        value={duration}
+        onChange={(e) => setDuration(Number(e.target.value))}
+        className={inputClass}
+      >
+        {durationOptions.map((minutes) => (
+          <option key={minutes} value={minutes}>
+            {minutes} min
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
   return (
     <Card padding="sm">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold">Weekly Slots</h2>
-        {!adding && (
-          <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
+        {!adding && !editingId && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setAdding(true);
+              setError(null);
+            }}
+          >
             Add Slot
           </Button>
         )}
@@ -122,37 +197,7 @@ export function SlotManager({
               </option>
             ))}
           </select>
-          <div className="grid grid-cols-3 gap-3">
-            <select
-              value={dayOfWeek}
-              onChange={(e) => setDayOfWeek(Number(e.target.value))}
-              className={inputClass}
-            >
-              {DAY_NAMES.map((day, i) => (
-                <option key={day} value={i}>
-                  {day}
-                </option>
-              ))}
-            </select>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className={inputClass}
-              required
-            />
-            <select
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className={inputClass}
-            >
-              {durationOptions.map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {minutes} min
-                </option>
-              ))}
-            </select>
-          </div>
+          {dayTimeDurationFields}
           {error && <p className="text-error text-xs">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={busy || !studentId}>
@@ -172,39 +217,77 @@ export function SlotManager({
         </p>
       ) : (
         <div className="space-y-2">
-          {slots.map((slot) => (
-            <div
-              key={slot.id}
-              className={`flex items-center justify-between gap-2 text-sm ${
-                slot.active ? "" : "opacity-50"
-              }`}
-            >
-              <div>
-                <span className="font-medium">{slot.studentName}</span>{" "}
-                <span className="text-muted">
-                  · {DAY_NAMES[slot.day_of_week]}s {formatTime(slot.start_time)} ·{" "}
-                  {slot.duration_minutes} min
-                  {!slot.active && " · paused"}
-                </span>
+          {slots.map((slot) =>
+            editingId === slot.id ? (
+              <form
+                key={slot.id}
+                onSubmit={handleEdit}
+                className="flex flex-col gap-3 py-2 px-3 -mx-1 rounded-lg border border-primary/40 bg-primary/5"
+              >
+                <div className="text-sm font-medium">
+                  Edit {slot.studentName}&apos;s slot
+                </div>
+                {dayTimeDurationFields}
+                <p className="text-xs text-muted">
+                  Applies to upcoming lessons only — past lessons and marked
+                  attendance stay where they are.
+                </p>
+                {error && <p className="text-error text-xs">{error}</p>}
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={busy}>
+                    {busy ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setEditingId(null)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div
+                key={slot.id}
+                className={`flex items-center justify-between gap-2 text-sm ${
+                  slot.active ? "" : "opacity-50"
+                }`}
+              >
+                <div>
+                  <span className="font-medium">{slot.studentName}</span>{" "}
+                  <span className="text-muted">
+                    · {DAY_NAMES[slot.day_of_week]}s {formatTime(slot.start_time)} ·{" "}
+                    {slot.duration_minutes} min
+                    {!slot.active && " · paused"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => startEdit(slot)}
+                    disabled={busy}
+                    className="text-xs text-muted hover:text-foreground underline cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => toggleActive(slot)}
+                    disabled={busy}
+                    className="text-xs text-muted hover:text-foreground underline cursor-pointer"
+                  >
+                    {slot.active ? "Pause" : "Resume"}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(slot)}
+                    disabled={busy}
+                    className="text-xs text-error hover:underline cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => toggleActive(slot)}
-                  disabled={busy}
-                  className="text-xs text-muted hover:text-foreground underline cursor-pointer"
-                >
-                  {slot.active ? "Pause" : "Resume"}
-                </button>
-                <button
-                  onClick={() => handleDelete(slot)}
-                  disabled={busy}
-                  className="text-xs text-error hover:underline cursor-pointer"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
     </Card>

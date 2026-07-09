@@ -13,6 +13,7 @@ export type AttendanceStatus =
   | "teacher_cancel"
   | "student_cancel"
   | "no_show";
+export type EmailRecipients = "primary" | "secondary" | "both";
 
 export interface Database {
   public: {
@@ -75,6 +76,10 @@ export interface Database {
           name: string;
           email: string | null;
           phone: string | null;
+          secondary_name: string | null;
+          secondary_email: string | null;
+          secondary_phone: string | null;
+          email_recipients: EmailRecipients;
           portal_token: string;
           created_at: string;
         };
@@ -84,6 +89,10 @@ export interface Database {
           name: string;
           email?: string | null;
           phone?: string | null;
+          secondary_name?: string | null;
+          secondary_email?: string | null;
+          secondary_phone?: string | null;
+          email_recipients?: EmailRecipients;
           portal_token: string;
           created_at?: string;
         };
@@ -91,6 +100,10 @@ export interface Database {
           name?: string;
           email?: string | null;
           phone?: string | null;
+          secondary_name?: string | null;
+          secondary_email?: string | null;
+          secondary_phone?: string | null;
+          email_recipients?: EmailRecipients;
           portal_token?: string;
         };
       };
