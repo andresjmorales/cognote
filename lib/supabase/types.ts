@@ -327,6 +327,7 @@ export interface Database {
           token: string;
           assigned_at: string;
           due_date: string | null;
+          unassigned_at: string | null;
         };
         Insert: {
           id?: string;
@@ -335,9 +336,12 @@ export interface Database {
           token: string;
           assigned_at?: string;
           due_date?: string | null;
+          unassigned_at?: string | null;
         };
         Update: {
           due_date?: string | null;
+          unassigned_at?: string | null;
+          assigned_at?: string;
         };
       };
       practice_sessions: {

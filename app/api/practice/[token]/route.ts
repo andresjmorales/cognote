@@ -18,6 +18,7 @@ export async function GET(
       .select(
         `
         id,
+        unassigned_at,
         student_id,
         plan_id,
         due_date,
@@ -34,6 +35,9 @@ export async function GET(
       .single();
 
     if (directMatch) {
+      if (directMatch.unassigned_at) {
+        return NextResponse.json({ error: "Practice link not found" }, { status: 404 });
+      }
       return NextResponse.json({
         studentPlanId: directMatch.id,
         studentName: (directMatch.students as any)?.name ?? "Student",
@@ -49,6 +53,7 @@ export async function GET(
         .select(
           `
           id,
+          unassigned_at,
           students ( name ),
           plans (
             name, clef, key_signature, include_sharps, include_flats,
@@ -63,6 +68,9 @@ export async function GET(
         .single();
 
       if (sp) {
+        if (sp.unassigned_at) {
+          return NextResponse.json({ error: "Practice link not found" }, { status: 404 });
+        }
         return NextResponse.json({
           studentPlanId: sp.id,
           studentName: (sp.students as any)?.name ?? "Student",

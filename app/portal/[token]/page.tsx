@@ -112,6 +112,7 @@ export default async function PortalPage({
         .from("student_plans")
         .select("id, token, student_id, plans ( name )")
         .in("student_id", studentIds)
+        .is("unassigned_at", null)
         .order("assigned_at", { ascending: false }),
       supabase
         .from("lesson_notes")
@@ -157,17 +158,45 @@ export default async function PortalPage({
           <h2 className="text-lg font-semibold mb-3">Practice</h2>
           {practiceLinks.length === 0 ? (
             <Card className="text-center text-muted">No practice assignments yet.</Card>
+          ) : students.length > 1 ? (
+            <div className="space-y-5">
+              {students.map((student) => {
+                const studentLinks = practiceLinks.filter(
+                  (link) => link.student_id === student.id
+                );
+                if (studentLinks.length === 0) return null;
+                return (
+                  <div key={student.id}>
+                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wide mb-2">
+                      {student.name}
+                    </h3>
+                    <div className="space-y-2">
+                      {studentLinks.map((link) => (
+                        <Card key={link.id} padding="sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="font-medium">
+                              {link.plans?.name ?? "Lesson"}
+                            </div>
+                            <a
+                              href={`/practice/${link.token}`}
+                              className="inline-flex items-center justify-center font-semibold bg-primary text-white hover:bg-primary-dark px-4 py-2 text-sm rounded-lg transition-colors"
+                            >
+                              Practice
+                            </a>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="space-y-2">
               {practiceLinks.map((link) => (
                 <Card key={link.id} padding="sm">
                   <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-medium">{link.plans?.name ?? "Lesson"}</div>
-                      <div className="text-xs text-muted">
-                        {nameById.get(link.student_id) ?? "Student"}
-                      </div>
-                    </div>
+                    <div className="font-medium">{link.plans?.name ?? "Lesson"}</div>
                     <a
                       href={`/practice/${link.token}`}
                       className="inline-flex items-center justify-center font-semibold bg-primary text-white hover:bg-primary-dark px-4 py-2 text-sm rounded-lg transition-colors"
