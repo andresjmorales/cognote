@@ -14,7 +14,9 @@ export default async function FamiliesPage() {
   const [{ data: guardians }, { data: students }] = await Promise.all([
     supabase
       .from("guardians")
-      .select("id, name, email, phone, portal_token, created_at")
+      .select(
+        "id, name, email, phone, secondary_name, secondary_email, secondary_phone, email_recipients, portal_token, created_at"
+      )
       .eq("teacher_id", user.id)
       .order("name"),
     supabase
@@ -31,7 +33,7 @@ export default async function FamiliesPage() {
         <p className="text-muted text-sm mt-1">
           Each family gets a private portal link with practice links, the lesson
           schedule, and your shared notes. No parent accounts needed, and
-          siblings share one family.
+          siblings share one family. Click a family name for details.
         </p>
       </div>
       <FamiliesManager guardians={guardians ?? []} students={students ?? []} />

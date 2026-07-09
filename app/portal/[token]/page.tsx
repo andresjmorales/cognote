@@ -259,7 +259,7 @@ export default async function PortalPage({
           )}
         </section>
 
-        {/* Studio info & policies */}
+        {/* Studio info */}
         {(policy.studio_info || policy.studio_website || policy.studio_contact) && (
           <section>
             <h2 className="text-lg font-semibold mb-3">

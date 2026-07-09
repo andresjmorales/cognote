@@ -130,7 +130,7 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
 
         <label className="text-sm">
           <span className="block text-xs font-semibold text-muted mb-1">
-            Studio info &amp; policies
+            Studio info
           </span>
           <textarea
             value={studioInfo}

@@ -16,13 +16,23 @@ export async function PUT(
   }
 
   const body = await req.json();
+  const update: Record<string, unknown> = {
+    name: body.name?.trim(),
+    email: body.email?.trim() || null,
+    phone: body.phone?.trim() || null,
+  };
+  if (body.secondaryName !== undefined)
+    update.secondary_name = body.secondaryName?.trim() || null;
+  if (body.secondaryEmail !== undefined)
+    update.secondary_email = body.secondaryEmail?.trim() || null;
+  if (body.secondaryPhone !== undefined)
+    update.secondary_phone = body.secondaryPhone?.trim() || null;
+  if (["primary", "secondary", "both"].includes(body.emailRecipients))
+    update.email_recipients = body.emailRecipients;
+
   const { data: guardian, error } = await supabase
     .from("guardians")
-    .update({
-      name: body.name?.trim(),
-      email: body.email?.trim() || null,
-      phone: body.phone?.trim() || null,
-    })
+    .update(update)
     .eq("id", id)
     .eq("teacher_id", user.id)
     .select()
@@ -45,6 +55,21 @@ export async function PUT(
         .update({ guardian_id: id })
         .in("id", body.studentIds)
         .eq("teacher_id", user.id);
+    }
+  }
+
+  // Brand-new students created inline with the family
+  if (Array.isArray(body.newStudents)) {
+    const rows = body.newStudents
+      .filter((s: { name?: string }) => s?.name?.trim())
+      .map((s: { name: string; birthdate?: string }) => ({
+        teacher_id: user.id,
+        name: s.name.trim(),
+        guardian_id: id,
+        birthdate: s.birthdate || null,
+      }));
+    if (rows.length > 0) {
+      await supabase.from("students").insert(rows);
     }
   }
 

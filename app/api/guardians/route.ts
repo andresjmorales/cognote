@@ -39,6 +39,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
+  const emailRecipients = ["primary", "secondary", "both"].includes(
+    body.emailRecipients
+  )
+    ? body.emailRecipients
+    : "primary";
+
   const { data: guardian, error } = await supabase
     .from("guardians")
     .insert({
@@ -46,6 +52,10 @@ export async function POST(req: NextRequest) {
       name: body.name.trim(),
       email: body.email?.trim() || null,
       phone: body.phone?.trim() || null,
+      secondary_name: body.secondaryName?.trim() || null,
+      secondary_email: body.secondaryEmail?.trim() || null,
+      secondary_phone: body.secondaryPhone?.trim() || null,
+      email_recipients: emailRecipients,
       portal_token: generateShortToken(),
     })
     .select()
@@ -61,6 +71,21 @@ export async function POST(req: NextRequest) {
       .update({ guardian_id: guardian.id })
       .in("id", body.studentIds)
       .eq("teacher_id", user.id);
+  }
+
+  // Brand-new students created inline with the family (onboarding flow)
+  if (Array.isArray(body.newStudents)) {
+    const rows = body.newStudents
+      .filter((s: { name?: string }) => s?.name?.trim())
+      .map((s: { name: string; birthdate?: string }) => ({
+        teacher_id: user.id,
+        name: s.name.trim(),
+        guardian_id: guardian.id,
+        birthdate: s.birthdate || null,
+      }));
+    if (rows.length > 0) {
+      await supabase.from("students").insert(rows);
+    }
   }
 
   return NextResponse.json(guardian);

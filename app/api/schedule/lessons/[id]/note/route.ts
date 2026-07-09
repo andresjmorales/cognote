@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import {
+  familyEmailRecipients,
+  familyGreetingNames,
+  type FamilyContact,
+} from "@/lib/guardians";
 import { getPolicy } from "@/lib/server/scheduling";
 import { requestOrigin } from "@/lib/server/http";
 import { formatLessonTime, formatLessonDate } from "@/lib/schedule";
@@ -27,7 +32,7 @@ export async function PUT(
   const { data: lesson } = await supabase
     .from("lessons")
     .select(
-      "id, lesson_date, starts_at, students ( name, guardians ( name, email, portal_token ) )"
+      "id, lesson_date, starts_at, students ( name, guardians ( name, email, secondary_name, secondary_email, email_recipients, portal_token ) )"
     )
     .eq("id", id)
     .eq("teacher_id", user.id)
@@ -62,15 +67,12 @@ export async function PUT(
   if (body.sendEmail && shared) {
     const student = lesson.students as unknown as {
       name: string;
-      guardians: {
-        name: string;
-        email: string | null;
-        portal_token: string | null;
-      } | null;
+      guardians: (FamilyContact & { portal_token: string | null }) | null;
     } | null;
-    const guardianEmail = student?.guardians?.email;
+    const family = student?.guardians;
+    const recipients = family ? familyEmailRecipients(family) : [];
 
-    if (!guardianEmail) {
+    if (!student || !family || recipients.length === 0) {
       emailError = "No family email on file for this student";
     } else {
       const policy = await getPolicy(supabase, user.id);
@@ -79,11 +81,11 @@ export async function PUT(
         ? `— ${policy.studio_name} (sent via CogNote Studio)`
         : "— Sent via CogNote Studio";
 
-      const portalToken = student.guardians?.portal_token;
+      const portalToken = family.portal_token;
       const result = await sendEmail({
-        to: guardianEmail,
+        to: recipients,
         subject: `Lesson notes for ${student.name} — ${when}`,
-        text: `Hi ${student.guardians!.name},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${body.body.trim()}\n\n${signature}`,
+        text: `Hi ${familyGreetingNames(family)},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${body.body.trim()}\n\n${signature}`,
         fromName: policy.studio_name
           ? `${policy.studio_name} (via CogNote)`
           : undefined,

@@ -126,18 +126,18 @@ export function WeekView({
         <div className="flex items-center gap-2">
           <Link
             href={`/schedule?week=${addDays(weekStart, -7)}`}
-            className="px-2 py-1 rounded-lg text-muted hover:text-foreground hover:bg-surface-dim"
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-surface text-foreground hover:bg-surface-dim hover:border-primary/50 transition-colors"
             aria-label="Previous week"
           >
-            ←
+            <ChevronIcon direction="left" />
           </Link>
-          <span className="font-medium text-sm">{weekLabel}</span>
+          <span className="font-medium text-sm min-w-24 text-center">{weekLabel}</span>
           <Link
             href={`/schedule?week=${addDays(weekStart, 7)}`}
-            className="px-2 py-1 rounded-lg text-muted hover:text-foreground hover:bg-surface-dim"
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-surface text-foreground hover:bg-surface-dim hover:border-primary/50 transition-colors"
             aria-label="Next week"
           >
-            →
+            <ChevronIcon direction="right" />
           </Link>
           <Link
             href="/schedule"
@@ -253,6 +253,28 @@ export function WeekView({
 function fmtDate(dateStr: string): string {
   const [, m, d] = dateStr.split("-").map(Number);
   return `${m}/${d}`;
+}
+
+function ChevronIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {direction === "left" ? (
+        <polyline points="15 18 9 12 15 6" />
+      ) : (
+        <polyline points="9 6 15 12 9 18" />
+      )}
+    </svg>
+  );
 }
 
 function LessonModal({

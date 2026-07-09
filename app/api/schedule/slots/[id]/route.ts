@@ -14,11 +14,19 @@ async function deleteFutureUnmarkedLessons(
   slotId: string,
   fromDate: string
 ) {
-  const { data: lessons } = await supabase
+  // attendance!lesson_id disambiguates from the lessons.makeup_for FK —
+  // the bare embed is ambiguous and PostgREST rejects the whole query,
+  // which used to leave deleted slots' lessons stranded on the calendar.
+  const { data: lessons, error } = await supabase
     .from("lessons")
-    .select("id, attendance ( id )")
+    .select("id, attendance!lesson_id ( id )")
     .eq("slot_id", slotId)
     .gte("lesson_date", fromDate);
+
+  if (error) {
+    console.error("deleteFutureUnmarkedLessons select failed:", error.message);
+    return;
+  }
 
   const unmarked = (lessons ?? [])
     .filter((l: { attendance: unknown[] | null }) => !l.attendance?.length)

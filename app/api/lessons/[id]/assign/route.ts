@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { generateShortToken } from "@/lib/token";
 import { sendEmail } from "@/lib/email";
+import {
+  familyEmailRecipients,
+  familyGreetingNames,
+  type FamilyContact,
+} from "@/lib/guardians";
 import { getPolicy } from "@/lib/server/scheduling";
 import { requestOrigin } from "@/lib/server/http";
 
@@ -41,7 +46,9 @@ export async function POST(
   // Verify student belongs to teacher
   const { data: student } = await supabase
     .from("students")
-    .select("id, name, guardians ( name, email, portal_token )")
+    .select(
+      "id, name, guardians ( name, email, secondary_name, secondary_email, email_recipients, portal_token )"
+    )
     .eq("id", studentId)
     .eq("teacher_id", user.id)
     .single();
@@ -99,13 +106,12 @@ export async function POST(
   let emailedTo: string | undefined;
   let emailError: string | undefined;
 
-  const guardian = student.guardians as unknown as {
-    name: string;
-    email: string | null;
-    portal_token: string | null;
-  } | null;
+  const guardian = student.guardians as unknown as
+    | (FamilyContact & { portal_token: string | null })
+    | null;
+  const recipients = guardian ? familyEmailRecipients(guardian) : [];
 
-  if (notifyFamily && guardian?.email) {
+  if (notifyFamily && guardian && recipients.length > 0) {
     const origin = requestOrigin(req);
     const practiceUrl = `${origin}/practice/${token}`;
     const policy = await getPolicy(supabase, user.id);
@@ -114,9 +120,9 @@ export async function POST(
       : "— Sent via CogNote Studio";
 
     const result = await sendEmail({
-      to: guardian.email,
+      to: recipients,
       subject: `New practice assignment for ${student.name}: ${plan.name}`,
-      text: `Hi ${guardian.name},\n\n${student.name} has a new practice assignment: "${plan.name}".\n\nStart practicing here:\n${practiceUrl}\n\n${signature}`,
+      text: `Hi ${familyGreetingNames(guardian)},\n\n${student.name} has a new practice assignment: "${plan.name}".\n\nStart practicing here:\n${practiceUrl}\n\n${signature}`,
       fromName: policy.studio_name
         ? `${policy.studio_name} (via CogNote)`
         : undefined,
