@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
+import { formatMoney } from "@/lib/billing";
 
 export const metadata: Metadata = { title: "Family Portal" };
 
@@ -96,6 +97,26 @@ export default async function PortalPage({
     body: string;
     lessons: { lesson_date: string; student_id: string } | null;
   }[] = [];
+  let invoices: {
+    id: string;
+    period_start: string;
+    period_end: string;
+    status: string;
+    subtotal_cents: number;
+    currency: string;
+    stripe_checkout_url: string | null;
+  }[] = [];
+
+  const invoicesRes = await supabase
+    .from("invoices")
+    .select(
+      "id, period_start, period_end, status, subtotal_cents, currency, stripe_checkout_url"
+    )
+    .eq("guardian_id", guardian.id)
+    .in("status", ["sent", "paid"])
+    .order("period_end", { ascending: false })
+    .limit(12);
+  invoices = (invoicesRes.data ?? []) as typeof invoices;
 
   if (studentIds.length > 0) {
     await materializeLessons(supabase, guardian.teacher_id, today, addDays(today, 28));
@@ -286,6 +307,55 @@ export default async function PortalPage({
                       : ""}
                   </div>
                   <p className="text-sm whitespace-pre-wrap">{note.body}</p>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Invoices */}
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Invoices</h2>
+          {invoices.length === 0 ? (
+            <Card className="text-center text-muted">No invoices yet.</Card>
+          ) : (
+            <div className="space-y-2">
+              {invoices.map((inv) => (
+                <Card key={inv.id} padding="sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-medium">
+                        {inv.period_start} → {inv.period_end}
+                      </div>
+                      <div className="text-xs text-muted capitalize">
+                        {inv.status} · {formatMoney(inv.subtotal_cents, inv.currency)}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {inv.status === "sent" && inv.stripe_checkout_url && (
+                        <a
+                          href={inv.stripe_checkout_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center font-semibold bg-primary text-white hover:bg-primary-dark px-4 py-2 text-sm rounded-lg transition-colors"
+                        >
+                          Pay online
+                        </a>
+                      )}
+                      {inv.status === "sent" &&
+                        !inv.stripe_checkout_url &&
+                        policy.payment_instructions.trim() && (
+                          <p className="text-xs text-muted whitespace-pre-wrap text-right max-w-xs">
+                            {policy.payment_instructions}
+                          </p>
+                        )}
+                      {inv.status === "paid" && (
+                        <span className="text-xs font-semibold text-primary">
+                          Paid
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </Card>
               ))}
             </div>

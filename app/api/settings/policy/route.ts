@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
+import { maskSecret } from "@/lib/billing";
+import type { InvoiceCadence, PaymentProvider, RateBasis } from "@/lib/schedule";
+
+/** Client-safe policy: Stripe secrets are masked, never returned in full. */
+function toClientPolicy(
+  policy: Awaited<ReturnType<typeof getPolicy>>,
+  teacherId: string
+) {
+  const {
+    stripe_secret_key,
+    stripe_publishable_key,
+    stripe_webhook_secret,
+    ...rest
+  } = policy;
+  return {
+    ...rest,
+    teacherId,
+    stripe_secret_key: null,
+    stripe_publishable_key: null,
+    stripe_webhook_secret: null,
+    stripe: {
+      secretKey: {
+        configured: !!stripe_secret_key,
+        masked: maskSecret(stripe_secret_key),
+      },
+      publishableKey: {
+        configured: !!stripe_publishable_key,
+        masked: maskSecret(stripe_publishable_key),
+      },
+      webhookSecret: {
+        configured: !!stripe_webhook_secret,
+        masked: maskSecret(stripe_webhook_secret),
+      },
+    },
+  };
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -11,7 +47,8 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json(await getPolicy(supabase, user.id));
+  const policy = await getPolicy(supabase, user.id);
+  return NextResponse.json(toClientPolicy(policy, user.id));
 }
 
 export async function PUT(req: NextRequest) {
@@ -54,55 +91,145 @@ export async function PUT(req: NextRequest) {
     }
   }
 
+  const cadence = body.invoiceCadence as InvoiceCadence | undefined;
+  if (cadence !== undefined && cadence !== "monthly" && cadence !== "manual") {
+    return NextResponse.json(
+      { error: "invoiceCadence must be monthly or manual" },
+      { status: 400 }
+    );
+  }
+
+  const rateBasis = body.rateBasis as RateBasis | undefined;
+  if (
+    rateBasis !== undefined &&
+    rateBasis !== "per_lesson" &&
+    rateBasis !== "per_hour"
+  ) {
+    return NextResponse.json(
+      { error: "rateBasis must be per_lesson or per_hour" },
+      { status: 400 }
+    );
+  }
+
+  const paymentProvider = body.paymentProvider as PaymentProvider | undefined;
+  if (
+    paymentProvider !== undefined &&
+    paymentProvider !== "manual" &&
+    paymentProvider !== "stripe"
+  ) {
+    return NextResponse.json(
+      { error: "paymentProvider must be manual or stripe" },
+      { status: 400 }
+    );
+  }
+
+  const upsert: Record<string, unknown> = {
+    teacher_id: user.id,
+    ...(body.studioName !== undefined && {
+      studio_name: String(body.studioName).trim().slice(0, 120),
+    }),
+    ...(body.studioWebsite !== undefined && {
+      studio_website: String(body.studioWebsite).trim().slice(0, 300),
+    }),
+    ...(body.studioContact !== undefined && {
+      studio_contact: String(body.studioContact).trim().slice(0, 300),
+    }),
+    ...(body.studioInfo !== undefined && {
+      studio_info: String(body.studioInfo).trim().slice(0, 5000),
+    }),
+    ...(durationOptions !== undefined && {
+      lesson_duration_options: durationOptions,
+    }),
+    ...(body.timezone !== undefined && { timezone: body.timezone }),
+    ...(body.cancellationWindowHours !== undefined && {
+      cancellation_window_hours: Number(body.cancellationWindowHours),
+    }),
+    ...(body.timelyCancelEarnsMakeup !== undefined && {
+      timely_cancel_earns_makeup: Boolean(body.timelyCancelEarnsMakeup),
+    }),
+    ...(body.lateCancelEarnsMakeup !== undefined && {
+      late_cancel_earns_makeup: Boolean(body.lateCancelEarnsMakeup),
+    }),
+    ...(body.noShowEarnsMakeup !== undefined && {
+      no_show_earns_makeup: Boolean(body.noShowEarnsMakeup),
+    }),
+    ...(body.teacherCancelEarnsMakeup !== undefined && {
+      teacher_cancel_earns_makeup: Boolean(body.teacherCancelEarnsMakeup),
+    }),
+    ...(body.makeupCreditExpiryDays !== undefined && {
+      makeup_credit_expiry_days: body.makeupCreditExpiryDays
+        ? Number(body.makeupCreditExpiryDays)
+        : null,
+    }),
+    // Billing
+    ...(body.billAttended !== undefined && {
+      bill_attended: Boolean(body.billAttended),
+    }),
+    ...(body.billNoShow !== undefined && {
+      bill_no_show: Boolean(body.billNoShow),
+    }),
+    ...(body.billTeacherCancel !== undefined && {
+      bill_teacher_cancel: Boolean(body.billTeacherCancel),
+    }),
+    ...(body.billTimelyStudentCancel !== undefined && {
+      bill_timely_student_cancel: Boolean(body.billTimelyStudentCancel),
+    }),
+    ...(body.billLateStudentCancel !== undefined && {
+      bill_late_student_cancel: Boolean(body.billLateStudentCancel),
+    }),
+    ...(body.billMakeup !== undefined && {
+      bill_makeup: Boolean(body.billMakeup),
+    }),
+    ...(body.defaultRateCents !== undefined && {
+      default_rate_cents:
+        body.defaultRateCents === null || body.defaultRateCents === ""
+          ? null
+          : Math.max(0, Math.round(Number(body.defaultRateCents))),
+    }),
+    ...(rateBasis !== undefined && { rate_basis: rateBasis }),
+    ...(body.currency !== undefined && {
+      currency: String(body.currency).trim().toUpperCase().slice(0, 3) || "USD",
+    }),
+    ...(cadence !== undefined && { invoice_cadence: cadence }),
+    ...(body.paymentInstructions !== undefined && {
+      payment_instructions: String(body.paymentInstructions).slice(0, 2000),
+    }),
+    ...(paymentProvider !== undefined && {
+      payment_provider: paymentProvider,
+    }),
+  };
+
+  // Stripe keys: only overwrite when a new value is pasted, or explicitly cleared
+  if (body.clearStripeSecretKey) upsert.stripe_secret_key = null;
+  else if (typeof body.stripeSecretKey === "string" && body.stripeSecretKey.trim()) {
+    upsert.stripe_secret_key = body.stripeSecretKey.trim();
+  }
+  if (body.clearStripePublishableKey) upsert.stripe_publishable_key = null;
+  else if (
+    typeof body.stripePublishableKey === "string" &&
+    body.stripePublishableKey.trim()
+  ) {
+    upsert.stripe_publishable_key = body.stripePublishableKey.trim();
+  }
+  if (body.clearStripeWebhookSecret) upsert.stripe_webhook_secret = null;
+  else if (
+    typeof body.stripeWebhookSecret === "string" &&
+    body.stripeWebhookSecret.trim()
+  ) {
+    upsert.stripe_webhook_secret = body.stripeWebhookSecret.trim();
+  }
+
   const { data, error } = await supabase
     .from("studio_policies")
-    .upsert(
-      {
-        teacher_id: user.id,
-        ...(body.studioName !== undefined && {
-          studio_name: String(body.studioName).trim().slice(0, 120),
-        }),
-        ...(body.studioWebsite !== undefined && {
-          studio_website: String(body.studioWebsite).trim().slice(0, 300),
-        }),
-        ...(body.studioContact !== undefined && {
-          studio_contact: String(body.studioContact).trim().slice(0, 300),
-        }),
-        ...(body.studioInfo !== undefined && {
-          studio_info: String(body.studioInfo).trim().slice(0, 5000),
-        }),
-        ...(durationOptions !== undefined && {
-          lesson_duration_options: durationOptions,
-        }),
-        ...(body.timezone !== undefined && { timezone: body.timezone }),
-        ...(body.cancellationWindowHours !== undefined && {
-          cancellation_window_hours: Number(body.cancellationWindowHours),
-        }),
-        ...(body.timelyCancelEarnsMakeup !== undefined && {
-          timely_cancel_earns_makeup: Boolean(body.timelyCancelEarnsMakeup),
-        }),
-        ...(body.lateCancelEarnsMakeup !== undefined && {
-          late_cancel_earns_makeup: Boolean(body.lateCancelEarnsMakeup),
-        }),
-        ...(body.noShowEarnsMakeup !== undefined && {
-          no_show_earns_makeup: Boolean(body.noShowEarnsMakeup),
-        }),
-        ...(body.teacherCancelEarnsMakeup !== undefined && {
-          teacher_cancel_earns_makeup: Boolean(body.teacherCancelEarnsMakeup),
-        }),
-        ...(body.makeupCreditExpiryDays !== undefined && {
-          makeup_credit_expiry_days: body.makeupCreditExpiryDays
-            ? Number(body.makeupCreditExpiryDays)
-            : null,
-        }),
-      },
-      { onConflict: "teacher_id" }
-    )
+    .upsert(upsert, { onConflict: "teacher_id" })
     .select()
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json(data);
+
+  // Re-fetch through getPolicy so defaults merge, then mask for the client
+  const policy = await getPolicy(supabase, user.id);
+  return NextResponse.json(toClientPolicy(policy, user.id));
 }

@@ -16,6 +16,12 @@
 import { Resend } from "resend";
 import { sendViaSmtp } from "@/lib/server/smtp";
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | Uint8Array;
+  contentType?: string;
+}
+
 export interface SendEmailArgs {
   /** One or more recipients (e.g. both guardians of a family). */
   to: string | string[];
@@ -32,6 +38,8 @@ export interface SendEmailArgs {
    * was provided). Pass it on every parent/student-facing email.
    */
   portalUrl?: string;
+  /** Optional file attachments (e.g. invoice PDF). */
+  attachments?: EmailAttachment[];
 }
 
 export interface SendEmailResult {
@@ -95,7 +103,10 @@ export async function sendEmail(rawArgs: SendEmailArgs): Promise<SendEmailResult
       return sendWithSmtp(args);
     default:
       console.log(
-        `[email no-op — EMAIL_PROVIDER=${provider}] to=${recipients.join(", ")} subject="${args.subject}"`
+        `[email no-op — EMAIL_PROVIDER=${provider}] to=${recipients.join(", ")} subject="${args.subject}"` +
+          (args.attachments?.length
+            ? ` attachments=${args.attachments.map((a) => a.filename).join(",")}`
+            : "")
       );
       return { sent: false, error: "Email is not configured" };
   }
@@ -108,6 +119,7 @@ async function sendWithResend({
   html,
   replyTo,
   fromName,
+  attachments,
 }: SendEmailArgs): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -123,6 +135,15 @@ async function sendWithResend({
     text,
     ...(html ? { html } : {}),
     ...(replyTo ? { replyTo } : {}),
+    ...(attachments?.length
+      ? {
+          attachments: attachments.map((a) => ({
+            filename: a.filename,
+            content: Buffer.from(a.content),
+            contentType: a.contentType,
+          })),
+        }
+      : {}),
   });
 
   if (error) {
@@ -139,6 +160,7 @@ async function sendWithSmtp({
   html,
   replyTo,
   fromName,
+  attachments,
 }: SendEmailArgs): Promise<SendEmailResult> {
   const host = process.env.SMTP_HOST ?? "127.0.0.1";
   const port = Number(process.env.SMTP_PORT ?? 54325);
@@ -156,6 +178,7 @@ async function sendWithSmtp({
       text,
       html,
       replyTo,
+      attachments,
     });
     return { sent: true };
   } catch (err) {

@@ -14,6 +14,11 @@ export type AttendanceStatus =
   | "student_cancel"
   | "no_show";
 export type EmailRecipients = "primary" | "secondary" | "both";
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+export type PaymentMethod = "manual" | "stripe";
+export type InvoiceCadence = "monthly" | "manual";
+export type PaymentProvider = "manual" | "stripe";
+export type RateBasis = "per_lesson" | "per_hour";
 
 export interface Database {
   public: {
@@ -47,6 +52,7 @@ export interface Database {
           teacher_notes: string;
           level: string | null;
           birthdate: string | null;
+          default_rate_cents: number | null;
           created_at: string;
         };
         Insert: {
@@ -58,6 +64,7 @@ export interface Database {
           teacher_notes?: string;
           level?: string | null;
           birthdate?: string | null;
+          default_rate_cents?: number | null;
           created_at?: string;
         };
         Update: {
@@ -67,6 +74,7 @@ export interface Database {
           teacher_notes?: string;
           level?: string | null;
           birthdate?: string | null;
+          default_rate_cents?: number | null;
         };
       };
       guardians: {
@@ -114,6 +122,9 @@ export interface Database {
         Row: {
           teacher_id: string;
           studio_name: string;
+          studio_website: string;
+          studio_contact: string;
+          studio_info: string;
           timezone: string;
           lesson_duration_options: number[];
           cancellation_window_hours: number;
@@ -122,11 +133,29 @@ export interface Database {
           no_show_earns_makeup: boolean;
           teacher_cancel_earns_makeup: boolean;
           makeup_credit_expiry_days: number | null;
+          bill_attended: boolean;
+          bill_no_show: boolean;
+          bill_teacher_cancel: boolean;
+          bill_timely_student_cancel: boolean;
+          bill_late_student_cancel: boolean;
+          bill_makeup: boolean;
+          default_rate_cents: number | null;
+          rate_basis: RateBasis;
+          currency: string;
+          invoice_cadence: InvoiceCadence;
+          payment_instructions: string;
+          payment_provider: PaymentProvider;
+          stripe_secret_key: string | null;
+          stripe_publishable_key: string | null;
+          stripe_webhook_secret: string | null;
           updated_at: string;
         };
         Insert: {
           teacher_id: string;
           studio_name?: string;
+          studio_website?: string;
+          studio_contact?: string;
+          studio_info?: string;
           timezone?: string;
           lesson_duration_options?: number[];
           cancellation_window_hours?: number;
@@ -135,9 +164,27 @@ export interface Database {
           no_show_earns_makeup?: boolean;
           teacher_cancel_earns_makeup?: boolean;
           makeup_credit_expiry_days?: number | null;
+          bill_attended?: boolean;
+          bill_no_show?: boolean;
+          bill_teacher_cancel?: boolean;
+          bill_timely_student_cancel?: boolean;
+          bill_late_student_cancel?: boolean;
+          bill_makeup?: boolean;
+          default_rate_cents?: number | null;
+          rate_basis?: RateBasis;
+          currency?: string;
+          invoice_cadence?: InvoiceCadence;
+          payment_instructions?: string;
+          payment_provider?: PaymentProvider;
+          stripe_secret_key?: string | null;
+          stripe_publishable_key?: string | null;
+          stripe_webhook_secret?: string | null;
         };
         Update: {
           studio_name?: string;
+          studio_website?: string;
+          studio_contact?: string;
+          studio_info?: string;
           timezone?: string;
           lesson_duration_options?: number[];
           cancellation_window_hours?: number;
@@ -146,6 +193,21 @@ export interface Database {
           no_show_earns_makeup?: boolean;
           teacher_cancel_earns_makeup?: boolean;
           makeup_credit_expiry_days?: number | null;
+          bill_attended?: boolean;
+          bill_no_show?: boolean;
+          bill_teacher_cancel?: boolean;
+          bill_timely_student_cancel?: boolean;
+          bill_late_student_cancel?: boolean;
+          bill_makeup?: boolean;
+          default_rate_cents?: number | null;
+          rate_basis?: RateBasis;
+          currency?: string;
+          invoice_cadence?: InvoiceCadence;
+          payment_instructions?: string;
+          payment_provider?: PaymentProvider;
+          stripe_secret_key?: string | null;
+          stripe_publishable_key?: string | null;
+          stripe_webhook_secret?: string | null;
         };
       };
       lesson_slots: {
@@ -159,6 +221,7 @@ export interface Database {
           start_date: string;
           end_date: string | null;
           active: boolean;
+          rate_cents: number | null;
           created_at: string;
         };
         Insert: {
@@ -171,6 +234,7 @@ export interface Database {
           start_date?: string;
           end_date?: string | null;
           active?: boolean;
+          rate_cents?: number | null;
         };
         Update: {
           day_of_week?: number;
@@ -179,6 +243,112 @@ export interface Database {
           start_date?: string;
           end_date?: string | null;
           active?: boolean;
+          rate_cents?: number | null;
+        };
+      };
+      invoices: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          guardian_id: string;
+          period_start: string;
+          period_end: string;
+          status: InvoiceStatus;
+          subtotal_cents: number;
+          currency: string;
+          sent_at: string | null;
+          paid_at: string | null;
+          payment_method: PaymentMethod | null;
+          stripe_checkout_session_id: string | null;
+          stripe_payment_intent_id: string | null;
+          stripe_checkout_url: string | null;
+          notes: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          guardian_id: string;
+          period_start: string;
+          period_end: string;
+          status?: InvoiceStatus;
+          subtotal_cents?: number;
+          currency?: string;
+          sent_at?: string | null;
+          paid_at?: string | null;
+          payment_method?: PaymentMethod | null;
+          stripe_checkout_session_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          stripe_checkout_url?: string | null;
+          notes?: string;
+        };
+        Update: {
+          status?: InvoiceStatus;
+          subtotal_cents?: number;
+          currency?: string;
+          sent_at?: string | null;
+          paid_at?: string | null;
+          payment_method?: PaymentMethod | null;
+          stripe_checkout_session_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          stripe_checkout_url?: string | null;
+          notes?: string;
+        };
+      };
+      invoice_items: {
+        Row: {
+          id: string;
+          invoice_id: string;
+          lesson_id: string | null;
+          description: string;
+          quantity: number;
+          unit_cents: number;
+          amount_cents: number;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          invoice_id: string;
+          lesson_id?: string | null;
+          description: string;
+          quantity?: number;
+          unit_cents: number;
+          amount_cents: number;
+          sort_order?: number;
+        };
+        Update: {
+          lesson_id?: string | null;
+          description?: string;
+          quantity?: number;
+          unit_cents?: number;
+          amount_cents?: number;
+          sort_order?: number;
+        };
+      };
+      payments: {
+        Row: {
+          id: string;
+          invoice_id: string;
+          amount_cents: number;
+          method: PaymentMethod;
+          external_id: string | null;
+          recorded_at: string;
+          note: string;
+        };
+        Insert: {
+          id?: string;
+          invoice_id: string;
+          amount_cents: number;
+          method: PaymentMethod;
+          external_id?: string | null;
+          recorded_at?: string;
+          note?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          method?: PaymentMethod;
+          external_id?: string | null;
+          note?: string;
         };
       };
       lessons: {

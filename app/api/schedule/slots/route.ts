@@ -45,6 +45,10 @@ export async function POST(req: NextRequest) {
       // same-day slot's first occurrence.
       start_date: body.startDate || today,
       end_date: body.endDate || null,
+      rate_cents:
+        body.rateCents === null || body.rateCents === undefined || body.rateCents === ""
+          ? null
+          : Math.max(0, Math.round(Number(body.rateCents))),
     })
     .select()
     .single();

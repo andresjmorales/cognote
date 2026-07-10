@@ -8,6 +8,10 @@ import type { AttendanceStatus } from "@/lib/supabase/types";
  * individually, so a 4:00 PM Tuesday lesson stays 4:00 PM local across DST.
  */
 
+export type InvoiceCadence = "monthly" | "manual";
+export type PaymentProvider = "manual" | "stripe";
+export type RateBasis = "per_lesson" | "per_hour";
+
 export interface StudioPolicy {
   studio_name: string;
   studio_website: string;
@@ -21,6 +25,23 @@ export interface StudioPolicy {
   no_show_earns_makeup: boolean;
   teacher_cancel_earns_makeup: boolean;
   makeup_credit_expiry_days: number | null;
+  // Billing (Phase 3)
+  bill_attended: boolean;
+  bill_no_show: boolean;
+  bill_teacher_cancel: boolean;
+  bill_timely_student_cancel: boolean;
+  bill_late_student_cancel: boolean;
+  bill_makeup: boolean;
+  default_rate_cents: number | null;
+  rate_basis: RateBasis;
+  currency: string;
+  invoice_cadence: InvoiceCadence;
+  payment_instructions: string;
+  payment_provider: PaymentProvider;
+  // Stripe BYO (Phase 4) — secrets never sent to the client in full
+  stripe_secret_key: string | null;
+  stripe_publishable_key: string | null;
+  stripe_webhook_secret: string | null;
 }
 
 export const DEFAULT_POLICY: StudioPolicy = {
@@ -36,6 +57,21 @@ export const DEFAULT_POLICY: StudioPolicy = {
   no_show_earns_makeup: false,
   teacher_cancel_earns_makeup: true,
   makeup_credit_expiry_days: null,
+  bill_attended: true,
+  bill_no_show: true,
+  bill_teacher_cancel: false,
+  bill_timely_student_cancel: false,
+  bill_late_student_cancel: true,
+  bill_makeup: false,
+  default_rate_cents: null,
+  rate_basis: "per_lesson",
+  currency: "USD",
+  invoice_cadence: "monthly",
+  payment_instructions: "",
+  payment_provider: "manual",
+  stripe_secret_key: null,
+  stripe_publishable_key: null,
+  stripe_webhook_secret: null,
 };
 
 /** Offset (ms) of `timeZone` from UTC at the instant `ts` (UTC ms). */
@@ -120,6 +156,7 @@ export interface SlotRow {
   start_date: string;
   end_date: string | null;
   active: boolean;
+  rate_cents?: number | null;
 }
 
 export interface OccurrenceInsert {
