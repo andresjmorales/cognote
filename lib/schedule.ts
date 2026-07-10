@@ -42,6 +42,10 @@ export interface StudioPolicy {
   stripe_secret_key: string | null;
   stripe_publishable_key: string | null;
   stripe_webhook_secret: string | null;
+  // Teacher notifications
+  notify_in_app: boolean;
+  notify_email_portal_cancel: boolean;
+  notify_email_invoice_paid: boolean;
 }
 
 export const DEFAULT_POLICY: StudioPolicy = {
@@ -72,6 +76,9 @@ export const DEFAULT_POLICY: StudioPolicy = {
   stripe_secret_key: null,
   stripe_publishable_key: null,
   stripe_webhook_secret: null,
+  notify_in_app: true,
+  notify_email_portal_cancel: true,
+  notify_email_invoice_paid: true,
 };
 
 /** Offset (ms) of `timeZone` from UTC at the instant `ts` (UTC ms). */
@@ -247,6 +254,52 @@ export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
   student_cancel: "Student cancelled",
   no_show: "No-show",
 };
+
+/** Statuses safe for one-click bulk mark (no notice_at needed). */
+export const BULK_ATTENDANCE_STATUSES: AttendanceStatus[] = [
+  "attended",
+  "no_show",
+  "teacher_cancel",
+];
+
+export type StudentCancelNoticeChoice = "now" | "timely" | "late" | "custom";
+
+/**
+ * Resolve notice_at for a student cancellation. Timely/late synthesize a
+ * timestamp relative to the lesson start and cancellation window so billing
+ * and make-up rules stay a pure function of notice_at × policy.
+ */
+export function resolveStudentCancelNoticeAt(
+  choice: StudentCancelNoticeChoice,
+  lessonStartsAt: string,
+  windowHours: number,
+  customIso?: string | null
+): string {
+  const startMs = new Date(lessonStartsAt).getTime();
+  const windowMs = Math.max(0, windowHours) * 60 * 60 * 1000;
+
+  switch (choice) {
+    case "now":
+      return new Date().toISOString();
+    case "timely":
+      // One minute outside the window (or 1h before start if window is 0)
+      return new Date(
+        startMs - (windowMs > 0 ? windowMs + 60_000 : 60 * 60 * 1000)
+      ).toISOString();
+    case "late": {
+      // Mid-window, or 30 minutes before start if window is tiny
+      const offset =
+        windowMs > 2 * 60_000 ? Math.floor(windowMs / 2) : 30 * 60_000;
+      return new Date(startMs - offset).toISOString();
+    }
+    case "custom": {
+      if (!customIso || Number.isNaN(new Date(customIso).getTime())) {
+        return new Date().toISOString();
+      }
+      return new Date(customIso).toISOString();
+    }
+  }
+}
 
 /**
  * Normalize a PostgREST embed that is logically one-to-one (unique FK) but

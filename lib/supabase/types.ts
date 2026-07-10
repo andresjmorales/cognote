@@ -148,6 +148,9 @@ export interface Database {
           stripe_secret_key: string | null;
           stripe_publishable_key: string | null;
           stripe_webhook_secret: string | null;
+          notify_in_app: boolean;
+          notify_email_portal_cancel: boolean;
+          notify_email_invoice_paid: boolean;
           updated_at: string;
         };
         Insert: {
@@ -179,6 +182,9 @@ export interface Database {
           stripe_secret_key?: string | null;
           stripe_publishable_key?: string | null;
           stripe_webhook_secret?: string | null;
+          notify_in_app?: boolean;
+          notify_email_portal_cancel?: boolean;
+          notify_email_invoice_paid?: boolean;
         };
         Update: {
           studio_name?: string;
@@ -208,6 +214,9 @@ export interface Database {
           stripe_secret_key?: string | null;
           stripe_publishable_key?: string | null;
           stripe_webhook_secret?: string | null;
+          notify_in_app?: boolean;
+          notify_email_portal_cancel?: boolean;
+          notify_email_invoice_paid?: boolean;
         };
       };
       lesson_slots: {
@@ -386,6 +395,7 @@ export interface Database {
           lesson_id: string;
           status: AttendanceStatus;
           notice_at: string | null;
+          cancel_note: string;
           marked_at: string;
         };
         Insert: {
@@ -393,12 +403,42 @@ export interface Database {
           lesson_id: string;
           status: AttendanceStatus;
           notice_at?: string | null;
+          cancel_note?: string;
           marked_at?: string;
         };
         Update: {
           status?: AttendanceStatus;
           notice_at?: string | null;
+          cancel_note?: string;
           marked_at?: string;
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          type: "portal_cancel" | "invoice_paid";
+          title: string;
+          body: string;
+          href: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          type: "portal_cancel" | "invoice_paid";
+          title: string;
+          body?: string;
+          href?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          read_at?: string | null;
+          title?: string;
+          body?: string;
+          href?: string | null;
         };
       };
       waitlist: {

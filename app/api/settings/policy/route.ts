@@ -197,6 +197,15 @@ export async function PUT(req: NextRequest) {
     ...(paymentProvider !== undefined && {
       payment_provider: paymentProvider,
     }),
+    ...(body.notifyInApp !== undefined && {
+      notify_in_app: Boolean(body.notifyInApp),
+    }),
+    ...(body.notifyEmailPortalCancel !== undefined && {
+      notify_email_portal_cancel: Boolean(body.notifyEmailPortalCancel),
+    }),
+    ...(body.notifyEmailInvoicePaid !== undefined && {
+      notify_email_invoice_paid: Boolean(body.notifyEmailInvoicePaid),
+    }),
   };
 
   // Stripe keys: only overwrite when a new value is pasted, or explicitly cleared

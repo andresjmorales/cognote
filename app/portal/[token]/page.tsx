@@ -17,6 +17,7 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
 import { formatMoney } from "@/lib/billing";
+import { PortalCancelButton } from "@/components/portal/PortalCancelButton";
 
 export const metadata: Metadata = { title: "Family Portal" };
 
@@ -33,15 +34,25 @@ interface PortalLesson {
 function PortalLessonCard({
   lesson,
   timezone,
+  token,
+  windowHours,
 }: {
   lesson: PortalLesson;
   timezone: string;
+  token: string;
+  windowHours: number;
 }) {
   const status = oneToOne(lesson.attendance)?.status;
   const cancelled = status === "teacher_cancel" || status === "student_cancel";
+  const upcoming =
+    !cancelled &&
+    status !== "attended" &&
+    status !== "no_show" &&
+    new Date(lesson.starts_at).getTime() > Date.now();
+
   return (
     <Card padding="sm">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className={`font-medium ${cancelled ? "line-through text-muted" : ""}`}>
             {formatLessonDate(lesson.starts_at, timezone)} ·{" "}
@@ -56,6 +67,13 @@ function PortalLessonCard({
           <span className="text-xs text-error font-medium">
             {ATTENDANCE_LABELS[status]}
           </span>
+        )}
+        {upcoming && (
+          <PortalCancelButton
+            token={token}
+            lessonId={lesson.id}
+            windowHours={windowHours}
+          />
         )}
       </div>
     </Card>
@@ -264,6 +282,8 @@ export default async function PortalPage({
                           key={lesson.id}
                           lesson={lesson}
                           timezone={policy.timezone}
+                          token={token}
+                          windowHours={policy.cancellation_window_hours}
                         />
                       ))}
                     </div>
@@ -278,6 +298,8 @@ export default async function PortalPage({
                   key={lesson.id}
                   lesson={lesson}
                   timezone={policy.timezone}
+                  token={token}
+                  windowHours={policy.cancellation_window_hours}
                 />
               ))}
             </div>

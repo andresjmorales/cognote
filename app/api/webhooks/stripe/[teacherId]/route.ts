@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
 import { constructWebhookEvent } from "@/lib/payments";
+import { createTeacherNotification } from "@/lib/server/notifications";
+import { formatMoney } from "@/lib/billing";
+import { requestOrigin } from "@/lib/server/http";
 
 /**
  * Stripe webhook per teacher (BYO keys).
@@ -59,7 +62,9 @@ export async function POST(
 
     const { data: invoice } = await supabase
       .from("invoices")
-      .select("id, status, subtotal_cents, teacher_id")
+      .select(
+        "id, status, subtotal_cents, currency, teacher_id, period_start, period_end"
+      )
       .eq("id", invoiceId)
       .eq("teacher_id", teacherId)
       .single();
@@ -98,6 +103,16 @@ export async function POST(
         })
         .eq("id", invoiceId)
         .eq("teacher_id", teacherId);
+
+      await createTeacherNotification(supabase, {
+        teacherId,
+        type: "invoice_paid",
+        title: "Invoice paid online",
+        body: `${formatMoney(amount, invoice.currency)} · ${invoice.period_start} → ${invoice.period_end}`,
+        href: `/billing/${invoiceId}`,
+        origin: requestOrigin(req),
+        policy,
+      });
     }
   }
 
