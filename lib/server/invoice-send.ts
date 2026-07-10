@@ -164,16 +164,35 @@ export async function sendInvoice(
     const periodLabel = `${invoice.period_start} to ${invoice.period_end}`;
     const studio = policy.studio_name || "your studio";
     const total = formatMoney(invoice.subtotal_cents, invoice.currency);
-    const payLine = checkoutUrl
-      ? `Pay online:\n${checkoutUrl}`
+    const greeting = familyGreetingNames(family);
+
+    const payText = checkoutUrl
+      ? `Pay online: ${checkoutUrl}`
       : policy.payment_instructions.trim()
         ? `Payment instructions:\n${policy.payment_instructions.trim()}`
         : "See your family portal for payment details.";
 
+    const payHtml = checkoutUrl
+      ? `<p><a href="${escapeHtml(checkoutUrl)}">Pay online</a></p>`
+      : policy.payment_instructions.trim()
+        ? `<p><strong>Payment instructions</strong></p><p style="white-space:pre-wrap;">${escapeHtml(policy.payment_instructions.trim())}</p>`
+        : `<p>See your family portal for payment details.</p>`;
+
+    const text = `Hi ${greeting},\n\nPlease find attached your invoice for ${periodLabel}.\n\nTotal due: ${total}\n\n${payText}\n\n— ${studio} (sent via CogNote Studio)`;
+
+    const html = `<div style="font-family:sans-serif;font-size:14px;line-height:1.5;color:#222;">
+<p>Hi ${escapeHtml(greeting)},</p>
+<p>Please find attached your invoice for ${escapeHtml(periodLabel)}.</p>
+<p><strong>Total due: ${escapeHtml(total)}</strong></p>
+${payHtml}
+<p>— ${escapeHtml(studio)} (sent via CogNote Studio)</p>
+</div>`;
+
     const result = await sendEmail({
       to: recipients,
       subject: `Invoice for ${periodLabel} — ${studio}`,
-      text: `Hi ${familyGreetingNames(family)},\n\nPlease find attached your invoice for ${periodLabel}.\n\nTotal due: ${total}\n\n${payLine}\n\n— ${studio} (sent via CogNote Studio)`,
+      text,
+      html,
       fromName: policy.studio_name
         ? `${policy.studio_name} (via CogNote)`
         : undefined,
@@ -194,4 +213,12 @@ export async function sendInvoice(
   }
 
   return { ok: true, emailed, emailError, checkoutUrl };
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

@@ -81,7 +81,7 @@ export async function POST(
         external_id: session.payment_intent
           ? String(session.payment_intent)
           : session.id,
-        note: "Stripe Checkout",
+        note: "Paid online",
       });
 
       await supabase

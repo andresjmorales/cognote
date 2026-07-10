@@ -29,7 +29,8 @@ export default async function InvoiceDetailPage({
         `
         *,
         guardians ( name, family_name ),
-        invoice_items ( * )
+        invoice_items ( * ),
+        payments ( id, amount_cents, method, note, recorded_at )
       `
       )
       .eq("id", id)
@@ -67,6 +68,28 @@ export default async function InvoiceDetailPage({
       amountCents: i.amount_cents,
     }));
 
+  const payments = (
+    (invoice.payments as {
+      id: string;
+      amount_cents: number;
+      method: string;
+      note: string;
+      recorded_at: string;
+    }[]) ?? []
+  )
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime()
+    )
+    .map((p) => ({
+      id: p.id,
+      amountCents: p.amount_cents,
+      method: p.method,
+      note: p.note,
+      recordedAt: p.recorded_at,
+    }));
+
   return (
     <div>
       <Link
@@ -89,6 +112,7 @@ export default async function InvoiceDetailPage({
         stripeConfigured={!!policy.stripe_secret_key}
         checkoutUrl={invoice.stripe_checkout_url}
         paymentInstructions={policy.payment_instructions}
+        payments={payments}
       />
     </div>
   );

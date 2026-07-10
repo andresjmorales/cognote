@@ -40,6 +40,7 @@ export function InvoiceDetailClient({
   stripeConfigured,
   checkoutUrl,
   paymentInstructions,
+  payments = [],
 }: {
   invoiceId: string;
   status: string;
@@ -54,6 +55,13 @@ export function InvoiceDetailClient({
   stripeConfigured: boolean;
   checkoutUrl: string | null;
   paymentInstructions: string;
+  payments?: {
+    id: string;
+    amountCents: number;
+    method: string;
+    note: string;
+    recordedAt: string;
+  }[];
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
@@ -295,9 +303,9 @@ export function InvoiceDetailClient({
             href={checkoutUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-sm text-primary break-all hover:underline"
+            className="text-sm text-primary font-medium hover:underline"
           >
-            {checkoutUrl}
+            Pay online
           </a>
         </Card>
       )}
@@ -399,6 +407,33 @@ export function InvoiceDetailClient({
           </p>
         )}
       </Card>
+
+      {payments.length > 0 && (
+        <Card padding="sm">
+          <h2 className="font-semibold mb-2">Payments</h2>
+          <ul className="space-y-2">
+            {payments.map((p) => (
+              <li
+                key={p.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 text-sm"
+              >
+                <div>
+                  <span className="font-medium capitalize">{p.method}</span>
+                  {p.note ? (
+                    <span className="text-muted"> · {p.note}</span>
+                  ) : null}
+                  <div className="text-xs text-muted">
+                    {new Date(p.recordedAt).toLocaleString()}
+                  </div>
+                </div>
+                <span className="font-semibold tabular-nums">
+                  {formatMoney(p.amountCents, currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {paymentProvider === "manual" && paymentInstructions && (
         <Card padding="sm">
