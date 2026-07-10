@@ -9,11 +9,15 @@ import { LaunchPlanToStudentButton } from "@/components/teacher/LaunchPlanToStud
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
 import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
+import { StudentLessonNotes } from "@/components/teacher/StudentLessonNotes";
+import { RecentSessionsList } from "@/components/teacher/RecentSessionsList";
 import { StudentInfoCard } from "@/components/teacher/StudentInfoCard";
 import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
 import { getOrSeedDimensions } from "@/lib/server/skills";
+import { getPolicy } from "@/lib/server/scheduling";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
+import { oneToOne } from "@/lib/schedule";
 
 export async function generateMetadata({
   params,
@@ -50,6 +54,8 @@ export default async function StudentDetailPage({
     dimensions,
     { data: assessments },
     { data: attendedLessons },
+    { data: lessonNoteRows },
+    policy,
   ] = await Promise.all([
     supabase
       .from("students")
@@ -89,12 +95,44 @@ export default async function StudentDetailPage({
       .select("id, lesson_date, attendance!lesson_id ( status )")
       .eq("student_id", id)
       .order("lesson_date", { ascending: false }),
+    supabase
+      .from("lesson_notes")
+      .select(
+        "id, body, private_body, shared_with_parent, emailed_at, updated_at, lessons!inner ( lesson_date, student_id )"
+      )
+      .eq("lessons.student_id", id)
+      .order("updated_at", { ascending: false }),
+    getPolicy(supabase, user.id),
   ]);
 
   if (!student) notFound();
 
   const activePlans = (studentPlans ?? []).filter(isActiveStudentPlan);
   const pastPlans = (studentPlans ?? []).filter((sp) => !isActiveStudentPlan(sp));
+
+  const lessonNotes = (lessonNoteRows ?? [])
+    .map((row) => {
+      const lesson = oneToOne(
+        row.lessons as
+          | { lesson_date: string; student_id: string }
+          | { lesson_date: string; student_id: string }[]
+          | null
+      );
+      if (!lesson) return null;
+      const body = row.body ?? "";
+      const privateBody = row.private_body ?? "";
+      if (!body.trim() && !privateBody.trim()) return null;
+      return {
+        id: row.id,
+        body,
+        privateBody,
+        sharedWithParent: row.shared_with_parent,
+        emailedAt: row.emailed_at,
+        lessonDate: lesson.lesson_date,
+        updatedAt: row.updated_at,
+      };
+    })
+    .filter((n): n is NonNullable<typeof n> => n !== null);
 
   // Attendance summary — only lessons that have been marked count.
   const attendanceCounts: Record<string, number> = {};
@@ -215,11 +253,13 @@ export default async function StudentDetailPage({
         initialDefaultRateCents={student.default_rate_cents ?? null}
       />
 
-      {/* Teacher Notes */}
+      {/* Private meta-notes about the student */}
       <StudentNotesEditor
         studentId={id}
         initialNotes={student.teacher_notes ?? ""}
       />
+
+      <StudentLessonNotes notes={lessonNotes} timezone={policy.timezone} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -464,59 +504,7 @@ export default async function StudentDetailPage({
           )}
 
           {/* Recent Sessions */}
-          <h2 className="text-lg font-semibold mb-3 mt-6">Recent Sessions</h2>
-          {allSessions.length === 0 ? (
-            <Card className="text-center text-muted">
-              <p>No sessions yet.</p>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {allSessions
-                .sort(
-                  (a: any, b: any) =>
-                    new Date(b.started_at).getTime() -
-                    new Date(a.started_at).getTime()
-                )
-                .slice(0, 10)
-                .map((s: any) => {
-                  const pct =
-                    s.total_questions > 0
-                      ? Math.round((s.total_correct / s.total_questions) * 100)
-                      : 0;
-                  return (
-                    <Card key={s.id} padding="sm">
-                      <div className="flex justify-between text-sm">
-                        <div>
-                          <span className="capitalize">{s.mode.replace("_", " ")}</span>
-                          {s.plan?.name && (
-                            <span className="text-muted ml-2">· {s.plan.name}</span>
-                          )}
-                          <span className="text-muted ml-2">
-                            {s.total_correct}/{s.total_questions}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={
-                              pct >= 80
-                                ? "text-success font-medium"
-                                : pct >= 50
-                                  ? "text-warning font-medium"
-                                  : "text-error font-medium"
-                            }
-                          >
-                            {pct}%
-                          </span>
-                          <span className="text-muted text-xs">
-                            {new Date(s.started_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-            </div>
-          )}
+          <RecentSessionsList sessions={allSessions} />
         </div>
       </div>
     </div>

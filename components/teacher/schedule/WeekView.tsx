@@ -23,7 +23,12 @@ export interface WeekLesson {
   startsAt: string;
   durationMinutes: number;
   attendance: { status: AttendanceStatus; noticeAt: string | null } | null;
-  note: { body: string; sharedWithParent: boolean; emailedAt: string | null } | null;
+  note: {
+    body: string;
+    privateBody: string;
+    sharedWithParent: boolean;
+    emailedAt: string | null;
+  } | null;
 }
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -195,9 +200,14 @@ export function WeekView({
                           {ATTENDANCE_LABELS[status]}
                         </div>
                       )}
-                      {lesson.note && (
+                      {lesson.note &&
+                        (lesson.note.body.trim() ||
+                          lesson.note.privateBody.trim()) && (
                         <div className="text-[10px] text-muted mt-0.5">
-                          📝 note{lesson.note.sharedWithParent ? " · shared" : ""}
+                          📝 note
+                          {lesson.note.sharedWithParent
+                            ? " · family"
+                            : " · private"}
                         </div>
                       )}
                     </button>
@@ -298,19 +308,25 @@ function LessonModal({
   onSaved: () => void;
   notify: (message: string) => void;
 }) {
-  const [noteBody, setNoteBody] = useState(lesson.note?.body ?? "");
-  const [shareNote, setShareNote] = useState(lesson.note?.sharedWithParent ?? true);
+  const [familyBody, setFamilyBody] = useState(lesson.note?.body ?? "");
+  const [privateBody, setPrivateBody] = useState(lesson.note?.privateBody ?? "");
   const [savingNote, setSavingNote] = useState(false);
 
+  const hasAnyNote = Boolean(familyBody.trim() || privateBody.trim());
+  const hadExistingNote = Boolean(
+    lesson.note &&
+      (lesson.note.body.trim() || lesson.note.privateBody.trim())
+  );
+
   async function saveNote(sendEmail: boolean) {
-    if (!noteBody.trim()) return;
+    if (!hasAnyNote && !hadExistingNote) return;
     setSavingNote(true);
     const res = await fetch(`/api/schedule/lessons/${lesson.id}/note`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        body: noteBody,
-        sharedWithParent: shareNote,
+        body: familyBody,
+        privateBody,
         sendEmail,
       }),
     });
@@ -341,15 +357,40 @@ function LessonModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between mb-1">
+        <div className="flex items-start justify-between mb-1 gap-2">
           <h3 className="font-semibold text-lg">{lesson.studentName}</h3>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-foreground cursor-pointer text-xl leading-none"
-            aria-label="Close"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg text-success hover:bg-success/10 cursor-pointer flex items-center justify-center"
+              aria-label="Done"
+              title="Done — confirm and close"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg text-muted hover:text-foreground hover:bg-surface-dim cursor-pointer flex items-center justify-center text-xl leading-none"
+              aria-label="Close"
+              title="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
         <p className="text-sm text-muted mb-4">
           {formatLessonDate(lesson.startsAt, timezone, "long")} at{" "}
@@ -387,39 +428,50 @@ function LessonModal({
 
         <hr className="border-border my-4" />
 
-        <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-          Lesson note
-        </p>
+        <label className="block text-xs font-semibold text-muted uppercase tracking-wide mb-1">
+          Private notes
+        </label>
         <textarea
-          value={noteBody}
-          onChange={(e) => setNoteBody(e.target.value)}
-          placeholder="Today we covered… practice this week…"
+          value={privateBody}
+          onChange={(e) => setPrivateBody(e.target.value)}
+          placeholder="Teacher-only — not shown to the family"
+          rows={3}
+          className={inputClass}
+        />
+
+        <label className="block text-xs font-semibold text-muted uppercase tracking-wide mb-1 mt-3">
+          Notes for student / parent
+        </label>
+        <textarea
+          value={familyBody}
+          onChange={(e) => setFamilyBody(e.target.value)}
+          placeholder="Shown in the family portal — practice this week…"
           rows={4}
           className={inputClass}
         />
-        <label className="flex items-center gap-2 text-sm mt-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={shareNote}
-            onChange={(e) => setShareNote(e.target.checked)}
-          />
-          Visible to the family in their portal
-        </label>
         {lesson.note?.emailedAt && (
           <p className="text-xs text-muted mt-1">
             Emailed {formatLessonDate(lesson.note.emailedAt, timezone)}
           </p>
         )}
         <div className="flex gap-2 mt-3">
-          <Button size="sm" disabled={savingNote || !noteBody.trim()} onClick={() => saveNote(false)}>
-            {savingNote ? "Saving..." : "Save Note"}
+          <Button
+            size="sm"
+            disabled={savingNote || (!hasAnyNote && !hadExistingNote)}
+            onClick={() => saveNote(false)}
+          >
+            {savingNote ? "Saving..." : "Save Notes"}
           </Button>
           <Button
             size="sm"
             variant="secondary"
-            disabled={savingNote || !noteBody.trim() || !shareNote}
+            disabled={savingNote || !familyBody.trim()}
             onClick={() => saveNote(true)}
-            title={!shareNote ? "Enable portal visibility to email the family" : undefined}
+            title={
+              !familyBody.trim()
+                ? "Add notes for student/parent to email the family"
+                : undefined
+            }
           >
             Save &amp; Email Family
           </Button>

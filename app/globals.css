@@ -24,8 +24,43 @@
   --font-display: "Nunito", ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror p.is-empty:first-child::before {
+  color: var(--color-muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror p {
+  margin: 0.35em 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.25rem;
+  margin: 0.35em 0;
+}
+
+.ProseMirror h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+}
+
+.rich-text-html p {
+  margin: 0.35em 0;
+}
+
+.rich-text-html ul,
+.rich-text-html ol {
+  padding-left: 1.25rem;
+  margin: 0.35em 0;
+}
+
+.rich-text-html h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
 }
