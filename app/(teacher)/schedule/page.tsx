@@ -10,6 +10,7 @@ import {
 } from "@/lib/schedule";
 import type { AttendanceStatus } from "@/lib/supabase/types";
 import { WeekView, type WeekLesson } from "@/components/teacher/schedule/WeekView";
+import { BulkAttendancePanel } from "@/components/teacher/schedule/BulkAttendancePanel";
 import { SlotManager } from "@/components/teacher/schedule/SlotManager";
 import { MakeupPanel, type MakeupCredit } from "@/components/teacher/schedule/MakeupPanel";
 import Link from "next/link";
@@ -170,7 +171,10 @@ export default async function SchedulePage({
         lessons={weekLessons}
         students={studentsRes.data ?? []}
         durationOptions={policy.lesson_duration_options}
+        cancellationWindowHours={policy.cancellation_window_hours}
       />
+
+      <BulkAttendancePanel lessons={weekLessons} timezone={policy.timezone} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="space-y-6">

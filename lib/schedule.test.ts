@@ -11,6 +11,7 @@ import {
   formatLessonTime,
   formatLessonDate,
   oneToOne,
+  resolveStudentCancelNoticeAt,
   DEFAULT_POLICY,
   type SlotRow,
 } from "@/lib/schedule";
@@ -195,6 +196,24 @@ describe("earnsMakeupCredit", () => {
     expect(
       earnsMakeupCredit("student_cancel", exactly24hBefore, lessonStart, DEFAULT_POLICY)
     ).toBe(true);
+  });
+});
+
+describe("resolveStudentCancelNoticeAt", () => {
+  const start = "2026-07-14T21:00:00.000Z";
+
+  it("timely is outside the window", () => {
+    const notice = resolveStudentCancelNoticeAt("timely", start, 24);
+    const windowMs = 24 * 60 * 60 * 1000;
+    expect(new Date(start).getTime() - new Date(notice).getTime()).toBeGreaterThanOrEqual(
+      windowMs
+    );
+  });
+
+  it("late is inside the window", () => {
+    const notice = resolveStudentCancelNoticeAt("late", start, 24);
+    const windowMs = 24 * 60 * 60 * 1000;
+    expect(new Date(start).getTime() - new Date(notice).getTime()).toBeLessThan(windowMs);
   });
 });
 

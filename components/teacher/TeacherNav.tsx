@@ -6,6 +6,7 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { usePathname, useRouter } from "next/navigation";
 import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationBell } from "@/components/teacher/NotificationBell";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -15,13 +16,44 @@ const navItems = [
   { href: "/lessons", label: "Lessons" },
   { href: "/billing", label: "Billing" },
   { href: "/settings", label: "Settings" },
-  { href: "/help", label: "Help" },
 ];
+
+function HelpIconLink({ active }: { active: boolean }) {
+  return (
+    <Link
+      href="/help"
+      aria-label="Help"
+      title="Help"
+      className={`p-2 rounded-lg transition-colors ${
+        active
+          ? "text-primary bg-primary/10"
+          : "text-muted hover:text-foreground hover:bg-surface-dim"
+      }`}
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    </Link>
+  );
+}
 
 export function TeacherNav({ teacherName }: { teacherName: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const helpActive = pathname.startsWith("/help");
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -65,42 +97,48 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
         </div>
 
         {/* Desktop account links */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-1">
+          <HelpIconLink active={helpActive} />
+          <NotificationBell />
           <Link
             href="/account"
-            className="text-sm text-muted hover:text-foreground transition-colors"
+            className="text-sm text-muted hover:text-foreground transition-colors ml-2"
           >
             {teacherName}
           </Link>
           <button
             onClick={handleSignOut}
-            className="text-sm text-muted hover:text-foreground cursor-pointer"
+            className="text-sm text-muted hover:text-foreground cursor-pointer ml-2"
           >
             Sign out
           </button>
         </div>
 
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden p-3 -mr-3 text-muted hover:text-foreground cursor-pointer"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            {mobileOpen ? (
-              <>
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </>
-            ) : (
-              <>
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </>
-            )}
-          </svg>
-        </button>
+        {/* Mobile: help + bell + hamburger */}
+        <div className="md:hidden flex items-center gap-0.5">
+          <HelpIconLink active={helpActive} />
+          <NotificationBell />
+          <button
+            className="p-3 -mr-3 text-muted hover:text-foreground cursor-pointer"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              {mobileOpen ? (
+                <>
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </>
+              ) : (
+                <>
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}

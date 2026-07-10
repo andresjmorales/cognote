@@ -5,6 +5,7 @@ import { PolicySettings } from "@/components/teacher/schedule/PolicySettings";
 import { BillingSettingsForm } from "@/components/teacher/settings/BillingSettingsForm";
 import { PaymentsSettingsForm } from "@/components/teacher/settings/PaymentsSettingsForm";
 import { DataTransferSettings } from "@/components/teacher/settings/DataTransferSettings";
+import { NotificationSettingsForm } from "@/components/teacher/settings/NotificationSettingsForm";
 import { stripeStatusFromPolicy } from "@/lib/billing";
 
 export const metadata = { title: "Studio Settings" };
@@ -46,6 +47,7 @@ export default async function SettingsPage() {
           teacherId={user.id}
           stripeStatus={stripeStatusFromPolicy(policy)}
         />
+        <NotificationSettingsForm policy={clientPolicy} />
         <DataTransferSettings />
       </div>
     </div>

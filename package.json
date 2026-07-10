@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:fresh": "npx --yes kill-port 3000 3001 3002 && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

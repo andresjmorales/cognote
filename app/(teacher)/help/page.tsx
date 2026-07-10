@@ -91,10 +91,13 @@ export default function HelpPage() {
             <h3 className="font-medium">Marking attendance</h3>
             <p className="text-muted">
               Tap any lesson in the weekly view to mark it: attended, teacher
-              cancelled, student cancelled, or no-show. For student
-              cancellations, the moment you mark it counts as when notice was
-              given &mdash; so mark it when the family tells you, and your
-              policy&apos;s cancellation window decides whether it was timely.
+              cancelled, student cancelled, or no-show. Teacher cancellations
+              email the family by default (optional note; you can turn email
+              off). For student cancellations, you&apos;ll choose when notice was
+              given (just now, timely, late, or a specific time) so billing and
+              make-ups follow your cancellation window. Use{" "}
+              <strong>Bulk mark attendance</strong> under the week grid for
+              Attended / No-show / Teacher cancelled only.
             </p>
           </div>
           <div>
@@ -159,11 +162,13 @@ export default function HelpPage() {
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
             Each family gets one private link with everything they need: their
-            students&apos; practice links, the upcoming lesson schedule, notes
-            you&apos;ve shared, your studio info, and a calendar they can
+            students&apos; practice links, the upcoming lesson schedule (parents
+            can cancel an upcoming lesson with an optional note), notes
+            you&apos;ve shared, invoices, your studio info, and a calendar they can
             download or subscribe to. No account or password required &mdash;
             remind parents to keep the link private, and reset it from the
-            Families page if needed.
+            Families page if needed. Portal cancellations appear in your
+            notification bell (and optionally by email — Settings → Notifications).
           </p>
           <p className="text-muted">
             Students never see the portal. Practice links show only practice;

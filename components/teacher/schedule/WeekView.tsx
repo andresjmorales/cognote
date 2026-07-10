@@ -10,6 +10,7 @@ import {
   formatLessonTime,
   formatLessonDate,
   ATTENDANCE_LABELS,
+  type StudentCancelNoticeChoice,
 } from "@/lib/schedule";
 import type { AttendanceStatus } from "@/lib/supabase/types";
 
@@ -50,6 +51,7 @@ export function WeekView({
   lessons,
   students,
   durationOptions,
+  cancellationWindowHours,
 }: {
   weekStart: string;
   today: string;
@@ -57,6 +59,7 @@ export function WeekView({
   lessons: WeekLesson[];
   students: { id: string; name: string }[];
   durationOptions: number[];
+  cancellationWindowHours: number;
 }) {
   const router = useRouter();
   const [openLesson, setOpenLesson] = useState<WeekLesson | null>(null);
@@ -74,7 +77,16 @@ export function WeekView({
     setTimeout(() => setToast(null), 2500);
   }
 
-  async function markAttendance(lesson: WeekLesson, status: AttendanceStatus | null) {
+  async function markAttendance(
+    lesson: WeekLesson,
+    status: AttendanceStatus | null,
+    extra?: {
+      noticeChoice?: "now" | "timely" | "late" | "custom";
+      noticeAt?: string;
+      cancelNote?: string;
+      notifyFamily?: boolean;
+    }
+  ) {
     const hadOverride = lesson.id in statusOverrides;
     const previous = statusOverrides[lesson.id];
     setStatusOverrides((prev) => ({ ...prev, [lesson.id]: status }));
@@ -82,10 +94,30 @@ export function WeekView({
     const res = await fetch(`/api/schedule/lessons/${lesson.id}/attendance`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        status,
+        noticeChoice: extra?.noticeChoice,
+        noticeAt: extra?.noticeAt,
+        cancelNote: extra?.cancelNote,
+        notifyFamily: extra?.notifyFamily,
+      }),
     });
     setBusy(false);
     if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (status === "teacher_cancel") {
+        if (extra?.notifyFamily !== false) {
+          notify(
+            data.emailed
+              ? "Cancelled — family emailed"
+              : (data.emailError
+                  ? `Cancelled — ${data.emailError}`
+                  : "Cancelled")
+          );
+        } else {
+          notify("Cancelled (family not emailed)");
+        }
+      }
       router.refresh();
     } else {
       setStatusOverrides((prev) => {
@@ -224,9 +256,10 @@ export function WeekView({
           lesson={openLesson}
           currentStatus={effectiveStatus(openLesson)}
           timezone={timezone}
+          cancellationWindowHours={cancellationWindowHours}
           busy={busy}
           onClose={() => setOpenLesson(null)}
-          onMark={(status) => markAttendance(openLesson, status)}
+          onMark={(status, extra) => markAttendance(openLesson, status, extra)}
           onDelete={() => deleteAdHoc(openLesson)}
           onSaved={() => {
             setOpenLesson(null);
@@ -291,6 +324,7 @@ function LessonModal({
   lesson,
   currentStatus,
   timezone,
+  cancellationWindowHours,
   busy,
   onClose,
   onMark,
@@ -301,9 +335,18 @@ function LessonModal({
   lesson: WeekLesson;
   currentStatus: AttendanceStatus | null;
   timezone: string;
+  cancellationWindowHours: number;
   busy: boolean;
   onClose: () => void;
-  onMark: (status: AttendanceStatus | null) => void;
+  onMark: (
+    status: AttendanceStatus | null,
+    extra?: {
+      noticeChoice?: StudentCancelNoticeChoice;
+      noticeAt?: string;
+      cancelNote?: string;
+      notifyFamily?: boolean;
+    }
+  ) => void;
   onDelete: () => void;
   onSaved: () => void;
   notify: (message: string) => void;
@@ -311,6 +354,14 @@ function LessonModal({
   const [familyBody, setFamilyBody] = useState(lesson.note?.body ?? "");
   const [privateBody, setPrivateBody] = useState(lesson.note?.privateBody ?? "");
   const [savingNote, setSavingNote] = useState(false);
+  const [cancelPrompt, setCancelPrompt] = useState<"student" | "teacher" | null>(
+    null
+  );
+  const [noticeChoice, setNoticeChoice] =
+    useState<StudentCancelNoticeChoice>("now");
+  const [customNotice, setCustomNotice] = useState("");
+  const [cancelNote, setCancelNote] = useState("");
+  const [notifyFamily, setNotifyFamily] = useState(true);
 
   const hasAnyNote = Boolean(familyBody.trim() || privateBody.trim());
   const hadExistingNote = Boolean(
@@ -345,6 +396,37 @@ function LessonModal({
       const data = await res.json().catch(() => ({}));
       notify(data.error ?? "Failed to save note");
     }
+  }
+
+  function handleStatusClick(status: AttendanceStatus) {
+    if (status === "student_cancel") {
+      setCancelPrompt("student");
+      return;
+    }
+    if (status === "teacher_cancel") {
+      setCancelPrompt("teacher");
+      setNotifyFamily(true);
+      return;
+    }
+    setCancelPrompt(null);
+    onMark(status);
+  }
+
+  function confirmStudentCancel() {
+    onMark("student_cancel", {
+      noticeChoice,
+      noticeAt: noticeChoice === "custom" ? customNotice : undefined,
+      cancelNote,
+    });
+    setCancelPrompt(null);
+  }
+
+  function confirmTeacherCancel() {
+    onMark("teacher_cancel", {
+      cancelNote,
+      notifyFamily,
+    });
+    setCancelPrompt(null);
   }
 
   const statuses: AttendanceStatus[] = [
@@ -403,21 +485,133 @@ function LessonModal({
         </p>
         <div className="grid grid-cols-2 gap-2 mb-2">
           {statuses.map((status) => {
-            const active = currentStatus === status;
+            const active =
+              currentStatus === status && cancelPrompt === null;
+            const prompting =
+              (status === "student_cancel" && cancelPrompt === "student") ||
+              (status === "teacher_cancel" && cancelPrompt === "teacher");
             return (
               <Button
                 key={status}
                 size="sm"
-                variant={active ? "primary" : "secondary"}
+                variant={active || prompting ? "primary" : "secondary"}
                 disabled={busy}
-                onClick={() => onMark(status)}
+                onClick={() => handleStatusClick(status)}
               >
                 {ATTENDANCE_LABELS[status]}
               </Button>
             );
           })}
         </div>
-        {currentStatus && (
+
+        {cancelPrompt === "student" && (
+          <div className="rounded-lg border border-border bg-surface-dim/40 p-3 mb-3 space-y-2">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+              When did they cancel?
+            </p>
+            <p className="text-[11px] text-muted">
+              Sets notice time for billing / make-ups (window:{" "}
+              {cancellationWindowHours}h).
+            </p>
+            {(
+              [
+                ["now", "Just now"],
+                ["timely", `Timely (≥${cancellationWindowHours}h before)`],
+                ["late", `Late (<${cancellationWindowHours}h before)`],
+                ["custom", "Pick date/time"],
+              ] as const
+            ).map(([value, label]) => (
+              <label
+                key={value}
+                className="flex items-center gap-2 text-sm cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="noticeChoice"
+                  checked={noticeChoice === value}
+                  onChange={() => setNoticeChoice(value)}
+                />
+                {label}
+              </label>
+            ))}
+            {noticeChoice === "custom" && (
+              <input
+                type="datetime-local"
+                value={customNotice}
+                onChange={(e) => setCustomNotice(e.target.value)}
+                className={inputClass}
+              />
+            )}
+            <textarea
+              value={cancelNote}
+              onChange={(e) => setCancelNote(e.target.value)}
+              placeholder="Optional cancel note…"
+              rows={2}
+              className={inputClass}
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={
+                  busy ||
+                  (noticeChoice === "custom" && !customNotice)
+                }
+                onClick={confirmStudentCancel}
+              >
+                Save cancellation
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setCancelPrompt(null)}
+              >
+                Back
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {cancelPrompt === "teacher" && (
+          <div className="rounded-lg border border-border bg-surface-dim/40 p-3 mb-3 space-y-2">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+              Cancel this lesson
+            </p>
+            <p className="text-[11px] text-muted">
+              The family will be emailed unless you turn that off below.
+            </p>
+            <textarea
+              value={cancelNote}
+              onChange={(e) => setCancelNote(e.target.value)}
+              placeholder="Optional note for the family (included in the email)…"
+              rows={2}
+              className={inputClass}
+            />
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notifyFamily}
+                onChange={(e) => setNotifyFamily(e.target.checked)}
+              />
+              Email the family
+            </label>
+            <div className="flex gap-2">
+              <Button size="sm" disabled={busy} onClick={confirmTeacherCancel}>
+                Confirm cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setCancelPrompt(null)}
+              >
+                Back
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {currentStatus && cancelPrompt === null && (
           <button
             onClick={() => onMark(null)}
             className="text-xs text-muted hover:text-foreground underline cursor-pointer mb-2"
