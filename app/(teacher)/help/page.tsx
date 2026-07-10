@@ -109,6 +109,25 @@ export default function HelpPage() {
       </Card>
 
       <Card padding="lg" className="space-y-4">
+        <h2 className="text-xl font-semibold">Billing &amp; Payments</h2>
+        <div className="space-y-3 text-sm leading-relaxed">
+          <p className="text-muted">
+            Set your default rate (per lesson or per hour), billability rules,
+            and payment instructions in Settings. Optional per-student and
+            per-slot rates override the studio default. On the Billing tab,
+            generate draft invoices for a date range from marked attendance,
+            edit line items, then Send to email a PDF and post the invoice to
+            the family portal.
+          </p>
+          <p className="text-muted">
+            Payments default to manual (mark paid yourself). To accept cards,
+            switch Settings → Payments to Stripe and paste your own keys —
+            CogNote never holds platform payment keys for lesson tuition.
+          </p>
+        </div>
+      </Card>
+
+      <Card padding="lg" className="space-y-4">
         <h2 className="text-xl font-semibold">Make-Up Credits</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">

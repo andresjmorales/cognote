@@ -60,6 +60,12 @@ export async function PUT(
   if (body.startDate !== undefined) update.start_date = body.startDate;
   if (body.endDate !== undefined) update.end_date = body.endDate || null;
   if (body.active !== undefined) update.active = Boolean(body.active);
+  if (body.rateCents !== undefined) {
+    update.rate_cents =
+      body.rateCents === null || body.rateCents === ""
+        ? null
+        : Math.max(0, Math.round(Number(body.rateCents)));
+  }
 
   const { data: slot, error } = await supabase
     .from("lesson_slots")

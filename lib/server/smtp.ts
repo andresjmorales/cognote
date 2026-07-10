@@ -7,6 +7,12 @@
 
 import net from "node:net";
 
+export interface SmtpAttachment {
+  filename: string;
+  content: Buffer | Uint8Array;
+  contentType?: string;
+}
+
 export interface SmtpMessage {
   host: string;
   port: number;
@@ -19,6 +25,7 @@ export interface SmtpMessage {
   text: string;
   html?: string;
   replyTo?: string;
+  attachments?: SmtpAttachment[];
 }
 
 const TIMEOUT_MS = 10_000;
@@ -95,8 +102,32 @@ function buildData(msg: SmtpMessage): string {
     "MIME-Version: 1.0",
   ];
 
+  const hasAttachments = (msg.attachments?.length ?? 0) > 0;
   let body: string;
-  if (msg.html) {
+
+  if (hasAttachments) {
+    const mixed = `m${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+    headers.push(`Content-Type: multipart/mixed; boundary="${mixed}"`);
+    const parts: string[] = [];
+    parts.push(`--${mixed}`);
+    parts.push(buildAlternativePart(msg));
+    for (const att of msg.attachments!) {
+      const b64 = Buffer.from(att.content).toString("base64");
+      const wrapped = b64.replace(/(.{76})/g, "$1\r\n").trim();
+      parts.push(`--${mixed}`);
+      parts.push(
+        `Content-Type: ${att.contentType ?? "application/octet-stream"}; name="${att.filename}"`
+      );
+      parts.push("Content-Transfer-Encoding: base64");
+      parts.push(
+        `Content-Disposition: attachment; filename="${att.filename}"`
+      );
+      parts.push("");
+      parts.push(wrapped);
+    }
+    parts.push(`--${mixed}--`);
+    body = parts.join("\r\n");
+  } else if (msg.html) {
     const boundary = `b${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
     headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
     body = [
@@ -118,4 +149,28 @@ function buildData(msg: SmtpMessage): string {
   const data = headers.join("\r\n") + "\r\n\r\n" + body;
   // Dot-stuffing per RFC 5321 §4.5.2, then terminate DATA.
   return data.replace(/\r\n\./g, "\r\n..") + "\r\n.";
+}
+
+function buildAlternativePart(msg: SmtpMessage): string {
+  if (!msg.html) {
+    return [
+      'Content-Type: text/plain; charset="utf-8"',
+      "",
+      msg.text,
+    ].join("\r\n");
+  }
+  const boundary = `a${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  return [
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="utf-8"',
+    "",
+    msg.text,
+    `--${boundary}`,
+    'Content-Type: text/html; charset="utf-8"',
+    "",
+    msg.html,
+    `--${boundary}--`,
+  ].join("\r\n");
 }

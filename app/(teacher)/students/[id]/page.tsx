@@ -212,6 +212,7 @@ export default async function StudentDetailPage({
         studentId={id}
         initialLevel={student.level ?? null}
         initialBirthdate={student.birthdate ?? null}
+        initialDefaultRateCents={student.default_rate_cents ?? null}
       />
 
       {/* Teacher Notes */}

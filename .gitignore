@@ -40,5 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# dev docs
+# dev docs + local agent skill imports
 .ai/
+.agents/
+.claude/
+.windsurf/
+skills-lock.json

@@ -6,17 +6,17 @@ CogNote runs a private music studio end to end: students and families, recurring
 
 Two surfaces, one platform:
 
-- **For teachers** — a full studio back office: CRM, schedule, attendance, policies, analytics, and assessments.
-- **For students and parents** — zero-friction links. Students open a practice URL and tap Start; parents get a single no-login portal with the schedule, practice links, and notes from the teacher. No accounts, no passwords, nothing to forget.
+- **For teachers** — a full studio back office: CRM, schedule, attendance, billing, policies, analytics, and assessments.
+- **For students and parents** — zero-friction links. Students open a practice URL and tap Start; parents get a single no-login portal with the schedule, practice links, notes, and invoices. No accounts, no passwords, nothing to forget.
 
 ---
 
 ## What Sets CogNote Apart
 
 1. **It teaches, not just administrates** — most studio software stops at scheduling and billing. CogNote ships a genuine learning layer: note identification and musical-symbol quizzes (optionally timed), free practice, and SM-2 spaced-repetition flashcards, with per-note accuracy analytics feeding back to the teacher.
-2. **One link per family** — the parent portal is a single unguessable, revocable URL. Schedule, practice links, lesson notes, calendar feed, studio info — no login, ever.
+2. **One link per family** — the parent portal is a single unguessable, revocable URL. Schedule, practice links, lesson notes, invoices, calendar feed, studio info — no login, ever.
 3. **Make-up lessons that follow *your* policy** — cancellation windows, which cancellations bank a make-up credit, credit expiry: all per-studio settings, never hardcoded rules. Make-ups link back to the cancellation that earned them, so credits are derivable and nothing double-counts.
-4. **Your data is never hostage** — MIT-licensed and fully self-hostable. The entire stack runs locally in Docker with no cloud accounts. Every integration (email, and payments later) degrades gracefully when unconfigured.
+4. **Your data is never hostage** — MIT-licensed and fully self-hostable. The entire stack runs locally in Docker with no cloud accounts. Every integration (email, payments) degrades gracefully when unconfigured.
 5. **Kid-friendly learning** — the practice side is built for young students: large buttons, friendly feedback, real staff notation sized for tablets, and emoji-rated flashcards.
 
 ---
@@ -29,7 +29,9 @@ Two surfaces, one platform:
 - **Scheduling & attendance** — recurring weekly lesson slots with a weekly teacher view; tap a lesson to mark attendance (attended / teacher cancel / student cancel / no-show) and jot a note. Slots store local time + studio timezone, so a 4:00 PM Tuesday lesson stays 4:00 PM across DST shifts
 - **Policy-driven make-ups** — make-up credits derive from attendance × your studio policy (cancellation window, which statuses earn credit, expiry); rescheduling links each make-up to its originating cancellation
 - **Lesson notes home** — "Save & Email Family" sends the note via email and posts it to the family portal
-- **Studio settings, not code** — studio name, timezone, lesson time blocks, cancellation/make-up policy, and an "About the Studio" section (free-text policies, website, contact) shown on the portal
+- **Billing & invoices** — generate drafts from attendance × your billability policy and rates (slot → student → studio); edit, send PDF by email, mark paid, export payments CSV; family portal shows invoice history
+- **Payments (optional)** — manual by default (Zelle/Venmo/cash instructions); optional bring-your-own Stripe Checkout links + webhook
+- **Studio settings, not code** — studio name, timezone, lesson time blocks, cancellation/make-up policy, billing rules, payment provider, and an "About the Studio" section shown on the portal
 - **Skills & progress tracking** — rate students 1–5 across teacher-defined skill dimensions (Musicianship, Rhythm, Sight Reading, ...); radar chart of current levels, trend lines over time, attendance summary, and an optional level anchor (RCM, Faber)
 - **Customizable lesson plans** — three plan types: note identification (C2–C7, both clefs), key signature identification, and musical symbols & concepts; reusable templates assigned in one click
 - **Timed quizzes** — optional per-question time limit (5–60 seconds) on any plan
@@ -46,7 +48,7 @@ Two surfaces, one platform:
 
 ### Family Portal (Parents)
 
-- **One private link per family** — practice links, upcoming lessons, notes from the teacher, calendar download/subscription, and studio info
+- **One private link per family** — practice links, upcoming lessons, notes from the teacher, invoices (pay link or payment instructions), calendar download/subscription, and studio info
 - **Revocable** — teachers can rotate a family's portal link at any time
 - **Parent-facing by design** — students only ever see practice pages; family details stay behind the portal token and teacher-only access
 
@@ -63,13 +65,13 @@ Two surfaces, one platform:
 
 CogNote is under active development toward a complete studio suite. Coming next (in rough order):
 
-- **Billing & invoicing** — invoices derived from attendance × your studio policy; sent invoices freeze so policy changes never rewrite an already-sent bill; manual "mark as paid" by default (Zelle/Venmo/cash — zero fees), plus a payments-received CSV export for your accounting tool
-- **Stripe, bring-your-own-keys** — optional payment links on invoices using *your* Stripe account; the platform never touches the money and takes no cut
 - **Sheet music** — PDF upload, per-student assignment with practice notes, portal downloads
 - **Reminders & automation** — lesson reminders, overdue-invoice nudges, practice-inactivity alerts
 - **Recitals & events** — RSVP links and per-student repertoire
 - **More learning tools** — ear training (interval/chord recognition), practice streaks and badges
 - **AI-drafted progress reports** — optional, bring-your-own API key, off by default; the teacher always edits before sending
+
+Billing, invoicing, and optional BYO Stripe Checkout shipped in July 2026 (Settings → Billing / Payments).
 
 ---
 
@@ -191,6 +193,7 @@ cognote/
 │   │   ├── schedule/           # Weekly view, attendance, make-ups, notes
 │   │   ├── settings/           # Studio settings + policy editor
 │   │   ├── account/            # Display name, email, password
+│   │   ├── billing/            # Invoice list + detail
 │   │   └── lessons/            # Lesson plan list, editor, detail views
 │   │       ├── [id]/
 │   │       └── new/
@@ -198,7 +201,7 @@ cognote/
 │   │   └── practice/
 │   │       └── [token]/        # Quiz, free practice, flashcard modes
 │   ├── portal/
-│   │   └── [token]/            # No-login family portal (schedule, notes, links)
+│   │   └── [token]/            # No-login family portal (schedule, notes, invoices)
 │   ├── api/                    # API routes
 │   │   ├── auth/               # Signup (beta gate), waitlist, profile
 │   │   ├── dashboard/          # Dashboard summary
@@ -207,6 +210,8 @@ cognote/
 │   │   ├── portal/             # Family calendar feed (.ics)
 │   │   ├── practice/           # Student session + attempt tracking
 │   │   ├── schedule/           # Slots, lessons, attendance, notes
+│   │   ├── billing/            # Invoice generate, send, mark-paid, CSV export
+│   │   ├── webhooks/stripe/    # BYO Stripe checkout.session.completed
 │   │   ├── settings/           # Studio policy settings
 │   │   ├── skills/             # Skill dimension management
 │   │   └── students/           # Student CRUD + analytics + skill ratings
@@ -224,6 +229,9 @@ cognote/
 │   ├── supabase/               # Client, server, and middleware helpers
 │   ├── server/                 # Server-only helpers (scheduling, SMTP, skills)
 │   ├── email.ts                # Email provider interface (resend | smtp | none)
+│   ├── billing.ts              # Pure invoice derivation (attendance × policy × rates)
+│   ├── payments.ts             # Stripe BYO Checkout + webhook verify
+│   ├── schedule.ts             # Scheduling helpers + studio policy defaults
 │   ├── schedule.ts             # Timezone/DST-safe scheduling + make-up credit math
 │   ├── music.ts                # Note utilities, answer generation, presets
 │   ├── symbol-paths.ts         # Auto-generated: Bravura SVG path data (do not edit)
@@ -267,7 +275,7 @@ teachers
 waitlist                           (beta signups, no FK)
 ```
 
-All teacher data is protected by **Row Level Security** — a teacher can only see their own students, families, schedule, lesson plans, and analytics. Student practice pages and the family portal use unguessable token links with no authentication; portal tokens are revocable, and students never see family or schedule details.
+All teacher data is protected by **Row Level Security** — a teacher can only see their own students, families, schedule, invoices, lesson plans, and analytics. Student practice pages and the family portal use unguessable token links with no authentication; portal tokens are revocable, and students never see family or schedule details.
 
 Migrations live in `supabase/migrations/` and are applied with `npx supabase db reset` (local) or `npx supabase db push` (remote).
 
@@ -380,6 +388,20 @@ Email degrades gracefully — with `EMAIL_PROVIDER` unset the app runs fine and 
 3. **Recommended DNS extras:** a DMARC record (`TXT` at `_dmarc`, value `v=DMARC1; p=none; rua=mailto:dmarc@your-domain.com`) starts deliverability monitoring without affecting sends.
 
 Any SMTP relay also works instead of Resend (`EMAIL_PROVIDER=smtp` + `SMTP_HOST`/`SMTP_PORT`), though the bundled SMTP client is minimal (no auth/TLS) — it's intended for Mailpit-style local relays, not the open internet.
+
+### 4c. Payments (optional)
+
+Manual payments work with **zero config** — set payment instructions in Settings → Billing, generate invoices from attendance, email PDFs, and mark paid yourself.
+
+Stripe is optional and bring-your-own (no platform keys, no Connect fees):
+
+1. Create a [Stripe](https://stripe.com) account (use **test mode** first)
+2. Developers → API keys → copy **Secret** and **Publishable** keys into **Settings → Payments** (choose Stripe as provider)
+3. Developers → Webhooks → Add endpoint using the URL shown in Settings (`https://<your-host>/api/webhooks/stripe/<your-teacher-id>`), event: `checkout.session.completed`
+4. Paste the webhook **signing secret** (`whsec_…`) into Settings
+5. Send a test invoice and pay with card `4242 4242 4242 4242`; when ready, switch to live keys and a live webhook
+
+Locally you can forward webhooks with the [Stripe CLI](https://stripe.com/docs/stripe-cli): `stripe listen --forward-to localhost:3000/api/webhooks/stripe/<teacherId>` (use the CLI’s `whsec_` in Settings).
 
 ### 5. Try a Lesson
 

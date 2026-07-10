@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { centsToDollarsInput, dollarsToCents } from "@/lib/billing";
 
 interface Slot {
   id: string;
@@ -14,6 +15,7 @@ interface Slot {
   duration_minutes: number;
   end_date: string | null;
   active: boolean;
+  rate_cents: number | null;
 }
 
 const DAY_NAMES = [
@@ -48,6 +50,7 @@ export function SlotManager({
   const [dayOfWeek, setDayOfWeek] = useState(2);
   const [startTime, setStartTime] = useState("16:00");
   const [duration, setDuration] = useState(durationOptions[0] ?? 30);
+  const [rateDollars, setRateDollars] = useState("");
 
   function startEdit(slot: Slot) {
     setAdding(false);
@@ -55,11 +58,24 @@ export function SlotManager({
     setDayOfWeek(slot.day_of_week);
     setStartTime(slot.start_time.slice(0, 5));
     setDuration(slot.duration_minutes);
+    setRateDollars(centsToDollarsInput(slot.rate_cents));
     setError(null);
+  }
+
+  function parseRate(): number | null | undefined {
+    if (rateDollars.trim() === "") return null;
+    const cents = dollarsToCents(rateDollars);
+    if (cents === null) return undefined;
+    return cents;
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    const rateCents = parseRate();
+    if (rateCents === undefined) {
+      setError("Enter a valid rate (e.g. 45.00) or leave blank");
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await fetch("/api/schedule/slots", {
@@ -70,11 +86,13 @@ export function SlotManager({
         dayOfWeek,
         startTime,
         durationMinutes: duration,
+        rateCents,
       }),
     });
     setBusy(false);
     if (res.ok) {
       setAdding(false);
+      setRateDollars("");
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -85,6 +103,11 @@ export function SlotManager({
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editingId) return;
+    const rateCents = parseRate();
+    if (rateCents === undefined) {
+      setError("Enter a valid rate (e.g. 45.00) or leave blank");
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/schedule/slots/${editingId}`, {
@@ -94,6 +117,7 @@ export function SlotManager({
         dayOfWeek,
         startTime,
         durationMinutes: duration,
+        rateCents,
       }),
     });
     setBusy(false);
@@ -165,6 +189,25 @@ export function SlotManager({
     </div>
   );
 
+  const rateField = (
+    <label className="text-sm">
+      <span className="block text-xs font-semibold text-muted mb-1">
+        Lesson rate (optional)
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-muted text-sm">$</span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={rateDollars}
+          onChange={(e) => setRateDollars(e.target.value)}
+          placeholder="Studio default if blank"
+          className={inputClass}
+        />
+      </div>
+    </label>
+  );
+
   return (
     <Card padding="sm">
       <div className="flex items-center justify-between mb-3">
@@ -175,6 +218,7 @@ export function SlotManager({
             variant="secondary"
             onClick={() => {
               setAdding(true);
+              setRateDollars("");
               setError(null);
             }}
           >
@@ -184,7 +228,10 @@ export function SlotManager({
       </div>
 
       {adding && (
-        <form onSubmit={handleAdd} className="flex flex-col gap-3 mb-4 pb-4 border-b border-border">
+        <form
+          onSubmit={handleAdd}
+          className="flex flex-col gap-3 mb-4 pb-4 border-b border-border"
+        >
           <select
             value={studentId}
             onChange={(e) => setStudentId(e.target.value)}
@@ -198,12 +245,18 @@ export function SlotManager({
             ))}
           </select>
           {dayTimeDurationFields}
+          {rateField}
           {error && <p className="text-error text-xs">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={busy || !studentId}>
               {busy ? "Adding..." : "Add Slot"}
             </Button>
-            <Button type="button" size="sm" variant="secondary" onClick={() => setAdding(false)}>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setAdding(false)}
+            >
               Cancel
             </Button>
           </div>
@@ -228,6 +281,7 @@ export function SlotManager({
                   Edit {slot.studentName}&apos;s slot
                 </div>
                 {dayTimeDurationFields}
+                {rateField}
                 <p className="text-xs text-muted">
                   Applies to upcoming lessons only — past lessons and marked
                   attendance stay where they are.
@@ -257,8 +311,10 @@ export function SlotManager({
                 <div>
                   <span className="font-medium">{slot.studentName}</span>{" "}
                   <span className="text-muted">
-                    · {DAY_NAMES[slot.day_of_week]}s {formatTime(slot.start_time)} ·{" "}
-                    {slot.duration_minutes} min
+                    · {DAY_NAMES[slot.day_of_week]}s{" "}
+                    {formatTime(slot.start_time)} · {slot.duration_minutes} min
+                    {slot.rate_cents != null &&
+                      ` · $${(slot.rate_cents / 100).toFixed(2)}`}
                     {!slot.active && " · paused"}
                   </span>
                 </div>

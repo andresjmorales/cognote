@@ -11,7 +11,7 @@ const inputClass =
 
 /**
  * Studio policies are per-teacher settings, not hardcoded rules (ROADMAP §3).
- * These options drive make-up credit derivation now and billing in Phase 3.
+ * These options drive make-up credit derivation and billing billability.
  */
 export function PolicySettings({
   policy,

@@ -24,6 +24,12 @@ export async function PUT(
       ...(body.guardianId !== undefined && { guardian_id: body.guardianId || null }),
       ...(body.level !== undefined && { level: body.level?.trim() || null }),
       ...(body.birthdate !== undefined && { birthdate: body.birthdate || null }),
+      ...(body.defaultRateCents !== undefined && {
+        default_rate_cents:
+          body.defaultRateCents === null || body.defaultRateCents === ""
+            ? null
+            : Math.max(0, Math.round(Number(body.defaultRateCents))),
+      }),
     })
     .eq("id", id)
     .eq("teacher_id", user.id)
