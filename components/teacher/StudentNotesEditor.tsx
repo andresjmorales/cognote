@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 export function StudentNotesEditor({
   studentId,
@@ -23,7 +24,7 @@ export function StudentNotesEditor({
     const supabase = createClient();
     await supabase
       .from("students")
-      .update({ teacher_notes: notes.trim() })
+      .update({ teacher_notes: notes })
       .eq("id", studentId);
     setSaving(false);
     setDirty(false);
@@ -32,23 +33,29 @@ export function StudentNotesEditor({
 
   return (
     <Card padding="sm" className="mb-6">
-      <div className="flex items-center justify-between mb-1">
-        <label className="text-xs text-muted font-medium">Teacher Notes</label>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <label className="text-xs text-muted font-medium">
+            Private Notes about Student
+          </label>
+          <p className="text-[11px] text-muted mt-0.5">
+            You can keep track of specific assignments and things learned. Parents won't see this.
+          </p>
+        </div>
         {dirty && (
           <Button size="sm" variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
         )}
       </div>
-      <textarea
+      <RichTextEditor
         value={notes}
-        onChange={(e) => {
-          setNotes(e.target.value);
+        onChange={(html) => {
+          setNotes(html);
           setDirty(true);
         }}
-        placeholder="Private notes about this student..."
-        rows={2}
-        className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm resize-y"
+        placeholder="Private notes about this student…"
+        minHeightClass="min-h-[160px]"
       />
     </Card>
   );

@@ -421,6 +421,7 @@ export interface Database {
           id: string;
           lesson_id: string;
           body: string;
+          private_body: string;
           shared_with_parent: boolean;
           emailed_at: string | null;
           created_at: string;
@@ -429,12 +430,14 @@ export interface Database {
         Insert: {
           id?: string;
           lesson_id: string;
-          body: string;
+          body?: string;
+          private_body?: string;
           shared_with_parent?: boolean;
           emailed_at?: string | null;
         };
         Update: {
           body?: string;
+          private_body?: string;
           shared_with_parent?: boolean;
           emailed_at?: string | null;
         };

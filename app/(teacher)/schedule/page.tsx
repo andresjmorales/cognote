@@ -49,7 +49,7 @@ export default async function SchedulePage({
           `id, student_id, slot_id, lesson_date, starts_at, duration_minutes, makeup_for,
            students ( name ),
            attendance!lesson_id ( id, status, notice_at ),
-           lesson_notes ( body, shared_with_parent, emailed_at )`
+           lesson_notes ( body, private_body, shared_with_parent, emailed_at )`
         )
         .eq("teacher_id", user.id)
         .gte("lesson_date", weekStart)
@@ -84,7 +84,12 @@ export default async function SchedulePage({
   const weekLessons: WeekLesson[] = (lessonsRes.data ?? []).map((l) => {
     const att = oneToOne(l.attendance as { id: string; status: AttendanceStatus; notice_at: string | null }[] | null);
     const note = oneToOne(
-      l.lesson_notes as { body: string; shared_with_parent: boolean; emailed_at: string | null }[] | null
+      l.lesson_notes as {
+        body: string;
+        private_body: string;
+        shared_with_parent: boolean;
+        emailed_at: string | null;
+      }[] | null
     );
     return {
       id: l.id,
@@ -99,6 +104,7 @@ export default async function SchedulePage({
       note: note
         ? {
             body: note.body,
+            privateBody: note.private_body ?? "",
             sharedWithParent: note.shared_with_parent,
             emailedAt: note.emailed_at,
           }
