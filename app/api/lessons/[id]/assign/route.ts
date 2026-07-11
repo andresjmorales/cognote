@@ -57,22 +57,68 @@ export async function POST(
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
-  // Check if assignment already exists (idempotent — reuse the token)
+  // An already-active assignment is idempotent: reuse the existing token and
+  // never re-email the family. Legacy databases may have duplicate rows, so
+  // deliberately choose the newest active assignment instead of using .single().
   const serviceClient = createServiceClient();
-  const { data: existing } = await serviceClient
+  const { data: activeAssignments, error: activeLookupError } = await serviceClient
     .from("student_plans")
     .select("id, token, unassigned_at")
     .eq("student_id", studentId)
     .eq("plan_id", planId)
-    .single();
+    .is("unassigned_at", null)
+    .order("assigned_at", { ascending: false })
+    .limit(1);
 
-  let token = existing?.token ?? null;
+  if (activeLookupError) {
+    console.error("Failed to look up active assignment:", activeLookupError);
+    return NextResponse.json(
+      { error: "Could not check existing assignments" },
+      { status: 500 }
+    );
+  }
 
-  if (existing?.unassigned_at) {
+  const activeAssignment = activeAssignments?.[0] ?? null;
+  if (activeAssignment) {
+    return NextResponse.json({
+      token: activeAssignment.token,
+      alreadyAssigned: true,
+      emailed: false,
+    });
+  }
+
+  // Re-activate the newest past assignment when one exists, preserving its
+  // token and practice history. This is a fresh assignment, so it may notify.
+  const { data: archivedAssignments, error: archivedLookupError } =
     await serviceClient
       .from("student_plans")
+      .select("id, token")
+      .eq("student_id", studentId)
+      .eq("plan_id", planId)
+      .not("unassigned_at", "is", null)
+      .order("assigned_at", { ascending: false })
+      .limit(1);
+
+  if (archivedLookupError) {
+    console.error("Failed to look up past assignment:", archivedLookupError);
+    return NextResponse.json(
+      { error: "Could not check previous assignments" },
+      { status: 500 }
+    );
+  }
+
+  const archivedAssignment = archivedAssignments?.[0] ?? null;
+  let token = archivedAssignment?.token ?? null;
+
+  if (archivedAssignment) {
+    const { error: reactivateError } = await serviceClient
+      .from("student_plans")
       .update({ unassigned_at: null, assigned_at: new Date().toISOString() })
-      .eq("id", existing.id);
+      .eq("id", archivedAssignment.id);
+    if (reactivateError) {
+      console.error("Failed to re-activate assignment:", reactivateError);
+      return NextResponse.json({ error: "Failed to reassign lesson" }, { status: 500 });
+    }
   }
 
   if (!token) {
@@ -94,7 +140,25 @@ export async function POST(
         break;
       }
       if (error.code === "23505") {
-        // Unique violation (token collision) — retry
+        // Either a rare token collision, or a concurrent assignment. Prefer
+        // the now-active assignment rather than emitting a duplicate email.
+        const { data: concurrentAssignments } = await serviceClient
+          .from("student_plans")
+          .select("token")
+          .eq("student_id", studentId)
+          .eq("plan_id", planId)
+          .is("unassigned_at", null)
+          .order("assigned_at", { ascending: false })
+          .limit(1);
+        const concurrentAssignment = concurrentAssignments?.[0] ?? null;
+        if (concurrentAssignment) {
+          return NextResponse.json({
+            token: concurrentAssignment.token,
+            alreadyAssigned: true,
+            emailed: false,
+          });
+        }
+        // Otherwise this was a token collision — retry.
         continue;
       }
       console.error("Failed to assign plan:", error);

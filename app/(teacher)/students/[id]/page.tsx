@@ -109,6 +109,19 @@ export default async function StudentDetailPage({
 
   const activePlans = (studentPlans ?? []).filter(isActiveStudentPlan);
   const pastPlans = (studentPlans ?? []).filter((sp) => !isActiveStudentPlan(sp));
+  const activePlanIds = new Set(
+    activePlans
+      .map((sp) => {
+        const plan = oneToOne(
+          sp.plans as
+            | { id: string; name: string }[]
+            | { id: string; name: string }
+            | null
+        );
+        return plan?.id;
+      })
+      .filter((planId): planId is string => Boolean(planId))
+  );
 
   const lessonNotes = (lessonNoteRows ?? [])
     .map((row) => {
@@ -239,7 +252,10 @@ export default async function StudentDetailPage({
           <AssignPlanToStudentButton
             studentId={id}
             studentName={student.name}
-            plans={allPlans ?? []}
+            plans={(allPlans ?? []).map((plan) => ({
+              ...plan,
+              assigned: activePlanIds.has(plan.id),
+            }))}
           />
           <RemoveStudentButton studentId={id} studentName={student.name} />
         </div>

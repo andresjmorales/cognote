@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BULK_ATTENDANCE_STATUSES } from "@/lib/schedule";
 import { getPolicy } from "@/lib/server/scheduling";
 import { requestOrigin } from "@/lib/server/http";
-import { emailFamilyTeacherCancel } from "@/lib/server/lesson-cancel-email";
+import { emailFamiliesTeacherCancelBulk } from "@/lib/server/lesson-cancel-email";
 import type { AttendanceStatus } from "@/lib/supabase/types";
 
 const MAX_IDS = 50;
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
   let succeeded = 0;
   let emailed = 0;
   const failed: { id: string; error: string }[] = [];
+  const successfullyCancelledIds: string[] = [];
   const policy =
     status === "teacher_cancel" && notifyFamily
       ? await getPolicy(supabase, user.id)
@@ -81,18 +82,24 @@ export async function POST(req: NextRequest) {
       continue;
     }
     succeeded += 1;
+    if (status === "teacher_cancel") successfullyCancelledIds.push(id);
+  }
 
-    if (status === "teacher_cancel" && notifyFamily && policy) {
-      const result = await emailFamilyTeacherCancel({
-        supabase,
-        lessonId: id,
-        teacherId: user.id,
-        teacherEmail: user.email,
-        policy,
-        origin,
-      });
-      if (result.emailed) emailed += 1;
-    }
+  if (
+    status === "teacher_cancel" &&
+    notifyFamily &&
+    policy &&
+    successfullyCancelledIds.length > 0
+  ) {
+    const result = await emailFamiliesTeacherCancelBulk({
+      supabase,
+      lessonIds: successfullyCancelledIds,
+      teacherId: user.id,
+      teacherEmail: user.email,
+      policy,
+      origin,
+    });
+    emailed = result.emailed;
   }
 
   return NextResponse.json({
