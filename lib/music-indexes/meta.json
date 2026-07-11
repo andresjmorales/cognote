@@ -1,0 +1,12 @@
+{
+  "built_at": "2026-07-11T15:08:27.528Z",
+  "openscore_lieder_tag": "v3.0.0",
+  "openscore_quartets_ref": "main",
+  "mutopia_cache_sha256": "2e72d33afb0f9504161a579294a6e50dac9b1cce0d33e3fefa9e5d9786fe1dca",
+  "counts": {
+    "openscore_lieder": 1356,
+    "openscore_quartets": 122,
+    "mutopia": 2124,
+    "mutopia_importable": 1231
+  }
+}

@@ -19,6 +19,15 @@ export type PaymentMethod = "manual" | "stripe";
 export type InvoiceCadence = "monthly" | "manual";
 export type PaymentProvider = "manual" | "stripe";
 export type RateBasis = "per_lesson" | "per_hour";
+export type MusicFormat = "pdf" | "musicxml" | "mxl";
+export type MusicLicenseCode =
+  | "public_domain"
+  | "cc0"
+  | "cc_by"
+  | "cc_by_sa"
+  | "teacher_owned"
+  | "unknown"
+  | "restricted";
 
 export interface Database {
   public: {
@@ -639,6 +648,91 @@ export interface Database {
           repetitions?: number;
           next_review?: string;
           last_reviewed?: string | null;
+        };
+      };
+      music_library_items: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          title: string;
+          composer: string;
+          arranger: string;
+          format: MusicFormat;
+          original_filename: string;
+          storage_path: string;
+          mime_type: string;
+          byte_size: number;
+          sha256: string;
+          tags: string[];
+          source: string;
+          source_url: string | null;
+          license_code: MusicLicenseCode;
+          license_url: string | null;
+          attribution: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          title: string;
+          composer?: string;
+          arranger?: string;
+          format: MusicFormat;
+          original_filename: string;
+          storage_path: string;
+          mime_type: string;
+          byte_size: number;
+          sha256: string;
+          tags?: string[];
+          source?: string;
+          source_url?: string | null;
+          license_code?: MusicLicenseCode;
+          license_url?: string | null;
+          attribution?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          composer?: string;
+          arranger?: string;
+          tags?: string[];
+          source?: string;
+          source_url?: string | null;
+          license_code?: MusicLicenseCode;
+          license_url?: string | null;
+          attribution?: string;
+          updated_at?: string;
+        };
+      };
+      sheet_music_assignments: {
+        Row: {
+          id: string;
+          music_item_id: string;
+          student_id: string;
+          assignment_note: string;
+          due_date: string | null;
+          assigned_at: string;
+          unassigned_at: string | null;
+          emailed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          music_item_id: string;
+          student_id: string;
+          assignment_note?: string;
+          due_date?: string | null;
+          assigned_at?: string;
+          unassigned_at?: string | null;
+          emailed_at?: string | null;
+        };
+        Update: {
+          assignment_note?: string;
+          due_date?: string | null;
+          assigned_at?: string;
+          unassigned_at?: string | null;
+          emailed_at?: string | null;
         };
       };
     };
