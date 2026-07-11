@@ -9,6 +9,7 @@ import { shareOrCopyUrl } from "@/lib/shareOrCopy";
 interface Student {
   id: string;
   name: string;
+  assigned?: boolean;
 }
 
 export function AssignPlanButton({
@@ -55,7 +56,9 @@ export function AssignPlanButton({
 
       const data = await res.json();
 
-      if (data.emailed) {
+      if (data.alreadyAssigned) {
+        setToast(`"${studentName}" already has this lesson.`);
+      } else if (data.emailed) {
         setToast(`Assigned to ${studentName}! Emailed the family.`);
       } else {
         // No family email on file (or email not configured) — fall back to
@@ -98,11 +101,19 @@ export function AssignPlanButton({
             students.map((s) => (
               <button
                 key={s.id}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-surface-dim active:bg-border transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer"
+                className={`w-full text-left px-3 py-2 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                  s.assigned
+                    ? "text-muted bg-surface-dim/50 cursor-not-allowed"
+                    : "hover:bg-surface-dim active:bg-border cursor-pointer"
+                }`}
                 onClick={() => handleAssign(s.id, s.name)}
-                disabled={assigning}
+                disabled={assigning || s.assigned}
+                title={s.assigned ? "Already assigned" : undefined}
               >
                 {s.name}
+                {s.assigned && (
+                  <span className="block text-xs text-muted">Already assigned</span>
+                )}
               </button>
             ))
           )}

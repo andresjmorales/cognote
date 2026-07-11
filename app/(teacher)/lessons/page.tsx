@@ -14,8 +14,13 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
   const noteCount = (plan.notes as string[])?.length ?? 0;
   const symbolCount = (plan.symbols as any[])?.length ?? 0;
   const keySigCount = (plan.key_signatures as string[])?.length ?? 0;
-  const assignedStudents = (plan.student_plans ?? [])
-    .filter(isActiveStudentPlan)
+  const activeAssignments = (plan.student_plans ?? []).filter(isActiveStudentPlan);
+  const assignedStudentIds = new Set(
+    activeAssignments
+      .map((sp: any) => sp.students?.id)
+      .filter((studentId: unknown): studentId is string => typeof studentId === "string")
+  );
+  const assignedStudents = activeAssignments
     .map((sp: any) => sp.students?.name)
     .filter(Boolean);
 
@@ -41,7 +46,13 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
         </Link>
         <div className="flex items-center gap-2 shrink-0 ml-3">
           <LaunchPlanButton planId={plan.id} planName={plan.name} students={students} />
-          <AssignPlanButton planId={plan.id} students={students} />
+          <AssignPlanButton
+            planId={plan.id}
+            students={students.map((student) => ({
+              ...student,
+              assigned: assignedStudentIds.has(student.id),
+            }))}
+          />
         </div>
       </div>
     </Card>

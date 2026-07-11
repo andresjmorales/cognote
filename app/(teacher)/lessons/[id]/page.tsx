@@ -57,6 +57,18 @@ export default async function PlanDetailPage({
   const pastStudentPlans = (studentPlans ?? []).filter(
     (sp) => !isActiveStudentPlan(sp)
   );
+  const activeStudentIds = new Set(
+    activeStudentPlans
+      .map((sp) =>
+        oneToOne(
+          sp.students as
+            | { id: string; name: string }[]
+            | { id: string; name: string }
+            | null
+        )?.id
+      )
+      .filter((studentId): studentId is string => Boolean(studentId))
+  );
 
   const { data: students } = await supabase
     .from("students")
@@ -97,7 +109,13 @@ export default async function PlanDetailPage({
       actionSlot={
         <>
           <LaunchPlanButton planId={plan.id} planName={plan.name} students={students ?? []} />
-          <AssignPlanButton planId={plan.id} students={students ?? []} />
+          <AssignPlanButton
+            planId={plan.id}
+            students={(students ?? []).map((student) => ({
+              ...student,
+              assigned: activeStudentIds.has(student.id),
+            }))}
+          />
           <DeletePlanButton planId={plan.id} planName={plan.name} />
         </>
       }
