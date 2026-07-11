@@ -37,6 +37,7 @@ Two surfaces, one platform:
 - **Customizable lesson plans** — three plan types: note identification (C2–C7, both clefs), key signature identification, and musical symbols & concepts; reusable templates assigned in one click
 - **Timed quizzes** — optional per-question time limit (5–60 seconds) on any plan
 - **Assign via email or link** — assigning a lesson emails the practice link to the family (with their portal link); with no family email on file it falls back to the native share sheet / clipboard
+- **Sheet music library** — upload PDF / MusicXML / MXL to a private library, find free Mutopia PDFs (PD/CC BY) to import, browse OpenScore/IMSLP as links, tag and search, assign to students with an optional note/due date/family email; families view and download from the portal (browser PDF viewer + OpenSheetMusicDisplay)
 - **Analytics dashboard** — per-note accuracy, session history, and practice trends per student
 - **Calendar feeds** — .ics download and a subscribable calendar URL per family; cancelled lessons drop out automatically
 
@@ -49,7 +50,7 @@ Two surfaces, one platform:
 
 ### Family Portal (Parents)
 
-- **One private link per family** — practice links, upcoming lessons (parents can cancel with a note), notes from the teacher, invoices (pay link or payment instructions), calendar download/subscription, and studio info
+- **One private link per family** — practice links, assigned sheet music (view/download), upcoming lessons (parents can cancel with a note), notes from the teacher, invoices (pay link or payment instructions), calendar download/subscription, and studio info
 - **Revocable** — teachers can rotate a family's portal link at any time
 - **Parent-facing by design** — students only ever see practice pages; family details stay behind the portal token and teacher-only access
 
@@ -66,13 +67,14 @@ Two surfaces, one platform:
 
 CogNote is under active development toward a complete studio suite. Coming next (in rough order):
 
-- **Sheet music** — PDF upload, per-student assignment with practice notes, portal downloads
+- **Sheet music** — private library + portal viewing shipped (Phase 5A); free-score discovery (Mutopia import, OpenScore/IMSLP link-out) shipped (Phase 5B)
 - **Reminders & automation** — lesson reminders, overdue-invoice nudges, practice-inactivity alerts
 - **Recitals & events** — RSVP links and per-student repertoire
 - **More learning tools** — ear training (interval/chord recognition), practice streaks and badges
 - **AI-drafted progress reports** — optional, bring-your-own API key, off by default; the teacher always edits before sending
 
 Billing, invoicing, and optional BYO Stripe Checkout shipped in July 2026 (Settings → Billing / Payments).
+Private sheet-music library (PDF + MusicXML upload, assign to students, portal view/download) shipped July 2026.
 
 ---
 
@@ -98,7 +100,7 @@ See [notes/spaced-repetition.md](notes/spaced-repetition.md) for full algorithm 
 | Framework | [Next.js 16](https://nextjs.org/) (App Router, Turbopack) |
 | Language | TypeScript |
 | Styling | Tailwind CSS 4 |
-| Music Notation | VexFlow 5 |
+| Music Notation | VexFlow 5 (quizzes); OpenSheetMusicDisplay (MusicXML); browser PDF viewer (scores) |
 | Charts | Recharts |
 | Calendar | [ics](https://www.npmjs.com/package/ics) (.ics files + subscribable feeds) |
 | Email | Provider interface — [Resend](https://resend.com) in production, SMTP/Mailpit locally, no-op when unset |

@@ -36,7 +36,10 @@ export function StaffRenderer({
       const VF = await import("vexflow");
       if (cancelled) return;
 
-      const { Renderer, Stave, StaveNote, Formatter, Accidental } = VF.default ?? VF;
+      // VexFlow ESM/CJS interop — runtime exports constructors; types do not.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const api: any = (VF as any).default ?? VF;
+      const { Renderer, Stave, StaveNote, Formatter, Accidental } = api;
 
       const renderer = new Renderer(el, Renderer.Backends.SVG);
       renderer.resize(width, height);
