@@ -1,11 +1,10 @@
 /**
- * Build static search indexes for Phase 5B source discovery.
+ * Build static search indexes for free-score discovery.
  *
  * Usage: node scripts/build-music-indexes.mjs
  *
- * Fetches OpenScore TSVs + Mutopia musiccache.dat and writes JSON under
- * lib/music-indexes/. Commit the output so runtime search needs no network
- * for Mutopia/OpenScore (IMSLP stays live).
+ * Fetches OpenScore TSVs + GitHub tree (for .mxl presence) + Mutopia
+ * musiccache.dat and writes JSON under lib/music-indexes/.
  */
 
 import { createHash } from "node:crypto";
@@ -16,7 +15,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(__dirname, "..", "lib", "music-indexes");
 
-const LIEDER_TAG = "v3.0.0";
+/** Lieder MXL lives on main (not the older v3.0.0 tag). */
+const LIEDER_REF = "main";
 const QUARTETS_REF = "main";
 
 async function fetchText(url) {
@@ -25,6 +25,17 @@ async function fetchText(url) {
   });
   if (!res.ok) throw new Error(`Fetch failed ${res.status}: ${url}`);
   return res.text();
+}
+
+async function fetchJson(url) {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "CogNote-index-builder/1.0 (studio sheet music)",
+      Accept: "application/vnd.github+json",
+    },
+  });
+  if (!res.ok) throw new Error(`Fetch failed ${res.status}: ${url}`);
+  return res.json();
 }
 
 function parseTsv(text) {
@@ -43,27 +54,66 @@ function parseTsv(text) {
 
 function composerFromPath(path) {
   const folder = path.split("/")[0] ?? "";
-  return folder.replace(/_/g, " ").replace(/,/g, ",").trim();
+  return folder.replace(/_/g, " ").trim();
 }
 
-function buildOpenScore(rows, source, idPrefix) {
+function encodeGithubPath(path) {
+  return path
+    .split("/")
+    .map((seg) => encodeURIComponent(seg))
+    .join("/");
+}
+
+/**
+ * Map score id → relative path under scores/…/lc{id}.mxl from the git tree.
+ */
+async function loadOpenScoreMxlPaths(repo, ref, idPrefix) {
+  const tree = await fetchJson(
+    `https://api.github.com/repos/OpenScore/${repo}/git/trees/${ref}?recursive=1`
+  );
+  if (tree.truncated) {
+    console.warn(`Warning: ${repo} tree truncated — MXL map may be incomplete`);
+  }
+  const byId = new Map();
+  const re = new RegExp(`/${idPrefix}(\\d+)\\.mxl$`, "i");
+  for (const entry of tree.tree ?? []) {
+    if (entry.type !== "blob" || !entry.path?.endsWith(".mxl")) continue;
+    const m = entry.path.match(re);
+    if (!m) continue;
+    // path like scores/Composer/_/Song/lc123.mxl → scores-relative dir
+    const dir = entry.path.replace(/\/[^/]+\.mxl$/i, "");
+    byId.set(m[1], dir);
+  }
+  return byId;
+}
+
+function buildOpenScore(rows, source, idPrefix, repo, ref, mxlById) {
   return rows.map((row) => {
     const composer = composerFromPath(row.path);
+    const mxlDir = mxlById.get(String(row.id));
+    const hasMxl = Boolean(mxlDir);
+    const file_url = hasMxl
+      ? `https://raw.githubusercontent.com/OpenScore/${repo}/${ref}/${encodeGithubPath(mxlDir)}/${idPrefix}${row.id}.mxl`
+      : null;
+
     return {
       id: `${source}:${row.id}`,
       source,
       title: row.name || "Untitled",
       composer,
-      format: "external",
+      format: hasMxl ? "mxl" : "external",
       license_code: "cc0",
       license_url: "https://creativecommons.org/publicdomain/zero/1.0/",
       source_url: row.link,
-      file_url: null,
-      import_allowed: false,
+      github_url: hasMxl
+        ? `https://github.com/OpenScore/${repo}/blob/${ref}/${encodeGithubPath(mxlDir)}/${idPrefix}${row.id}.mxl`
+        : `https://github.com/OpenScore/${repo}/tree/${ref}/scores/${encodeGithubPath(row.path)}`,
+      file_url,
+      import_allowed: hasMxl,
       attribution: `OpenScore (${source === "openscore-lieder" ? "Lieder" : "String Quartets"}) — CC0. Credit appreciated.`,
       instrument:
         source === "openscore-lieder" ? "Voice, Piano" : "String Quartet",
-      external_only: true,
+      external_only: !hasMxl,
       path: row.path,
       score_id: row.id,
       id_prefix: idPrefix,
@@ -107,7 +157,6 @@ function parseMutopiaCache(text) {
 
   for (const part of parts) {
     const lines = part.replace(/^\r?\n/, "").split(/\r?\n/);
-    // Pad so short records don't throw
     while (lines.length < 32) lines.push("");
 
     const idno = lines[0]?.trim();
@@ -119,6 +168,7 @@ function parseMutopiaCache(text) {
     const title = lines[12]?.trim() ?? "";
     const composer = lines[13]?.trim() ?? "";
     const instrument = lines[16]?.trim() ?? "";
+    const style = lines[18]?.trim() ?? "";
     const arranger = lines[20]?.trim() ?? "";
     const copyright = lines[22]?.trim() ?? "";
     const mutopiaId = lines[23]?.trim() ?? "";
@@ -149,6 +199,7 @@ function parseMutopiaCache(text) {
           ? `Mutopia Project piece ${mutopiaId || idno}. ${copyright}.`
           : `Mutopia Project piece ${mutopiaId || idno}.`,
       instrument,
+      style: style || undefined,
       external_only: !import_allowed,
       mutopia_id: mutopiaId,
       copyright_raw: copyright,
@@ -161,11 +212,30 @@ function parseMutopiaCache(text) {
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
 
+  console.log("Fetching OpenScore Lieder MXL tree…");
+  const liederMxl = await loadOpenScoreMxlPaths("Lieder", LIEDER_REF, "lc");
+  console.log(`  ${liederMxl.size} MXL files`);
+
   console.log("Fetching OpenScore Lieder scores.tsv…");
   const liederTsv = await fetchText(
-    `https://raw.githubusercontent.com/OpenScore/Lieder/${LIEDER_TAG}/data/scores.tsv`
+    `https://raw.githubusercontent.com/OpenScore/Lieder/${LIEDER_REF}/data/scores.tsv`
   );
-  const lieder = buildOpenScore(parseTsv(liederTsv), "openscore-lieder", "lc");
+  const lieder = buildOpenScore(
+    parseTsv(liederTsv),
+    "openscore-lieder",
+    "lc",
+    "Lieder",
+    LIEDER_REF,
+    liederMxl
+  );
+
+  console.log("Fetching OpenScore String Quartets MXL tree…");
+  const quartetsMxl = await loadOpenScoreMxlPaths(
+    "StringQuartets",
+    QUARTETS_REF,
+    "sq"
+  );
+  console.log(`  ${quartetsMxl.size} MXL files`);
 
   console.log("Fetching OpenScore String Quartets scores.tsv…");
   const quartetsTsv = await fetchText(
@@ -174,7 +244,10 @@ async function main() {
   const quartets = buildOpenScore(
     parseTsv(quartetsTsv),
     "openscore-quartets",
-    "sq"
+    "sq",
+    "StringQuartets",
+    QUARTETS_REF,
+    quartetsMxl
   );
 
   console.log("Fetching Mutopia musiccache.dat…");
@@ -182,18 +255,20 @@ async function main() {
     "https://www.mutopiaproject.org/datafiles/musiccache.dat"
   );
   const mutopia = parseMutopiaCache(cache);
-  const mutopiaImportable = mutopia.filter((m) => m.import_allowed).length;
 
   const meta = {
     built_at: new Date().toISOString(),
-    openscore_lieder_tag: LIEDER_TAG,
+    openscore_lieder_ref: LIEDER_REF,
     openscore_quartets_ref: QUARTETS_REF,
     mutopia_cache_sha256: createHash("sha256").update(cache).digest("hex"),
     counts: {
       openscore_lieder: lieder.length,
+      openscore_lieder_importable: lieder.filter((r) => r.import_allowed).length,
       openscore_quartets: quartets.length,
+      openscore_quartets_importable: quartets.filter((r) => r.import_allowed)
+        .length,
       mutopia: mutopia.length,
-      mutopia_importable: mutopiaImportable,
+      mutopia_importable: mutopia.filter((m) => m.import_allowed).length,
     },
   };
 

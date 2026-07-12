@@ -5,14 +5,30 @@ import {
   sha256Hex,
   storageObjectPath,
   type MusicLicenseCode,
+  type MusicFormat,
 } from "@/lib/sheet-music";
 import { findIndexedResult } from "@/lib/music-sources";
 
-const ALLOWED_HOSTS = new Set(["www.mutopiaproject.org", "mutopiaproject.org"]);
+const ALLOWED_HOSTS = new Set([
+  "www.mutopiaproject.org",
+  "mutopiaproject.org",
+  "raw.githubusercontent.com",
+]);
+
+function isZipMxl(buffer: Buffer): boolean {
+  // MXL is a ZIP container; PK\x03\x04
+  return (
+    buffer.length >= 4 &&
+    buffer[0] === 0x50 &&
+    buffer[1] === 0x4b &&
+    buffer[2] === 0x03 &&
+    buffer[3] === 0x04
+  );
+}
 
 /**
- * Import an allow-listed discovery result (currently Mutopia PD/CC BY PDFs)
- * into the teacher's private library.
+ * Import an allow-listed discovery result into the teacher's private library.
+ * Currently: Mutopia PD/CC BY PDFs, OpenScore Lieder MXL (CC0 from GitHub).
  */
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -33,7 +49,11 @@ export async function POST(req: NextRequest) {
   if (!result) {
     return NextResponse.json({ error: "Unknown catalogue item" }, { status: 404 });
   }
-  if (!result.import_allowed || !result.file_url || result.format !== "pdf") {
+  if (
+    !result.import_allowed ||
+    !result.file_url ||
+    (result.format !== "pdf" && result.format !== "mxl")
+  ) {
     return NextResponse.json(
       {
         error:
@@ -49,8 +69,23 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid file URL" }, { status: 400 });
   }
-  if (!ALLOWED_HOSTS.has(fileUrl.hostname) || !fileUrl.pathname.endsWith(".pdf")) {
+
+  const pathLower = fileUrl.pathname.toLowerCase();
+  const expectPdf = result.format === "pdf";
+  const expectMxl = result.format === "mxl";
+  if (!ALLOWED_HOSTS.has(fileUrl.hostname)) {
     return NextResponse.json({ error: "File host not allowed" }, { status: 400 });
+  }
+  if (expectPdf && !pathLower.endsWith(".pdf")) {
+    return NextResponse.json({ error: "Expected a PDF URL" }, { status: 400 });
+  }
+  if (expectMxl) {
+    if (fileUrl.hostname !== "raw.githubusercontent.com") {
+      return NextResponse.json({ error: "MXL host not allowed" }, { status: 400 });
+    }
+    if (!pathLower.includes("/openscore/") || !pathLower.endsWith(".mxl")) {
+      return NextResponse.json({ error: "Expected an OpenScore MXL URL" }, { status: 400 });
+    }
   }
 
   const download = await fetch(result.file_url, {
@@ -60,20 +95,26 @@ export async function POST(req: NextRequest) {
     redirect: "follow",
   });
   if (!download.ok) {
-    console.error("Mutopia download failed:", download.status, result.file_url);
+    console.error("score download failed:", download.status, result.file_url);
     return NextResponse.json(
-      { error: "Could not download score from Mutopia" },
+      { error: "Could not download score file" },
       { status: 502 }
     );
   }
 
   const buffer = Buffer.from(await download.arrayBuffer());
-  if (buffer.byteLength < 100 || buffer.byteLength > 25 * 1024 * 1024) {
+  if (buffer.byteLength < 50 || buffer.byteLength > 25 * 1024 * 1024) {
     return NextResponse.json({ error: "Downloaded file size invalid" }, { status: 400 });
   }
-  // PDF magic
-  if (buffer.subarray(0, 4).toString("ascii") !== "%PDF") {
+
+  if (expectPdf && buffer.subarray(0, 4).toString("ascii") !== "%PDF") {
     return NextResponse.json({ error: "Downloaded file is not a PDF" }, { status: 400 });
+  }
+  if (expectMxl && !isZipMxl(buffer)) {
+    return NextResponse.json(
+      { error: "Downloaded file is not a valid MXL (ZIP) archive" },
+      { status: 400 }
+    );
   }
 
   const hash = sha256Hex(buffer);
@@ -98,15 +139,20 @@ export async function POST(req: NextRequest) {
   }
 
   const itemId = crypto.randomUUID();
+  const defaultName = expectPdf ? "score.pdf" : "score.mxl";
   const filename =
-    fileUrl.pathname.split("/").pop()?.replace(/[^\w.\-]+/g, "_") || "score.pdf";
+    fileUrl.pathname.split("/").pop()?.replace(/[^\w.\-]+/g, "_") || defaultName;
   const storage_path = storageObjectPath(user.id, itemId, filename);
   const license_code = result.license_code as MusicLicenseCode;
+  const format = result.format as MusicFormat;
+  const mime_type = expectPdf
+    ? "application/pdf"
+    : "application/vnd.recordare.musicxml";
 
   const { error: uploadError } = await service.storage
     .from(SHEET_MUSIC_BUCKET)
     .upload(storage_path, buffer, {
-      contentType: "application/pdf",
+      contentType: mime_type,
       upsert: false,
     });
 
@@ -114,6 +160,15 @@ export async function POST(req: NextRequest) {
     console.error("import upload:", uploadError);
     return NextResponse.json({ error: "Failed to store file" }, { status: 500 });
   }
+
+  const sourceTag =
+    result.source === "mutopia"
+      ? "mutopia"
+      : result.source === "openscore-lieder"
+        ? "openscore-lieder"
+        : result.source === "openscore-quartets"
+          ? "openscore-quartets"
+          : result.source;
 
   const { data: item, error: insertError } = await service
     .from("music_library_items")
@@ -123,14 +178,24 @@ export async function POST(req: NextRequest) {
       title: result.title,
       composer: result.composer,
       arranger: result.arranger ?? "",
-      format: "pdf",
+      format,
       original_filename: filename,
       storage_path,
-      mime_type: "application/pdf",
+      mime_type,
       byte_size: buffer.byteLength,
       sha256: hash,
-      tags: ["mutopia", ...(result.instrument ? [result.instrument.toLowerCase()] : [])],
-      source: "mutopia",
+      tags: [
+        sourceTag,
+        ...(result.instrument
+          ? result.instrument
+              .toLowerCase()
+              .split(/[,;/]+/)
+              .map((t) => t.trim())
+              .filter(Boolean)
+              .slice(0, 4)
+          : []),
+      ],
+      source: sourceTag,
       source_url: result.source_url,
       license_code,
       license_url: result.license_url ?? null,
