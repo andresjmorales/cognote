@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { CopyLinkClient } from "@/components/teacher/CopyLinkClient";
 import { AssignPlanToStudentButton } from "@/components/teacher/AssignPlanToStudentButton";
 import { LaunchPlanToStudentButton } from "@/components/teacher/LaunchPlanToStudentButton";
+import { AssignSheetMusicToStudentButton } from "@/components/music/AssignSheetMusicToStudentButton";
+import { UnassignSheetMusicButton } from "@/components/music/UnassignSheetMusicButton";
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
 import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
@@ -17,7 +19,9 @@ import { getOrSeedDimensions } from "@/lib/server/skills";
 import { getPolicy } from "@/lib/server/scheduling";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
+import { formatLabel, isActiveSheetMusicAssignment } from "@/lib/sheet-music";
 import { oneToOne } from "@/lib/schedule";
+import type { MusicFormat } from "@/lib/supabase/types";
 
 export async function generateMetadata({
   params,
@@ -51,6 +55,8 @@ export default async function StudentDetailPage({
     { data: student },
     { data: studentPlans },
     { data: allPlans },
+    { data: musicAssignments },
+    { data: libraryItems },
     dimensions,
     { data: assessments },
     { data: attendedLessons },
@@ -82,6 +88,21 @@ export default async function StudentDetailPage({
       .select("id, name")
       .eq("teacher_id", user.id)
       .order("name"),
+    supabase
+      .from("sheet_music_assignments")
+      .select(
+        `
+        id, assignment_note, due_date, assigned_at, unassigned_at,
+        music_library_items ( id, title, composer, format, license_code )
+      `
+      )
+      .eq("student_id", id)
+      .order("assigned_at", { ascending: false }),
+    supabase
+      .from("music_library_items")
+      .select("id, title, composer")
+      .eq("teacher_id", user.id)
+      .order("title"),
     getOrSeedDimensions(supabase, user.id),
     supabase
       .from("skill_assessments")
@@ -120,7 +141,14 @@ export default async function StudentDetailPage({
         );
         return plan?.id;
       })
-      .filter((planId): planId is string => Boolean(planId))
+      .filter((planId): planId is string => typeof planId === "string")
+  );
+
+  const activeMusic = (musicAssignments ?? []).filter(isActiveSheetMusicAssignment);
+  const activeMusicIds = new Set(
+    activeMusic
+      .map((a) => oneToOne(a.music_library_items)?.id)
+      .filter((itemId): itemId is string => typeof itemId === "string")
   );
 
   const lessonNotes = (lessonNoteRows ?? [])
@@ -243,7 +271,7 @@ export default async function StudentDetailPage({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <LaunchPlanToStudentButton
             studentId={id}
             studentName={student.name}
@@ -255,6 +283,15 @@ export default async function StudentDetailPage({
             plans={(allPlans ?? []).map((plan) => ({
               ...plan,
               assigned: activePlanIds.has(plan.id),
+            }))}
+          />
+          <AssignSheetMusicToStudentButton
+            studentId={id}
+            studentName={student.name}
+            items={(libraryItems ?? []).map((item) => ({
+              ...item,
+              composer: item.composer ?? undefined,
+              assigned: activeMusicIds.has(item.id),
             }))}
           />
           <RemoveStudentButton studentId={id} studentName={student.name} />
@@ -352,6 +389,54 @@ export default async function StudentDetailPage({
             </>
           )}
         </Card>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-3">Assigned Sheet Music</h2>
+        {activeMusic.length === 0 ? (
+          <Card className="text-center text-muted">
+            <p>No sheet music assigned yet.</p>
+            <p className="text-sm mt-1">
+              Use &quot;Assign Sheet Music&quot; above, or assign from the Music library.
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {activeMusic.map((assignment) => {
+              const item = oneToOne(assignment.music_library_items);
+              if (!item) return null;
+              return (
+                <Card key={assignment.id} padding="sm">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/music/${item.id}`}
+                        className="font-medium hover:text-primary transition-colors"
+                      >
+                        {item.title}
+                      </Link>
+                      <div className="text-xs text-muted mt-0.5">
+                        {[
+                          item.composer || null,
+                          formatLabel(item.format as MusicFormat),
+                          assignment.due_date ? `Due ${assignment.due_date}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                      {assignment.assignment_note && (
+                        <p className="text-xs text-muted mt-1 line-clamp-2">
+                          {assignment.assignment_note}
+                        </p>
+                      )}
+                    </div>
+                    <UnassignSheetMusicButton assignmentId={assignment.id} />
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

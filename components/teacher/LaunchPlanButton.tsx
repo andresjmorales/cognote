@@ -96,7 +96,7 @@ export function LaunchPlanButton({
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-56">
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-56 max-w-[calc(100vw-1.5rem)] max-h-64 overflow-y-auto">
           <a
             href={`/lessons/${planId}/preview`}
             target="_blank"

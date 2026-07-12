@@ -94,7 +94,7 @@ export function AssignPlanButton({
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-48">
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-48 max-w-[calc(100vw-1.5rem)] max-h-64 overflow-y-auto">
           {students.length === 0 ? (
             <div className="p-3 text-sm text-muted">No students yet</div>
           ) : (
