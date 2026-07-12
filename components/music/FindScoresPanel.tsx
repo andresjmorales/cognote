@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LICENSE_LABELS } from "@/lib/sheet-music";
 import {
+  ALL_SOURCES,
   SOURCE_LABELS,
+  sourceLinkLabel,
   type MusicSourceId,
   type SheetMusicSearchResult,
 } from "@/lib/music-sources";
@@ -31,6 +32,8 @@ function SourceBadge({ source }: { source: MusicSourceId }) {
   );
 }
 
+const DEFAULT_SOURCES = new Set<MusicSourceId>(ALL_SOURCES);
+
 export function FindScoresPanel() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -40,6 +43,23 @@ export function FindScoresPanel() {
   const [results, setResults] = useState<SheetMusicSearchResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [sources, setSources] = useState<Set<MusicSourceId>>(DEFAULT_SOURCES);
+  const [importableOnly, setImportableOnly] = useState(false);
+  const [instrument, setInstrument] = useState("");
+  const [style, setStyle] = useState("");
+
+  function toggleSource(id: MusicSourceId) {
+    setSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size === 1) return next; // keep at least one
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   async function runSearch(e?: React.FormEvent) {
     e?.preventDefault();
@@ -50,7 +70,13 @@ export function FindScoresPanel() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/music/search?q=${encodeURIComponent(q.trim())}`);
+      const params = new URLSearchParams({ q: q.trim() });
+      params.set("sources", Array.from(sources).join(","));
+      if (importableOnly) params.set("importable", "1");
+      if (instrument.trim()) params.set("instrument", instrument.trim());
+      if (style.trim()) params.set("style", style.trim());
+
+      const res = await fetch(`/api/music/search?${params.toString()}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? "Search failed");
@@ -98,7 +124,7 @@ export function FindScoresPanel() {
   if (!open) {
     return (
       <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-        Find free scores
+        Search free scores
       </Button>
     );
   }
@@ -107,11 +133,11 @@ export function FindScoresPanel() {
     <Card className="space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="font-semibold">Find free scores</h2>
+          <h2 className="font-semibold">Search free scores</h2>
           <p className="text-xs text-muted mt-1">
-            Search Mutopia (importable PD/CC BY PDFs), OpenScore (CC0 — open on
-            MuseScore.com), and IMSLP (external link only). Your private uploads
-            stay private.
+            Mutopia PDFs and OpenScore Lieder MXL can be added to your library.
+            OpenScore Quartets and IMSLP are browse links (MuseScore.com downloads
+            may require a paid account — use GitHub MXL import when available).
           </p>
         </div>
         <button
@@ -123,23 +149,67 @@ export function FindScoresPanel() {
         </button>
       </div>
 
-      <form onSubmit={runSearch} className="flex flex-wrap gap-2 items-center">
-        <input
-          className={`${fieldClass} flex-1 min-w-[12rem]`}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Composer or title…"
-          autoFocus
-        />
-        <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "Searching…" : "Search"}
-        </Button>
+      <form onSubmit={runSearch} className="space-y-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            className={`${fieldClass} flex-1 min-w-[12rem]`}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Composer or title…"
+            autoFocus
+          />
+          <Button type="submit" size="sm" disabled={busy}>
+            {busy ? "Searching…" : "Search"}
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-xs">
+          {ALL_SOURCES.map((id) => (
+            <label key={id} className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sources.has(id)}
+                onChange={() => toggleSource(id)}
+              />
+              {SOURCE_LABELS[id]}
+            </label>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-end">
+          <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer pb-2">
+            <input
+              type="checkbox"
+              checked={importableOnly}
+              onChange={(e) => setImportableOnly(e.target.checked)}
+            />
+            Importable only
+          </label>
+          <div>
+            <label className="block text-[11px] text-muted mb-0.5">Instrument</label>
+            <input
+              className={`${fieldClass} w-36`}
+              value={instrument}
+              onChange={(e) => setInstrument(e.target.value)}
+              placeholder="piano, voice…"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] text-muted mb-0.5">Style / period</label>
+            <input
+              className={`${fieldClass} w-36`}
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              placeholder="Romantic…"
+            />
+          </div>
+        </div>
       </form>
 
       {error && <p className="text-sm text-error">{error}</p>}
 
       {results && results.length === 0 && !error && (
-        <p className="text-sm text-muted">No matches. Try another spelling.</p>
+        <p className="text-sm text-muted">No matches. Try another spelling or clear filters.</p>
       )}
 
       {results && results.length > 0 && (
@@ -152,14 +222,24 @@ export function FindScoresPanel() {
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-sm">{r.title}</div>
                 <div className="text-xs text-muted mt-0.5">
-                  {[r.composer || null, r.instrument || null, r.format.toUpperCase()]
+                  {[
+                    r.composer || null,
+                    r.instrument || null,
+                    r.key ? `Key ${r.key}` : null,
+                    r.style || null,
+                    r.format === "external" ? null : r.format.toUpperCase(),
+                  ]
                     .filter(Boolean)
                     .join(" · ")}
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   <SourceBadge source={r.source} />
                   <LicenseBadge code={r.license_code} />
-                  {!r.import_allowed && (
+                  {r.import_allowed ? (
+                    <span className="inline-flex items-center rounded-md bg-success/15 px-1.5 py-0.5 text-[11px] font-medium text-success">
+                      Can add
+                    </span>
+                  ) : (
                     <span className="inline-flex items-center rounded-md bg-warning/20 px-1.5 py-0.5 text-[11px] font-medium">
                       Link only
                     </span>
@@ -188,8 +268,18 @@ export function FindScoresPanel() {
                   rel="noreferrer"
                   className="inline-flex items-center justify-center font-semibold bg-surface border border-border text-foreground hover:border-primary/50 px-3 py-1.5 text-xs rounded-lg transition-colors"
                 >
-                  Open source
+                  {sourceLinkLabel(r.source)}
                 </a>
+                {r.github_url && r.source.startsWith("openscore") && (
+                  <a
+                    href={r.github_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center font-semibold bg-surface border border-border text-foreground hover:border-primary/50 px-3 py-1.5 text-xs rounded-lg transition-colors"
+                  >
+                    View on GitHub
+                  </a>
+                )}
               </div>
             </div>
           ))}
@@ -197,11 +287,9 @@ export function FindScoresPanel() {
       )}
 
       <p className="text-xs text-muted">
-        OpenScore GitHub stores MuseScore source, not MusicXML — open the MuseScore
-        page to download MusicXML/PDF, then upload here.{" "}
-        <Link href="https://www.mutopiaproject.org/legal.html" className="underline" target="_blank">
-          Mutopia legal
-        </Link>
+        OpenScore Lieder MXL is fetched from the public GitHub corpus (CC0) so
+        families can view it in CogNote without a MuseScore.com download. Exporting
+        an engraved PDF from MXL is a future enhancement.
       </p>
 
       {toast && (

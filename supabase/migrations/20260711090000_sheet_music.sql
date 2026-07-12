@@ -1,5 +1,4 @@
--- Phase 5A: private teacher sheet-music library + per-student assignments.
--- See .ai/SHEET_MUSIC.md § Phase 5A.
+-- Private teacher sheet-music library + per-student assignments.
 
 CREATE TABLE music_library_items (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),

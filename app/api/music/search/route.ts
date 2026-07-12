@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
+  ALL_SOURCES,
   searchImslp,
   searchStaticIndexes,
+  type MusicSearchFilters,
   type MusicSourceId,
   type SheetMusicSearchResult,
 } from "@/lib/music-sources";
-
-const ALL_SOURCES: MusicSourceId[] = [
-  "mutopia",
-  "openscore-lieder",
-  "openscore-quartets",
-  "imslp",
-];
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -41,20 +36,26 @@ export async function GET(req: NextRequest) {
         ) as MusicSourceId[])
     : ALL_SOURCES;
 
+  const filters: MusicSearchFilters = {
+    sources,
+    importableOnly: req.nextUrl.searchParams.get("importable") === "1",
+    instrument: req.nextUrl.searchParams.get("instrument")?.trim() || undefined,
+    style: req.nextUrl.searchParams.get("style")?.trim() || undefined,
+  };
+
   const staticSources = sources.filter((s) => s !== "imslp");
   const results: SheetMusicSearchResult[] = [
-    ...searchStaticIndexes(q, staticSources),
+    ...searchStaticIndexes(q, { ...filters, sources: staticSources }),
   ];
 
   if (sources.includes("imslp")) {
     try {
-      results.push(...(await searchImslp(q)));
+      results.push(...(await searchImslp(q, filters)));
     } catch (err) {
       console.error("IMSLP search error:", err);
     }
   }
 
-  // Prefer importable Mutopia hits, then other static, then IMSLP
   const rank = (r: SheetMusicSearchResult) => {
     if (r.import_allowed) return 0;
     if (r.source !== "imslp") return 1;

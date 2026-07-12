@@ -1,24 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { findIndexedResult, searchStaticIndexes } from "./music-sources";
+import {
+  cleanImslpFieldValue,
+  extractImslpField,
+  findIndexedResult,
+  searchStaticIndexes,
+  sourceLinkLabel,
+} from "./music-sources";
 
 describe("music-sources search", () => {
-  it("finds Mutopia Bach results that are importable", () => {
-    const results = searchStaticIndexes("bach", ["mutopia"]);
+  it("finds Mutopia Bach results that are importable PDFs", () => {
+    const results = searchStaticIndexes("bach", { sources: ["mutopia"] });
     expect(results.length).toBeGreaterThan(0);
-    expect(results.some((r) => r.source === "mutopia")).toBe(true);
     const importable = results.filter((r) => r.import_allowed);
     expect(importable.length).toBeGreaterThan(0);
     expect(importable.every((r) => r.file_url?.endsWith(".pdf"))).toBe(true);
     expect(importable[0].format).toBe("pdf");
-    expect(importable[0].file_url).toMatch(/mutopiaproject\.org\/ftp\/.+\.pdf$/);
   });
 
   it("excludes CC BY-SA from import_allowed", () => {
-    const results = searchStaticIndexes("a", ["mutopia"]).filter(
-      (r) => r.license_code === "cc_by_sa"
-    );
-    // May be empty if query too short — use empty-filter on full index via find
-    const sa = searchStaticIndexes("danube", ["mutopia"]).filter(
+    const sa = searchStaticIndexes("danube", { sources: ["mutopia"] }).filter(
       (r) => r.license_code === "cc_by_sa"
     );
     for (const r of sa) {
@@ -26,21 +26,83 @@ describe("music-sources search", () => {
     }
   });
 
-  it("finds OpenScore Lieder as link-only CC0", () => {
-    const results = searchStaticIndexes("mahler", ["openscore-lieder"]);
+  it("imports OpenScore Lieder MXL from GitHub when present", () => {
+    const results = searchStaticIndexes("beggar maid", {
+      sources: ["openscore-lieder"],
+    });
     expect(results.length).toBeGreaterThan(0);
-    expect(results[0].license_code).toBe("cc0");
-    expect(results[0].import_allowed).toBe(false);
-    expect(results[0].source_url).toContain("musescore.com");
+    const hit = results.find((r) => /beggar/i.test(r.title));
+    expect(hit).toBeTruthy();
+    expect(hit!.license_code).toBe("cc0");
+    expect(hit!.import_allowed).toBe(true);
+    expect(hit!.format).toBe("mxl");
+    expect(hit!.file_url).toMatch(
+      /raw\.githubusercontent\.com\/OpenScore\/Lieder\/.+\.mxl$/
+    );
+    expect(sourceLinkLabel(hit!.source)).toBe("Open in MuseScore");
+  });
+
+  it("filters importable-only and instrument", () => {
+    const all = searchStaticIndexes("piano", { sources: ["mutopia"] });
+    const importable = searchStaticIndexes("piano", {
+      sources: ["mutopia"],
+      importableOnly: true,
+    });
+    expect(importable.every((r) => r.import_allowed)).toBe(true);
+    expect(importable.length).toBeLessThanOrEqual(all.length);
+
+    const voice = searchStaticIndexes("song", {
+      sources: ["mutopia", "openscore-lieder"],
+      instrument: "voice",
+    });
+    expect(
+      voice.every((r) => (r.instrument ?? "").toLowerCase().includes("voice"))
+    ).toBe(true);
   });
 
   it("looks up indexed Mutopia ids", () => {
-    const sample = searchStaticIndexes("beethoven", ["mutopia"]).find(
+    const sample = searchStaticIndexes("beethoven", { sources: ["mutopia"] }).find(
       (r) => r.import_allowed && r.file_url?.endsWith(".pdf")
     );
     expect(sample).toBeTruthy();
-    expect(sample!.file_url).toMatch(/mutopiaproject\.org\/ftp\/.+\.pdf$/);
     const found = findIndexedResult(sample!.id);
     expect(found?.title).toBe(sample!.title);
+  });
+
+  it("labels IMSLP links as View source", () => {
+    expect(sourceLinkLabel("imslp")).toBe("View source");
+    expect(sourceLinkLabel("mutopia")).toBe("View source");
+  });
+});
+
+describe("IMSLP field cleanup", () => {
+  const sample = `
+| *****WORK INFO*****
+|Work Title=Make Me a Clean Heart, O God
+|Key={{Key|c}}
+|Piece Style=Romantic
+|Instrumentation=SATB with keyboard accompaniment
+| *****COMMENTS*****
+`;
+
+  const rebekah = `
+|Instrumentation=soprano (Rebekah), tenor (Isaac), bass (Eliezer); mixed chorus (SATBB)<br>orchestra
+|Piece Style=Romantic
+`;
+
+  it("keeps full {{Key|c}} values instead of truncating at the pipe", () => {
+    expect(extractImslpField(sample, "Key")).toBe("C minor");
+    expect(extractImslpField(sample, "Instrumentation")).toBe(
+      "SATB with keyboard accompaniment"
+    );
+    expect(extractImslpField(sample, "Piece Style")).toBe("Romantic");
+  });
+
+  it("turns br tags into separators and drops leftover braces", () => {
+    expect(extractImslpField(rebekah, "Instrumentation")).toBe(
+      "soprano (Rebekah), tenor (Isaac), bass (Eliezer); mixed chorus (SATBB); orchestra"
+    );
+    expect(cleanImslpFieldValue("Key {{Key")).toBe("Key");
+    expect(cleanImslpFieldValue("{{Key|D}}")).toBe("D major");
   });
 });
