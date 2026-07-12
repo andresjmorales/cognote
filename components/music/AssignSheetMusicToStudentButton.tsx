@@ -4,33 +4,35 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-interface Student {
+interface MusicItem {
   id: string;
-  name: string;
+  title: string;
+  composer?: string;
   assigned?: boolean;
 }
 
 const fieldClass =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
 
-/** List under a right-aligned action — open leftward so it stays on-screen. */
+/** List under a left-cluster header button (student page) — open rightward. */
 const listPanelClass =
-  "absolute right-0 top-full mt-1 z-30 w-52 max-w-[calc(100vw-1.5rem)] max-h-64 overflow-y-auto bg-surface border border-border rounded-lg shadow-lg";
+  "absolute left-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-30 w-64 max-w-[calc(100vw-1.5rem)] max-h-64 overflow-y-auto";
 
-/** Wide confirm form: fixed + inset on mobile; dropdown under trigger on desktop. */
 const formPanelClass =
-  "fixed z-50 left-4 right-4 top-[12%] max-h-[80vh] overflow-y-auto sm:absolute sm:inset-auto sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-72 sm:max-w-[calc(100vw-1.5rem)] sm:max-h-none bg-surface border border-border rounded-lg shadow-lg p-3 space-y-3";
+  "fixed z-50 left-4 right-4 top-[12%] max-h-[80vh] overflow-y-auto sm:absolute sm:inset-auto sm:left-0 sm:right-auto sm:top-full sm:mt-1 sm:w-72 sm:max-w-[calc(100vw-1.5rem)] sm:max-h-none bg-surface border border-border rounded-lg shadow-lg p-3 space-y-3";
 
-export function AssignSheetMusicButton({
-  musicItemId,
-  students,
+export function AssignSheetMusicToStudentButton({
+  studentId,
+  studentName,
+  items,
 }: {
-  musicItemId: string;
-  students: Student[];
+  studentId: string;
+  studentName: string;
+  items: MusicItem[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Student | null>(null);
+  const [selected, setSelected] = useState<MusicItem | null>(null);
   const [note, setNote] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [notifyFamily, setNotifyFamily] = useState(true);
@@ -57,11 +59,11 @@ export function AssignSheetMusicButton({
     if (!selected) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/music/${musicItemId}/assign`, {
+      const res = await fetch(`/api/music/${selected.id}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: selected.id,
+          studentId,
           notifyFamily,
           assignmentNote: note,
           dueDate: dueDate || null,
@@ -71,14 +73,14 @@ export function AssignSheetMusicButton({
       if (!res.ok) {
         setToast(data.error ?? "Failed to assign");
       } else if (data.alreadyAssigned) {
-        setToast(`${selected.name} already has this score.`);
+        setToast(`"${selected.title}" is already assigned.`);
       } else if (data.emailed) {
-        setToast(`Assigned to ${selected.name}! Emailed the family.`);
+        setToast(`"${selected.title}" assigned! Emailed the family.`);
       } else {
         setToast(
           notifyFamily
-            ? `Assigned to ${selected.name}. No family email on file (or email not configured).`
-            : `Assigned to ${selected.name}.`
+            ? `"${selected.title}" assigned. No family email on file (or email not configured).`
+            : `"${selected.title}" assigned to ${studentName}.`
         );
       }
       setTimeout(() => setToast(null), 5000);
@@ -95,8 +97,8 @@ export function AssignSheetMusicButton({
 
   return (
     <div className="relative" ref={panelRef}>
-      <Button size="sm" onClick={() => setOpen(!open)}>
-        Assign
+      <Button size="sm" variant="secondary" onClick={() => setOpen(!open)}>
+        Assign Sheet Music
       </Button>
 
       {open && selected && (
@@ -110,24 +112,27 @@ export function AssignSheetMusicButton({
 
       {open && !selected && (
         <div className={listPanelClass}>
-          {students.length === 0 ? (
-            <div className="p-3 text-sm text-muted">No students yet</div>
+          {items.length === 0 ? (
+            <div className="p-3 text-sm text-muted">No scores in your library yet</div>
           ) : (
-            students.map((s) => (
+            items.map((item) => (
               <button
-                key={s.id}
+                key={item.id}
                 type="button"
                 className={`w-full text-left px-3 py-2 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                  s.assigned
+                  item.assigned
                     ? "text-muted bg-surface-dim/50 cursor-not-allowed"
                     : "hover:bg-surface-dim cursor-pointer"
                 }`}
-                disabled={busy || s.assigned}
-                onClick={() => setSelected(s)}
-                title={s.assigned ? "Already assigned" : undefined}
+                disabled={busy || item.assigned}
+                onClick={() => setSelected(item)}
+                title={item.assigned ? "Already assigned" : undefined}
               >
-                {s.name}
-                {s.assigned && (
+                <span className="font-medium">{item.title}</span>
+                {item.composer && (
+                  <span className="block text-xs text-muted">{item.composer}</span>
+                )}
+                {item.assigned && (
                   <span className="block text-xs text-muted">Already assigned</span>
                 )}
               </button>
@@ -138,7 +143,9 @@ export function AssignSheetMusicButton({
 
       {open && selected && (
         <div className={formPanelClass}>
-          <div className="text-sm font-medium">Assign to {selected.name}</div>
+          <div className="text-sm font-medium">
+            Assign &quot;{selected.title}&quot; to {studentName}
+          </div>
           <div>
             <label className="block text-xs text-muted mb-1">Practice note</label>
             <textarea

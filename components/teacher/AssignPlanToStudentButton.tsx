@@ -95,7 +95,7 @@ export function AssignPlanToStudentButton({
       </Button>
 
       {open && (
-        <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-64 max-h-64 overflow-y-auto">
+        <div className="absolute left-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-10 w-64 max-w-[calc(100vw-1.5rem)] max-h-64 overflow-y-auto">
           {plans.length === 0 ? (
             <div className="p-3 text-sm text-muted">No lessons yet</div>
           ) : (
