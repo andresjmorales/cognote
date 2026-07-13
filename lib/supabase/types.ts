@@ -61,6 +61,7 @@ export interface Database {
           teacher_notes: string;
           level: string | null;
           birthdate: string | null;
+          practice_start_date: string | null;
           default_rate_cents: number | null;
           created_at: string;
         };
@@ -73,6 +74,7 @@ export interface Database {
           teacher_notes?: string;
           level?: string | null;
           birthdate?: string | null;
+          practice_start_date?: string | null;
           default_rate_cents?: number | null;
           created_at?: string;
         };
@@ -83,6 +85,7 @@ export interface Database {
           teacher_notes?: string;
           level?: string | null;
           birthdate?: string | null;
+          practice_start_date?: string | null;
           default_rate_cents?: number | null;
         };
       };
@@ -512,6 +515,7 @@ export interface Database {
           questions_per_lesson: number;
           answer_choices: number;
           notes: string[];
+          labels: string[];
           created_at: string;
           updated_at: string;
         };
@@ -529,6 +533,7 @@ export interface Database {
           questions_per_lesson?: number;
           answer_choices?: number;
           notes: string[];
+          labels?: string[];
           created_at?: string;
           updated_at?: string;
         };
@@ -544,6 +549,7 @@ export interface Database {
           questions_per_lesson?: number;
           answer_choices?: number;
           notes?: string[];
+          labels?: string[];
           updated_at?: string;
         };
       };

@@ -79,9 +79,9 @@ export default async function PlanDetailPage({
   const notes = (plan.notes as string[]) ?? [];
   const symbols = (plan.symbols as any[]) ?? [];
   const keySignatures = (plan.key_signatures as string[]) ?? [];
+  const labels = (plan.labels as string[] | null) ?? [];
   const isSymbolPlan = plan.plan_type === "symbol_concepts";
   const isKeySigPlan = plan.plan_type === "key_signature_identification";
-  const difficultyLabel = (plan.difficulty as string)?.charAt(0).toUpperCase() + (plan.difficulty as string)?.slice(1);
 
   return (
     <PlanEditWrapper
@@ -99,7 +99,7 @@ export default async function PlanDetailPage({
         answer_choices: plan.answer_choices,
         notes,
         symbols,
-        difficulty: plan.difficulty ?? "beginner",
+        labels,
         teacher_notes: plan.teacher_notes ?? "",
         show_hints: plan.show_hints ?? true,
         key_sig_scale_mode: plan.key_sig_scale_mode ?? "major",
@@ -129,15 +129,20 @@ export default async function PlanDetailPage({
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{plan.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
               isSymbolPlan ? "bg-accent/20 text-accent" : isKeySigPlan ? "bg-primary/10 text-primary" : "bg-primary/10 text-primary"
             }`}>
               {isSymbolPlan ? "Symbols & Concepts" : isKeySigPlan ? "Key Signature Identification" : "Note Identification"}
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-surface-dim text-muted font-medium">
-              {difficultyLabel}
-            </span>
+            {labels.map((label) => (
+              <span
+                key={label}
+                className="text-xs px-2 py-0.5 rounded-full bg-surface-dim text-muted font-medium"
+              >
+                {label}
+              </span>
+            ))}
           </div>
         </div>
 

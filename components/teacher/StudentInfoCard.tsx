@@ -4,19 +4,29 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { centsToDollarsInput, dollarsToCents, formatMoney } from "@/lib/billing";
+import {
+  createdAtToPracticeStartDate,
+  formatPracticeSince,
+  isYearOnlyPracticeStart,
+  yearToPracticeStartDate,
+} from "@/lib/students-practice";
 
 /**
- * Editable student details: level, birthday, and optional default lesson rate.
+ * Editable student details: level, birthday, practicing since, and optional rate.
  */
 export function StudentInfoCard({
   studentId,
   initialLevel,
   initialBirthdate,
+  initialPracticeStartDate,
+  createdAt,
   initialDefaultRateCents,
 }: {
   studentId: string;
   initialLevel: string | null;
   initialBirthdate: string | null;
+  initialPracticeStartDate: string | null;
+  createdAt: string;
   initialDefaultRateCents: number | null;
 }) {
   return (
@@ -46,12 +56,176 @@ export function StudentInfoCard({
               : formatBirthdate(v);
           }}
         />
+        <PracticeSinceField
+          studentId={studentId}
+          initialValue={initialPracticeStartDate}
+          createdAt={createdAt}
+        />
         <RateField
           studentId={studentId}
           initialCents={initialDefaultRateCents}
         />
       </div>
     </Card>
+  );
+}
+
+function PracticeSinceField({
+  studentId,
+  initialValue,
+  createdAt,
+}: {
+  studentId: string;
+  initialValue: string | null;
+  createdAt: string;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<"year" | "date">(
+    initialValue && !isYearOnlyPracticeStart(initialValue) ? "date" : "year"
+  );
+  const [year, setYear] = useState(
+    initialValue ? initialValue.slice(0, 4) : ""
+  );
+  const [date, setDate] = useState(
+    initialValue && !isYearOnlyPracticeStart(initialValue) ? initialValue : ""
+  );
+  const [saving, setSaving] = useState(false);
+
+  async function saveValue(practiceStartDate: string | null) {
+    setSaving(true);
+    await fetch(`/api/students/${studentId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ practiceStartDate }),
+    });
+    setSaving(false);
+    setEditing(false);
+    router.refresh();
+  }
+
+  function openEdit() {
+    setMode(
+      initialValue && !isYearOnlyPracticeStart(initialValue) ? "date" : "year"
+    );
+    setYear(initialValue ? initialValue.slice(0, 4) : "");
+    setDate(
+      initialValue && !isYearOnlyPracticeStart(initialValue) ? initialValue : ""
+    );
+    setEditing(true);
+  }
+
+  return (
+    <div>
+      <div className="text-xs text-muted font-medium mb-0.5">Practicing since</div>
+      {editing ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setMode("year")}
+              className={`cursor-pointer ${
+                mode === "year" ? "text-primary font-semibold" : "text-muted"
+              }`}
+            >
+              Year only
+            </button>
+            <span className="text-muted">·</span>
+            <button
+              type="button"
+              onClick={() => setMode("date")}
+              className={`cursor-pointer ${
+                mode === "date" ? "text-primary font-semibold" : "text-muted"
+              }`}
+            >
+              Exact date
+            </button>
+          </div>
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            {mode === "year" ? (
+              <input
+                autoFocus
+                type="number"
+                min={1950}
+                max={new Date().getFullYear()}
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const y = Number(year);
+                    if (y >= 1950 && y <= new Date().getFullYear()) {
+                      saveValue(yearToPracticeStartDate(y));
+                    }
+                  }
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                placeholder="e.g. 2021"
+                className="px-2 py-0.5 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm w-24"
+              />
+            ) : (
+              <input
+                autoFocus
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && date) saveValue(date);
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                className="px-2 py-0.5 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm w-44"
+              />
+            )}
+            <button
+              onClick={() => {
+                if (mode === "year") {
+                  const y = Number(year);
+                  if (y >= 1950 && y <= new Date().getFullYear()) {
+                    saveValue(yearToPracticeStartDate(y));
+                  }
+                } else if (date) {
+                  saveValue(date);
+                }
+              }}
+              disabled={saving}
+              className="text-xs text-primary hover:text-primary-dark font-semibold cursor-pointer"
+            >
+              {saving ? "..." : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => saveValue(null)}
+              disabled={saving}
+              className="text-xs text-muted hover:text-foreground cursor-pointer"
+            >
+              Clear
+            </button>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const addDate = createdAtToPracticeStartDate(createdAt);
+              if (addDate) saveValue(addDate);
+            }}
+            disabled={saving}
+            className="text-xs text-muted hover:text-primary text-left cursor-pointer"
+          >
+            Use date student was added
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={openEdit}
+          className="text-sm hover:text-primary transition-colors cursor-pointer"
+          title="Edit practicing since"
+        >
+          {initialValue ? (
+            <span className="font-medium">{formatPracticeSince(initialValue)}</span>
+          ) : (
+            <span className="text-muted">Set start</span>
+          )}
+        </button>
+      )}
+    </div>
   );
 }
 

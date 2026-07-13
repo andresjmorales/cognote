@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 import { createClient } from "@/lib/supabase/client";
 import { NotificationBell } from "@/components/teacher/NotificationBell";
+import { useTeacherTheme } from "@/components/teacher/TeacherThemeProvider";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -47,6 +48,51 @@ function HelpIconLink({ active }: { active: boolean }) {
         <line x1="12" y1="17" x2="12.01" y2="17" />
       </svg>
     </Link>
+  );
+}
+
+function ThemeToggleButton() {
+  const { theme, toggleTheme } = useTeacherTheme();
+  const isDark = theme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Light mode" : "Dark mode"}
+      className="p-2 rounded-lg transition-colors text-muted hover:text-foreground hover:bg-surface-dim cursor-pointer"
+    >
+      {isDark ? (
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+      ) : (
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -99,6 +145,7 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
 
         {/* Desktop account links */}
         <div className="hidden md:flex items-center gap-1">
+          <ThemeToggleButton />
           <HelpIconLink active={helpActive} />
           <NotificationBell />
           <Link
@@ -115,8 +162,9 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
           </button>
         </div>
 
-        {/* Mobile: help + bell + hamburger */}
+        {/* Mobile: theme + help + bell + hamburger */}
         <div className="md:hidden flex items-center gap-0.5">
+          <ThemeToggleButton />
           <HelpIconLink active={helpActive} />
           <NotificationBell />
           <button

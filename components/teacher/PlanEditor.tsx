@@ -19,9 +19,9 @@ import {
   symbolsByCategory,
   type MusicalSymbol,
 } from "@/lib/symbols";
+import { DEFAULT_PLAN_LABELS, normalizePlanLabels } from "@/lib/plans";
 
 const CLEF_OPTIONS = ["treble", "bass", "both"] as const;
-const DIFFICULTY_OPTIONS = ["beginner", "intermediate", "advanced"] as const;
 /** 0 = untimed; other values are seconds per question (quiz mode only) */
 const TIME_LIMIT_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60] as const;
 const UNTIMED = 0;
@@ -56,7 +56,7 @@ interface PlanEditorProps {
     answer_choices: number;
     notes: string[];
     symbols: MusicalSymbol[];
-    difficulty: string;
+    labels: string[];
     teacher_notes: string;
     show_hints: boolean;
     key_sig_scale_mode?: KeySigScaleMode;
@@ -82,7 +82,10 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
   const [answerChoices, setAnswerChoices] = useState(initialData?.answer_choices ?? 4);
   const [selectedNotes, setSelectedNotes] = useState<string[]>(initialData?.notes ?? ["C4", "D4", "E4", "F4", "G4"]);
   const [presetKey, setPresetKey] = useState("Middle C Position");
-  const [difficulty, setDifficulty] = useState(initialData?.difficulty ?? "beginner");
+  const [labels, setLabels] = useState<string[]>(
+    normalizePlanLabels(initialData?.labels ?? [])
+  );
+  const [customLabel, setCustomLabel] = useState("");
   const [teacherNotes, setTeacherNotes] = useState(initialData?.teacher_notes ?? "");
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(
     initialData?.symbols?.map((s) => s.id) ?? []
@@ -196,7 +199,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
       symbols: planType === "symbol_concepts" ? symbolData : [],
       key_sig_scale_mode: planType === "key_signature_identification" ? keySigScaleMode : "major",
       key_signatures: planType === "key_signature_identification" ? selectedKeySigs : [],
-      difficulty,
+      labels: normalizePlanLabels(labels),
       teacher_notes: teacherNotes.trim(),
       show_hints: planType === "symbol_concepts" ? showHints : true,
       time_limit_seconds: timeLimitSeconds,
@@ -267,37 +270,102 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm text-muted mb-1">Difficulty</label>
-              <select
-                value={difficulty}
-                onChange={(e) => {
-                  const d = e.target.value;
-                  setDifficulty(d);
-                  setShowHints(d === "beginner");
-                }}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                {DIFFICULTY_OPTIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </option>
+          <div>
+            <label className="block text-sm text-muted mb-1">Labels</label>
+            <p className="text-xs text-muted mb-2">
+              Optional tags for organizing plans. They do not change the quiz.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {DEFAULT_PLAN_LABELS.map((preset) => {
+                const selected = labels.some(
+                  (l) => l.toLowerCase() === preset.toLowerCase()
+                );
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setLabels((prev) =>
+                        selected
+                          ? prev.filter(
+                              (l) => l.toLowerCase() !== preset.toLowerCase()
+                            )
+                          : normalizePlanLabels([...prev, preset])
+                      );
+                    }}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                      selected
+                        ? "bg-primary text-white"
+                        : "bg-surface-dim text-foreground hover:bg-border"
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                );
+              })}
+              {labels
+                .filter(
+                  (l) =>
+                    !DEFAULT_PLAN_LABELS.some(
+                      (p) => p.toLowerCase() === l.toLowerCase()
+                    )
+                )
+                .map((custom) => (
+                  <button
+                    key={custom}
+                    type="button"
+                    onClick={() =>
+                      setLabels((prev) => prev.filter((l) => l !== custom))
+                    }
+                    className="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-white cursor-pointer"
+                    title="Remove label"
+                  >
+                    {custom} ×
+                  </button>
                 ))}
-              </select>
             </div>
-            <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm cursor-pointer pb-2">
-                <input
-                  type="checkbox"
-                  checked={isTemplate}
-                  onChange={(e) => setIsTemplate(e.target.checked)}
-                  className="rounded"
-                />
-                Template (reusable)
-              </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const next = customLabel.trim();
+                    if (!next) return;
+                    setLabels((prev) => normalizePlanLabels([...prev, next]));
+                    setCustomLabel("");
+                  }
+                }}
+                placeholder="Add custom label"
+                className="flex-1 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  const next = customLabel.trim();
+                  if (!next) return;
+                  setLabels((prev) => normalizePlanLabels([...prev, next]));
+                  setCustomLabel("");
+                }}
+              >
+                Add
+              </Button>
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isTemplate}
+              onChange={(e) => setIsTemplate(e.target.checked)}
+              className="rounded"
+            />
+            Template (reusable)
+          </label>
 
           <div>
             <label className="block text-sm text-muted mb-1">Teacher Notes</label>

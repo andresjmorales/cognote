@@ -25,7 +25,7 @@ Two surfaces, one platform:
 
 ### Studio Management (Teachers)
 
-- **Students & families** — student CRM with structured guardian/family records; siblings share one family and one portal link; adding a student with email/phone (or adult-self) creates a singleton family automatically
+- **Students & families** — student CRM with structured guardian/family records; siblings share one family and one portal link; adding a student with email/phone (or adult-self) creates a singleton family automatically; optional “practicing since” (year or exact date)
 - **Scheduling & attendance** — recurring weekly lesson slots with a weekly teacher view; tap a lesson to mark attendance (attended / teacher cancel / student cancel / no-show) and jot a note. Student cancels ask when notice was given (for billing/make-ups). Bulk mark for Attended / No-show / Teacher cancelled. Slots store local time + studio timezone, so a 4:00 PM Tuesday lesson stays 4:00 PM across DST shifts
 - **Policy-driven make-ups** — make-up credits derive from attendance × your studio policy (cancellation window, which statuses earn credit, expiry); rescheduling links each make-up to the originating cancellation
 - **Lesson notes home** — private + family-facing fields; "Save & Email Family" sends the family note via email and posts it to the portal
@@ -34,12 +34,14 @@ Two surfaces, one platform:
 - **Payments (optional)** — manual by default (Zelle/Venmo/cash instructions); optional bring-your-own Stripe Checkout links + webhook
 - **Studio settings, not code** — studio name, timezone, lesson time blocks, cancellation/make-up policy, billing rules, payment provider, notifications, spreadsheet student import, optional BYO AI assist, data export/import, and an "About the Studio" section shown on the portal
 - **Skills & progress tracking** — rate students 1–5 across teacher-defined skill dimensions (Musicianship, Rhythm, Sight Reading, ...); radar chart of current levels, trend lines over time, attendance summary, and an optional level anchor (RCM, Faber)
-- **Customizable lesson plans** — three plan types: note identification (C2–C7, both clefs), key signature identification, and musical symbols & concepts; reusable templates assigned in one click
+- **Customizable lesson plans** — three plan types: note identification (C2–C7, both clefs), key signature identification, and musical symbols & concepts; reusable templates assigned in one click; optional organizational labels (Easy / Intermediate / Advanced / Fundamentals or custom)
 - **Timed quizzes** — optional per-question time limit (5–60 seconds) on any plan
 - **Assign via email or link** — assigning a lesson emails the practice link to the family (with their portal link); with no family email on file it falls back to the native share sheet / clipboard
 - **Sheet music library** — upload PDF / MusicXML / MXL to a private library; search free scores (Mutopia PDF + OpenScore Lieder MXL import; OpenScore Quartets / IMSLP as links); assign to students; families view in the portal (browser PDF viewer + OpenSheetMusicDisplay)
 - **Analytics dashboard** — per-note accuracy, session history, and practice trends per student
 - **Calendar feeds** — .ics download and a subscribable calendar URL per family; cancelled lessons drop out automatically
+- **Dark mode (teacher Studio)** — toggle in the nav; practice quizzes, flashcards, free practice, and `/try` stay light for readable staff notation
+- **Optional AI assists** — BYO API key (Settings → Optional AI): spreadsheet column mapping and student progress summary drafts (append to private notes after edit)
 
 ### Practice & Learning (Students)
 
@@ -70,10 +72,6 @@ CogNote is under active development toward a complete studio suite. Coming next 
 - **Reminders & automation** — lesson reminders, overdue-invoice nudges, practice-inactivity alerts
 - **Recitals & events** — RSVP links and per-student repertoire
 - **More learning tools** — ear training (interval/chord recognition), practice streaks and badges
-- **AI-drafted progress reports** — optional, bring-your-own API key, off by default; the teacher always edits before sending
-
-Billing, invoicing, and optional BYO Stripe Checkout shipped in July 2026 (Settings → Billing / Payments).
-Sheet music library (private uploads, Mutopia/OpenScore discovery, assign to students, portal view/download) shipped July 2026.
 
 ---
 

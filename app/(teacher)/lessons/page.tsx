@@ -14,6 +14,7 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
   const noteCount = (plan.notes as string[])?.length ?? 0;
   const symbolCount = (plan.symbols as any[])?.length ?? 0;
   const keySigCount = (plan.key_signatures as string[])?.length ?? 0;
+  const labels = (plan.labels as string[] | null) ?? [];
   const activeAssignments = (plan.student_plans ?? []).filter(isActiveStudentPlan);
   const assignedStudentIds = new Set(
     activeAssignments
@@ -27,9 +28,19 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
   return (
     <Card padding="sm">
       <div className="flex justify-between items-start">
-        <Link href={`/lessons/${plan.id}`} className="flex-1">
-          <div className="font-semibold hover:text-primary transition-colors">
-            {plan.name}
+        <Link href={`/lessons/${plan.id}`} className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold hover:text-primary transition-colors">
+              {plan.name}
+            </span>
+            {labels.map((label) => (
+              <span
+                key={label}
+                className="text-[11px] px-2 py-0.5 rounded-full bg-surface-dim text-muted font-medium"
+              >
+                {label}
+              </span>
+            ))}
           </div>
           <div className="text-xs text-muted mt-1">
             {isSymbolPlan
@@ -73,7 +84,7 @@ export default async function PlansPage() {
       .select(
         `
         id, name, is_template, clef, key_signature, notes, questions_per_lesson,
-        plan_type, symbols, key_signatures,
+        plan_type, symbols, key_signatures, labels,
         student_plans ( id, unassigned_at, students ( id, name ) )
       `
       )

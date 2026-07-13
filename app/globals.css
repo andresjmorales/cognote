@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
-@theme inline {
+/*
+ * Use @theme (not inline) so utilities reference CSS variables.
+ * Teacher dark mode redefines those variables under .dark.
+ */
+@theme {
   --color-background: #faf9f7;
   --color-foreground: #1a1a2e;
 
@@ -22,6 +26,31 @@
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Teacher Studio dark theme. Applied via .dark on the teacher layout wrapper
+ * only — practice / portal / landing inherit :root light tokens.
+ */
+.dark {
+  --color-background: #12141a;
+  --color-foreground: #eceae4;
+
+  --color-primary: #3db5a6;
+  --color-primary-light: #5bc4b8;
+  --color-primary-dark: #2a9d8f;
+
+  --color-success: #6bcb77;
+  --color-success-light: #3d7a45;
+  --color-error: #e07a6a;
+  --color-error-light: #8a4540;
+  --color-warning: #f0c762;
+  --color-accent: #d4a843;
+
+  --color-surface: #1c1f28;
+  --color-surface-dim: #262a35;
+  --color-border: #343845;
+  --color-muted: #9a978f;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before,

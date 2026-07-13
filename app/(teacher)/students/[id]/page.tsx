@@ -11,6 +11,7 @@ import { UnassignSheetMusicButton } from "@/components/music/UnassignSheetMusicB
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
 import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
+import { StudentAiSummaryCard } from "@/components/teacher/StudentAiSummaryCard";
 import { StudentLessonNotes } from "@/components/teacher/StudentLessonNotes";
 import { RecentSessionsList } from "@/components/teacher/RecentSessionsList";
 import { StudentInfoCard } from "@/components/teacher/StudentInfoCard";
@@ -303,13 +304,24 @@ export default async function StudentDetailPage({
         studentId={id}
         initialLevel={student.level ?? null}
         initialBirthdate={student.birthdate ?? null}
+        initialPracticeStartDate={student.practice_start_date ?? null}
+        createdAt={student.created_at}
         initialDefaultRateCents={student.default_rate_cents ?? null}
       />
 
       {/* Private meta-notes about the student */}
       <StudentNotesEditor
+        key={(student.teacher_notes ?? "").length}
         studentId={id}
         initialNotes={student.teacher_notes ?? ""}
+      />
+
+      <StudentAiSummaryCard
+        studentId={id}
+        aiConfigured={
+          policy.ai_provider !== "none" && Boolean(policy.ai_api_key)
+        }
+        currentNotesHtml={student.teacher_notes ?? ""}
       />
 
       <StudentLessonNotes notes={lessonNotes} timezone={policy.timezone} />

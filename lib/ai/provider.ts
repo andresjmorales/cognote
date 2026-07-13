@@ -35,10 +35,18 @@ Use the exact header strings from Headers. Omit or null unused fields.
 Prefer student_name for the learner; guardian_name/email/phone for the parent.`;
 
   try {
-    if (args.provider === "openai") {
-      return await callOpenAi(args.apiKey, prompt);
+    const content =
+      args.provider === "openai"
+        ? await callOpenAiText(args.apiKey, {
+            system: "You return only JSON column mappings for spreadsheet import.",
+            prompt,
+            jsonObject: true,
+          })
+        : await callAnthropicText(args.apiKey, prompt);
+    if (content.error) {
+      return { mapping: {}, error: content.error };
     }
-    return await callAnthropic(args.apiKey, prompt);
+    return { mapping: parseMappingJson(content.text ?? "{}") };
   } catch (err) {
     return {
       mapping: {},
@@ -47,10 +55,135 @@ Prefer student_name for the learner; guardian_name/email/phone for the parent.`;
   }
 }
 
-async function callOpenAi(
+export type StudentSummaryContext = {
+  name: string;
+  /** Precomputed age in whole years; use this — do not recalculate from birthdate. */
+  ageYears: number | null;
+  level: string | null;
+  /** Human label e.g. "since 2022" / "since Jan 15, 2024"; null if unknown. */
+  practiceSinceLabel: string | null;
+  /** Exact title date line to use, e.g. "July 13, 2026". */
+  noteDateLabel: string;
+  existingPrivateNotes: string | null;
+  skills: { dimension: string; rating: number; assessedAt: string }[];
+  attendance: {
+    attended: number;
+    studentCancel: number;
+    teacherCancel: number;
+    noShow: number;
+    unmarked: number;
+  };
+  practice: {
+    totalSessions: number;
+    overallAccuracy: number | null;
+    weakItems: { label: string; accuracy: number; attempts: number }[];
+  };
+  recentLessonNotes: {
+    date: string;
+    familyNote: string | null;
+    privateNote: string | null;
+  }[];
+};
+
+/**
+ * Draft a concise progress summary for a student from studio data.
+ * Teacher always edits before saving; BYO key only.
+ */
+export async function draftStudentSummaryWithAi(args: {
+  provider: AiProviderId;
+  apiKey: string;
+  context: StudentSummaryContext;
+}): Promise<{ summary: string; error?: string }> {
+  if (args.provider === "none" || !args.apiKey.trim()) {
+    return {
+      summary: "",
+      error: "No AI provider configured. Add a key in Settings → Optional AI.",
+    };
+  }
+
+  const ageLine =
+    args.context.ageYears != null
+      ? `Age is ${args.context.ageYears} (already computed — never recalculate or invent a different age).`
+      : "Age is unknown (no birthdate).";
+
+  const prompt = `You write a short private progress note for a music teacher about one student.
+
+Hard rules:
+- Start with exactly this H1 title (copy verbatim):
+  # Progress Note — ${args.context.noteDateLabel}
+- Then optionally a short subtitle with the student's first name only (not another date).
+- ${ageLine}
+- Use only facts in the JSON below. Do not invent repertoire, grades, milestones, "target ages," readiness timelines, or decisions about continuing/stopping lessons.
+- Age is demographic context only — never turn it into a progress goal or deadline.
+- If attendance or practice data is empty/zero, say that briefly in one sentence. Do not invent a data-collection roadmap.
+- Prefer concrete observations from recentLessonNotes, skills, and practice weakItems when present.
+- Write in GitHub-flavored markdown using only: paragraphs, **bold**, *italic*, ### headings, and - or 1. lists when useful.
+- Keep it to 2–4 short sections after the title. Tone: warm, professional, teacher-to-self.
+- This note will be appended under older notes — do not repeat long history already in existingPrivateNotes; focus on current status.
+
+Student data:
+${JSON.stringify(
+  {
+    name: args.context.name,
+    ageYears: args.context.ageYears,
+    level: args.context.level,
+    practiceSinceLabel: args.context.practiceSinceLabel,
+    skills: args.context.skills,
+    attendance: args.context.attendance,
+    practice: args.context.practice,
+    recentLessonNotes: args.context.recentLessonNotes,
+    existingPrivateNotesExcerpt: args.context.existingPrivateNotes
+      ? args.context.existingPrivateNotes.slice(0, 800)
+      : null,
+  },
+  null,
+  2
+)}`;
+
+  try {
+    const content =
+      args.provider === "openai"
+        ? await callOpenAiText(args.apiKey, {
+            system:
+              "You draft concise private piano-teacher progress notes as markdown. Obey age and title instructions exactly. Never invent milestones from age.",
+            prompt,
+            jsonObject: false,
+          })
+        : await callAnthropicText(args.apiKey, prompt);
+    if (content.error) {
+      return { summary: "", error: content.error };
+    }
+    const summary = ensureProgressNoteTitle(
+      (content.text ?? "").trim(),
+      args.context.noteDateLabel
+    );
+    return { summary };
+  } catch (err) {
+    return {
+      summary: "",
+      error: err instanceof Error ? err.message : "AI request failed",
+    };
+  }
+}
+
+/** Guarantee the dated H1 so stacked notes stay scannable. */
+export function ensureProgressNoteTitle(
+  markdown: string,
+  noteDateLabel: string
+): string {
+  const expected = `# Progress Note — ${noteDateLabel}`;
+  const trimmed = markdown.trim();
+  if (!trimmed) return expected;
+  if (/^#\s*Progress Note\b/i.test(trimmed)) {
+    return trimmed.replace(/^#\s*Progress Note[^\n]*/i, expected);
+  }
+  return `${expected}\n\n${trimmed}`;
+}
+
+async function callOpenAiText(
   apiKey: string,
-  prompt: string
-): Promise<{ mapping: ColumnMapping; error?: string }> {
+  args: { system: string; prompt: string; jsonObject: boolean }
+): Promise<{ text?: string; error?: string }> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -59,35 +192,32 @@ async function callOpenAi(
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
-      temperature: 0,
-      response_format: { type: "json_object" },
+      temperature: args.jsonObject ? 0 : 0.4,
+      ...(args.jsonObject
+        ? { response_format: { type: "json_object" } }
+        : {}),
       messages: [
-        {
-          role: "system",
-          content: "You return only JSON column mappings for spreadsheet import.",
-        },
-        { role: "user", content: prompt },
+        { role: "system", content: args.system },
+        { role: "user", content: args.prompt },
       ],
     }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     return {
-      mapping: {},
       error: `OpenAI error (${res.status}): ${text.slice(0, 200)}`,
     };
   }
   const data = (await res.json()) as {
     choices?: { message?: { content?: string } }[];
   };
-  const content = data.choices?.[0]?.message?.content ?? "{}";
-  return { mapping: parseMappingJson(content) };
+  return { text: data.choices?.[0]?.message?.content ?? "" };
 }
 
-async function callAnthropic(
+async function callAnthropicText(
   apiKey: string,
   prompt: string
-): Promise<{ mapping: ColumnMapping; error?: string }> {
+): Promise<{ text?: string; error?: string }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -104,7 +234,6 @@ async function callAnthropic(
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     return {
-      mapping: {},
       error: `Anthropic error (${res.status}): ${text.slice(0, 200)}`,
     };
   }
@@ -112,8 +241,8 @@ async function callAnthropic(
     content?: { type: string; text?: string }[];
   };
   const text =
-    data.content?.find((c) => c.type === "text")?.text ?? "{}";
-  return { mapping: parseMappingJson(text) };
+    data.content?.find((c) => c.type === "text")?.text ?? "";
+  return { text };
 }
 
 function parseMappingJson(raw: string): ColumnMapping {
