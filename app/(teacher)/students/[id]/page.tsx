@@ -15,6 +15,7 @@ import { StudentAiSummaryCard } from "@/components/teacher/StudentAiSummaryCard"
 import { StudentLessonNotes } from "@/components/teacher/StudentLessonNotes";
 import { RecentSessionsList } from "@/components/teacher/RecentSessionsList";
 import { StudentInfoCard } from "@/components/teacher/StudentInfoCard";
+import { EditableStudentName } from "@/components/teacher/EditableStudentName";
 import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
 import { getOrSeedDimensions } from "@/lib/server/skills";
 import { getPolicy } from "@/lib/server/scheduling";
@@ -249,7 +250,7 @@ export default async function StudentDetailPage({
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold">{student.name}</h1>
+          <EditableStudentName studentId={id} initialName={student.name} />
           {(student.guardians as { id: string; name: string } | null)?.name ? (
             <p className="text-muted text-sm">
               Family:{" "}
