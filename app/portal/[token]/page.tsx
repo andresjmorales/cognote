@@ -11,13 +11,16 @@ import {
   ATTENDANCE_LABELS,
   oneToOne,
 } from "@/lib/schedule";
-import type { AttendanceStatus } from "@/lib/supabase/types";
+import type { AttendanceStatus, RsvpStatus } from "@/lib/supabase/types";
 import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
 import { formatMoney } from "@/lib/billing";
+import { formatEventWhen } from "@/lib/events";
 import { PortalCancelButton } from "@/components/portal/PortalCancelButton";
+import { PortalEventRsvp } from "@/components/portal/PortalEventRsvp";
+import { loadStudentStreakSummary } from "@/lib/server/streaks";
 
 export const metadata: Metadata = { title: "Family Portal" };
 
@@ -135,6 +138,22 @@ export default async function PortalPage({
     currency: string;
     stripe_checkout_url: string | null;
   }[] = [];
+  let portalEvents: {
+    id: string;
+    title: string;
+    description: string;
+    location: string;
+    starts_at: string;
+    ends_at: string | null;
+    performers: { name: string; repertoire: string }[];
+    rsvp: {
+      id: string;
+      status: RsvpStatus;
+      party_size: number | null;
+      note: string;
+    } | null;
+  }[] = [];
+  const streakByStudent = new Map<string, number>();
 
   const invoicesRes = await supabase
     .from("invoices")
@@ -150,7 +169,7 @@ export default async function PortalPage({
   if (studentIds.length > 0) {
     await materializeLessons(supabase, guardian.teacher_id, today, addDays(today, 28));
 
-    const [lessonsRes, linksRes, notesRes, musicRes] = await Promise.all([
+    const [lessonsRes, linksRes, notesRes, musicRes, eventsRes] = await Promise.all([
       supabase
         .from("lessons")
         .select(
@@ -183,11 +202,104 @@ export default async function PortalPage({
         .in("student_id", studentIds)
         .is("unassigned_at", null)
         .order("assigned_at", { ascending: false }),
+      supabase
+        .from("events")
+        .select(
+          `
+          id, title, description, location, starts_at, ends_at,
+          event_students!inner (
+            student_id, repertoire, sort_order,
+            students ( id, name )
+          ),
+          event_rsvps (
+            id, status, party_size, note, guardian_id
+          )
+        `
+        )
+        .eq("teacher_id", guardian.teacher_id)
+        .gte("starts_at", new Date().toISOString())
+        .in("event_students.student_id", studentIds)
+        .order("starts_at"),
     ]);
     lessons = (lessonsRes.data ?? []) as unknown as PortalLesson[];
     practiceLinks = (linksRes.data ?? []).filter(isActiveStudentPlan) as unknown as typeof practiceLinks;
     sharedNotes = (notesRes.data ?? []) as unknown as typeof sharedNotes;
     sheetMusic = (musicRes.data ?? []) as unknown as typeof sheetMusic;
+
+    const studentIdSet = new Set(studentIds);
+    portalEvents = ((eventsRes.data ?? []) as {
+      id: string;
+      title: string;
+      description: string;
+      location: string;
+      starts_at: string;
+      ends_at: string | null;
+      event_students:
+        | {
+            student_id: string;
+            repertoire: string;
+            sort_order: number;
+            students: { id: string; name: string } | { id: string; name: string }[] | null;
+          }[]
+        | null;
+      event_rsvps:
+        | {
+            id: string;
+            status: RsvpStatus;
+            party_size: number | null;
+            note: string;
+            guardian_id: string;
+          }[]
+        | null;
+    }[])
+      .map((event) => {
+        const performers = (event.event_students ?? [])
+          .filter((es) => studentIdSet.has(es.student_id))
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((es) => {
+            const student = oneToOne(es.students);
+            return {
+              name: student?.name ?? "Student",
+              repertoire: es.repertoire?.trim() ?? "",
+            };
+          });
+        const rsvp =
+          (event.event_rsvps ?? []).find((r) => r.guardian_id === guardian.id) ??
+          null;
+        return {
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          location: event.location,
+          starts_at: event.starts_at,
+          ends_at: event.ends_at,
+          performers,
+          rsvp: rsvp
+            ? {
+                id: rsvp.id,
+                status: rsvp.status,
+                party_size: rsvp.party_size,
+                note: rsvp.note,
+              }
+            : null,
+        };
+      })
+      .filter((e) => e.performers.length > 0);
+
+    if (policy.streaks_enabled) {
+      await Promise.all(
+        students.map(async (student) => {
+          const summary = await loadStudentStreakSummary(
+            supabase,
+            student.id,
+            policy
+          );
+          if (summary && summary.currentStreak > 0) {
+            streakByStudent.set(student.id, summary.currentStreak);
+          }
+        })
+      );
+    }
   }
 
   const nameById = new Map(students.map((s) => [s.id, s.name]));
@@ -228,11 +340,17 @@ export default async function PortalPage({
                   (link) => link.student_id === student.id
                 );
                 if (studentLinks.length === 0) return null;
+                const streak = streakByStudent.get(student.id);
                 return (
                   <div key={student.id}>
                     <h3 className="text-sm font-semibold text-muted uppercase tracking-wide mb-2">
                       {student.name}
                     </h3>
+                    {streak != null && streak > 0 && (
+                      <p className="text-xs text-muted mb-2">
+                        Practice streak: {streak} day{streak === 1 ? "" : "s"}
+                      </p>
+                    )}
                     <div className="space-y-2">
                       {studentLinks.map((link) => (
                         <Card key={link.id} padding="sm">
@@ -256,6 +374,17 @@ export default async function PortalPage({
             </div>
           ) : (
             <div className="space-y-2">
+              {(() => {
+                const streak =
+                  students[0] != null
+                    ? streakByStudent.get(students[0].id)
+                    : undefined;
+                return streak != null && streak > 0 ? (
+                  <p className="text-xs text-muted">
+                    Practice streak: {streak} day{streak === 1 ? "" : "s"}
+                  </p>
+                ) : null;
+              })()}
               {practiceLinks.map((link) => (
                 <Card key={link.id} padding="sm">
                   <div className="flex items-center justify-between gap-3">
@@ -377,6 +506,57 @@ export default async function PortalPage({
             </div>
           )}
         </section>
+
+        {/* Events */}
+        {portalEvents.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-3">Events</h2>
+            <div className="space-y-2">
+              {portalEvents.map((event) => (
+                <Card key={event.id} padding="sm">
+                  <div className="font-medium">{event.title}</div>
+                  <div className="text-sm text-muted mt-0.5">
+                    {formatEventWhen(
+                      event.starts_at,
+                      event.ends_at,
+                      policy.timezone
+                    )}
+                  </div>
+                  {event.location?.trim() && (
+                    <div className="text-xs text-muted mt-0.5">
+                      {event.location.trim()}
+                    </div>
+                  )}
+                  {event.performers.length > 0 && (
+                    <ul className="mt-2 text-sm space-y-0.5">
+                      {event.performers.map((p, i) => (
+                        <li key={`${p.name}-${i}`}>
+                          {p.repertoire
+                            ? `${p.name} — ${p.repertoire}`
+                            : p.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {event.description?.trim() && (
+                    <p className="text-xs text-muted mt-2 whitespace-pre-wrap">
+                      {event.description.trim()}
+                    </p>
+                  )}
+                  {event.rsvp && (
+                    <PortalEventRsvp
+                      token={token}
+                      eventId={event.id}
+                      initialStatus={event.rsvp.status}
+                      initialPartySize={event.rsvp.party_size}
+                      initialNote={event.rsvp.note}
+                    />
+                  )}
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Upcoming lessons */}
         <section>

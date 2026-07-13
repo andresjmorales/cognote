@@ -125,3 +125,29 @@ INSERT INTO note_attempts (session_id, note_displayed, clef, correct_answer, stu
   ('40000000-0000-0000-0000-000000000001', 'G4', 'treble', 'G', 'G', true, 1900),
   ('40000000-0000-0000-0000-000000000001', 'D4', 'treble', 'D', 'D', true, 1400),
   ('40000000-0000-0000-0000-000000000001', 'F4', 'treble', 'F', 'F', true, 1600);
+
+-- Sample studio recital (upcoming Saturday 3pm Chicago-ish UTC offset; relative)
+INSERT INTO events (id, teacher_id, title, description, location, starts_at, ends_at) VALUES
+  ('60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+   'Spring Studio Recital',
+   'Students perform short pieces for families. Arrive 15 minutes early.',
+   'Community Hall',
+   date_trunc('week', now() AT TIME ZONE 'America/Chicago') AT TIME ZONE 'America/Chicago'
+     + interval '6 days' + interval '15 hours',
+   date_trunc('week', now() AT TIME ZONE 'America/Chicago') AT TIME ZONE 'America/Chicago'
+     + interval '6 days' + interval '17 hours');
+
+INSERT INTO event_students (event_id, student_id, repertoire, sort_order) VALUES
+  ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001',
+   'Middle C Waltz', 0),
+  ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002',
+   'Ode to Joy (RH)', 1),
+  ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003',
+   'Lightly Row', 2);
+
+INSERT INTO event_rsvps (event_id, guardian_id, status, party_size, note, responded_at) VALUES
+  ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001',
+   'yes', 4, 'Grandparents coming too', now() - interval '1 day'),
+  ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000002',
+   'pending', NULL, '', NULL);
+

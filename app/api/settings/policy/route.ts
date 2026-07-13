@@ -229,6 +229,18 @@ export async function PUT(req: NextRequest) {
       notify_email_invoice_paid: Boolean(body.notifyEmailInvoicePaid),
     }),
     ...(aiProvider !== undefined && { ai_provider: aiProvider }),
+    ...(body.streaksEnabled !== undefined && {
+      streaks_enabled: Boolean(body.streaksEnabled),
+    }),
+    ...(body.streakCountQuiz !== undefined && {
+      streak_count_quiz: Boolean(body.streakCountQuiz),
+    }),
+    ...(body.streakCountFreePractice !== undefined && {
+      streak_count_free_practice: Boolean(body.streakCountFreePractice),
+    }),
+    ...(body.streakCountFlashcards !== undefined && {
+      streak_count_flashcards: Boolean(body.streakCountFlashcards),
+    }),
   };
 
   // Stripe keys: only overwrite when a new value is pasted, or explicitly cleared

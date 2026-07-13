@@ -28,6 +28,7 @@ export type MusicLicenseCode =
   | "teacher_owned"
   | "unknown"
   | "restricted";
+export type RsvpStatus = "pending" | "yes" | "no" | "maybe";
 
 export interface Database {
   public: {
@@ -165,6 +166,10 @@ export interface Database {
           notify_email_invoice_paid: boolean;
           ai_provider: "none" | "openai" | "anthropic";
           ai_api_key: string | null;
+          streaks_enabled: boolean;
+          streak_count_quiz: boolean;
+          streak_count_free_practice: boolean;
+          streak_count_flashcards: boolean;
           updated_at: string;
         };
         Insert: {
@@ -201,6 +206,10 @@ export interface Database {
           notify_email_invoice_paid?: boolean;
           ai_provider?: "none" | "openai" | "anthropic";
           ai_api_key?: string | null;
+          streaks_enabled?: boolean;
+          streak_count_quiz?: boolean;
+          streak_count_free_practice?: boolean;
+          streak_count_flashcards?: boolean;
         };
         Update: {
           studio_name?: string;
@@ -235,6 +244,10 @@ export interface Database {
           notify_email_invoice_paid?: boolean;
           ai_provider?: "none" | "openai" | "anthropic";
           ai_api_key?: string | null;
+          streaks_enabled?: boolean;
+          streak_count_quiz?: boolean;
+          streak_count_free_practice?: boolean;
+          streak_count_flashcards?: boolean;
         };
       };
       lesson_slots: {
@@ -747,10 +760,91 @@ export interface Database {
           emailed_at?: string | null;
         };
       };
+      events: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          title: string;
+          description: string;
+          location: string;
+          starts_at: string;
+          ends_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          title: string;
+          description?: string;
+          location?: string;
+          starts_at: string;
+          ends_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          description?: string;
+          location?: string;
+          starts_at?: string;
+          ends_at?: string | null;
+          updated_at?: string;
+        };
+      };
+      event_students: {
+        Row: {
+          id: string;
+          event_id: string;
+          student_id: string;
+          repertoire: string;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          student_id: string;
+          repertoire?: string;
+          sort_order?: number;
+        };
+        Update: {
+          repertoire?: string;
+          sort_order?: number;
+        };
+      };
+      event_rsvps: {
+        Row: {
+          id: string;
+          event_id: string;
+          guardian_id: string;
+          status: RsvpStatus;
+          party_size: number | null;
+          note: string;
+          responded_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          guardian_id: string;
+          status?: RsvpStatus;
+          party_size?: number | null;
+          note?: string;
+          responded_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: RsvpStatus;
+          party_size?: number | null;
+          note?: string;
+          responded_at?: string | null;
+        };
+      };
     };
     Enums: {
       clef_type: ClefType;
       practice_mode: PracticeMode;
+      rsvp_status: RsvpStatus;
     };
   };
 }

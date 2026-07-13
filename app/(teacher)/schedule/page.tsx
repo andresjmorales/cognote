@@ -13,6 +13,7 @@ import { WeekView, type WeekLesson } from "@/components/teacher/schedule/WeekVie
 import { BulkAttendancePanel } from "@/components/teacher/schedule/BulkAttendancePanel";
 import { SlotManager } from "@/components/teacher/schedule/SlotManager";
 import { MakeupPanel, type MakeupCredit } from "@/components/teacher/schedule/MakeupPanel";
+import { formatEventDateKey } from "@/lib/events";
 import Link from "next/link";
 
 export const metadata = { title: "Schedule" };
@@ -42,7 +43,7 @@ export default async function SchedulePage({
   const matTo = weekEnd > addDays(today, 56) ? weekEnd : addDays(today, 56);
   await materializeLessons(supabase, user.id, matFrom, matTo);
 
-  const [lessonsRes, slotsRes, studentsRes, attendanceRes, redeemedRes] =
+  const [lessonsRes, slotsRes, studentsRes, attendanceRes, redeemedRes, eventsRes] =
     await Promise.all([
       supabase
         .from("lessons")
@@ -80,6 +81,13 @@ export default async function SchedulePage({
         .select("makeup_for")
         .eq("teacher_id", user.id)
         .not("makeup_for", "is", null),
+      supabase
+        .from("events")
+        .select("id, title, location, starts_at, ends_at")
+        .eq("teacher_id", user.id)
+        .gte("starts_at", `${addDays(weekStart, -1)}T00:00:00.000Z`)
+        .lte("starts_at", `${addDays(weekEnd, 2)}T00:00:00.000Z`)
+        .order("starts_at"),
     ]);
 
   const weekLessons: WeekLesson[] = (lessonsRes.data ?? []).map((l) => {
@@ -112,6 +120,17 @@ export default async function SchedulePage({
         : null,
     };
   });
+
+  const weekEvents = (eventsRes.data ?? [])
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      location: e.location ?? "",
+      startsAt: e.starts_at,
+      endsAt: e.ends_at as string | null,
+      localDate: formatEventDateKey(e.starts_at, policy.timezone),
+    }))
+    .filter((e) => e.localDate >= weekStart && e.localDate <= weekEnd);
 
   const redeemed = new Set(
     (redeemedRes.data ?? []).map((l) => l.makeup_for as string)
@@ -169,6 +188,7 @@ export default async function SchedulePage({
         today={today}
         timezone={policy.timezone}
         lessons={weekLessons}
+        events={weekEvents}
         students={studentsRes.data ?? []}
         durationOptions={policy.lesson_duration_options}
         cancellationWindowHours={policy.cancellation_window_hours}
