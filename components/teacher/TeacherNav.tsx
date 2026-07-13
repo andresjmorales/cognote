@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,89 +20,43 @@ const navItems = [
   { href: "/settings", label: "Settings" },
 ];
 
-function HelpIconLink({ active }: { active: boolean }) {
-  return (
-    <Link
-      href="/help"
-      aria-label="Help"
-      title="Help"
-      className={`p-2 rounded-lg transition-colors ${
-        active
-          ? "text-primary bg-primary/10"
-          : "text-muted hover:text-foreground hover:bg-surface-dim"
-      }`}
-    >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <circle cx="12" cy="12" r="10" />
-        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
-    </Link>
-  );
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-function ThemeToggleButton() {
-  const { theme, toggleTheme } = useTeacherTheme();
-  const isDark = theme === "dark";
-  return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Light mode" : "Dark mode"}
-      className="p-2 rounded-lg transition-colors text-muted hover:text-foreground hover:bg-surface-dim cursor-pointer"
-    >
-      {isDark ? (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-        </svg>
-      ) : (
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
-export function TeacherNav({ teacherName }: { teacherName: string }) {
+function AccountMenu({ teacherName }: { teacherName: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, toggleTheme } = useTeacherTheme();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const isDark = theme === "dark";
+  const accountActive = pathname.startsWith("/account");
   const helpActive = pathname.startsWith("/help");
 
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   async function handleSignOut() {
+    setOpen(false);
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -110,12 +64,109 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
   }
 
   return (
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Account menu"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        title={teacherName}
+        className={`flex items-center justify-center h-9 w-9 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+          open || accountActive
+            ? "bg-primary text-white"
+            : "bg-surface-dim text-foreground hover:bg-border"
+        }`}
+      >
+        {initialsFromName(teacherName)}
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-64 rounded-xl border border-border bg-surface shadow-lg z-50 py-1 overflow-hidden"
+        >
+          <div className="px-3 py-2.5 border-b border-border">
+            <div className="text-sm font-semibold truncate">{teacherName}</div>
+            <div className="text-[11px] text-muted">Teacher account</div>
+          </div>
+
+          <Link
+            href="/account"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={`block px-3 py-2.5 text-sm transition-colors ${
+              accountActive
+                ? "bg-primary/10 text-primary"
+                : "text-foreground hover:bg-surface-dim"
+            }`}
+          >
+            Account settings
+          </Link>
+
+          <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+            <span className="text-foreground">Dark mode</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isDark}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleTheme();
+              }}
+              className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer shrink-0 ${
+                isDark ? "bg-primary" : "bg-border"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  isDark ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          <Link
+            href="/help"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={`block px-3 py-2.5 text-sm transition-colors ${
+              helpActive
+                ? "bg-primary/10 text-primary"
+                : "text-foreground hover:bg-surface-dim"
+            }`}
+          >
+            Help
+          </Link>
+
+          <div className="border-t border-border mt-1 pt-1">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              className="w-full text-left px-3 py-2.5 text-sm text-foreground hover:bg-surface-dim cursor-pointer"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TeacherNav({ teacherName }: { teacherName: string }) {
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
     <header className="bg-surface border-b border-border">
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16 md:h-14">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-8 min-w-0">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
+            className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight shrink-0"
           >
             <BrandMark
               size={BRAND_ICON_SIZE.header}
@@ -143,36 +194,26 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
           </nav>
         </div>
 
-        {/* Desktop account links */}
-        <div className="hidden md:flex items-center gap-1">
-          <ThemeToggleButton />
-          <HelpIconLink active={helpActive} />
+        <div className="flex items-center gap-1 shrink-0">
           <NotificationBell />
-          <Link
-            href="/account"
-            className="text-sm text-muted hover:text-foreground transition-colors ml-2"
-          >
-            {teacherName}
-          </Link>
+          <AccountMenu teacherName={teacherName} />
           <button
-            onClick={handleSignOut}
-            className="text-sm text-muted hover:text-foreground cursor-pointer ml-2"
-          >
-            Sign out
-          </button>
-        </div>
-
-        {/* Mobile: theme + help + bell + hamburger */}
-        <div className="md:hidden flex items-center gap-0.5">
-          <ThemeToggleButton />
-          <HelpIconLink active={helpActive} />
-          <NotificationBell />
-          <button
-            className="p-3 -mr-3 text-muted hover:text-foreground cursor-pointer"
+            type="button"
+            className="md:hidden p-2.5 -mr-2 text-muted hover:text-foreground cursor-pointer"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle menu"
+            aria-label="Toggle navigation"
+            aria-expanded={mobileOpen}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden
+            >
               {mobileOpen ? (
                 <>
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -190,7 +231,6 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-surface px-4 pb-3 pt-2 space-y-1">
           {navItems.map((item) => {
@@ -210,21 +250,6 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
               </Link>
             );
           })}
-          <div className="border-t border-border mt-2 pt-2 flex items-center justify-between px-3">
-            <Link
-              href="/account"
-              onClick={() => setMobileOpen(false)}
-              className="text-sm text-muted hover:text-foreground transition-colors"
-            >
-              {teacherName}
-            </Link>
-            <button
-              onClick={() => { setMobileOpen(false); handleSignOut(); }}
-              className="text-sm text-muted hover:text-foreground cursor-pointer"
-            >
-              Sign out
-            </button>
-          </div>
         </div>
       )}
     </header>

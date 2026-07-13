@@ -35,21 +35,27 @@ function readStoredTheme(): ThemeMode {
 /**
  * Teacher-Studio theme only. Scoped to this wrapper (not <html>) so student
  * practice, /try, and portal stay light — staff/notation are not dark-themed.
+ *
+ * Uses data-teacher-theme (not class "dark") so Tailwind's dark variant /
+ * prefers-color-scheme machinery does not fight the override.
  */
 export function TeacherThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>("light");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setThemeState(readStoredTheme());
+    setReady(true);
   }, []);
 
   useEffect(() => {
+    if (!ready) return;
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {
       /* ignore */
     }
-  }, [theme]);
+  }, [theme, ready]);
 
   const setTheme = useCallback((mode: ThemeMode) => {
     setThemeState(mode);
@@ -62,9 +68,7 @@ export function TeacherThemeProvider({ children }: { children: ReactNode }) {
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       <div
-        className={`min-h-screen bg-background text-foreground ${
-          theme === "dark" ? "dark" : ""
-        }`}
+        className="min-h-screen bg-background text-foreground"
         data-teacher-theme={theme}
       >
         {children}

@@ -29,10 +29,11 @@
 }
 
 /*
- * Teacher Studio dark theme. Applied via .dark on the teacher layout wrapper
- * only — practice / portal / landing inherit :root light tokens.
+ * Teacher Studio dark theme. data-teacher-theme on the layout wrapper only —
+ * practice / portal / landing keep :root light tokens.
  */
-.dark {
+[data-teacher-theme="dark"] {
+  color-scheme: dark;
   --color-background: #12141a;
   --color-foreground: #eceae4;
 
