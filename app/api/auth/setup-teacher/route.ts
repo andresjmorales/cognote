@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (existing) {
+    const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
+    await ensureStudioPolicyRow(serviceClient, user.id);
     return NextResponse.json({ ok: true });
   }
 
@@ -46,6 +48,9 @@ export async function POST(req: NextRequest) {
     console.error("Failed to create teacher row:", error);
     return NextResponse.json({ error: "Failed to set up account" }, { status: 500 });
   }
+
+  const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
+  await ensureStudioPolicyRow(serviceClient, user.id);
 
   return NextResponse.json({ ok: true });
 }

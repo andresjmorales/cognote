@@ -46,6 +46,9 @@ export interface StudioPolicy {
   notify_in_app: boolean;
   notify_email_portal_cancel: boolean;
   notify_email_invoice_paid: boolean;
+  /** Optional BYO LLM for assist features (import mapping, future drafts). */
+  ai_provider: "none" | "openai" | "anthropic";
+  ai_api_key: string | null;
 }
 
 export const DEFAULT_POLICY: StudioPolicy = {
@@ -68,7 +71,7 @@ export const DEFAULT_POLICY: StudioPolicy = {
   bill_late_student_cancel: true,
   bill_makeup: false,
   default_rate_cents: null,
-  rate_basis: "per_lesson",
+  rate_basis: "per_hour",
   currency: "USD",
   invoice_cadence: "monthly",
   payment_instructions: "",
@@ -79,6 +82,8 @@ export const DEFAULT_POLICY: StudioPolicy = {
   notify_in_app: true,
   notify_email_portal_cancel: true,
   notify_email_invoice_paid: true,
+  ai_provider: "none",
+  ai_api_key: null,
 };
 
 /** Offset (ms) of `timeZone` from UTC at the instant `ts` (UTC ms). */

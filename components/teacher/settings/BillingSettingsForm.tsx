@@ -19,7 +19,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
     centsToDollarsInput(policy.default_rate_cents)
   );
   const [rateBasis, setRateBasis] = useState<RateBasis>(
-    policy.rate_basis ?? "per_lesson"
+    policy.rate_basis ?? "per_hour"
   );
   const [currency, setCurrency] = useState(policy.currency || "USD");
   const [cadence, setCadence] = useState<InvoiceCadence>(policy.invoice_cadence);

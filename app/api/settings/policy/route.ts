@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
 import { maskSecret } from "@/lib/billing";
 import type { InvoiceCadence, PaymentProvider, RateBasis } from "@/lib/schedule";
+import type { AiProviderId } from "@/lib/ai/provider";
 
-/** Client-safe policy: Stripe secrets are masked, never returned in full. */
+/** Client-safe policy: secrets are masked, never returned in full. */
 function toClientPolicy(
   policy: Awaited<ReturnType<typeof getPolicy>>,
   teacherId: string
@@ -13,6 +14,7 @@ function toClientPolicy(
     stripe_secret_key,
     stripe_publishable_key,
     stripe_webhook_secret,
+    ai_api_key,
     ...rest
   } = policy;
   return {
@@ -21,6 +23,7 @@ function toClientPolicy(
     stripe_secret_key: null,
     stripe_publishable_key: null,
     stripe_webhook_secret: null,
+    ai_api_key: null,
     stripe: {
       secretKey: {
         configured: !!stripe_secret_key,
@@ -33,6 +36,12 @@ function toClientPolicy(
       webhookSecret: {
         configured: !!stripe_webhook_secret,
         masked: maskSecret(stripe_webhook_secret),
+      },
+    },
+    ai: {
+      apiKey: {
+        configured: !!ai_api_key,
+        masked: maskSecret(ai_api_key),
       },
     },
   };
@@ -123,6 +132,19 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  const aiProvider = body.aiProvider as AiProviderId | undefined;
+  if (
+    aiProvider !== undefined &&
+    aiProvider !== "none" &&
+    aiProvider !== "openai" &&
+    aiProvider !== "anthropic"
+  ) {
+    return NextResponse.json(
+      { error: "aiProvider must be none, openai, or anthropic" },
+      { status: 400 }
+    );
+  }
+
   const upsert: Record<string, unknown> = {
     teacher_id: user.id,
     ...(body.studioName !== undefined && {
@@ -206,6 +228,7 @@ export async function PUT(req: NextRequest) {
     ...(body.notifyEmailInvoicePaid !== undefined && {
       notify_email_invoice_paid: Boolean(body.notifyEmailInvoicePaid),
     }),
+    ...(aiProvider !== undefined && { ai_provider: aiProvider }),
   };
 
   // Stripe keys: only overwrite when a new value is pasted, or explicitly cleared
@@ -226,6 +249,14 @@ export async function PUT(req: NextRequest) {
     body.stripeWebhookSecret.trim()
   ) {
     upsert.stripe_webhook_secret = body.stripeWebhookSecret.trim();
+  }
+
+  if (body.clearAiApiKey) upsert.ai_api_key = null;
+  else if (typeof body.aiApiKey === "string" && body.aiApiKey.trim()) {
+    upsert.ai_api_key = body.aiApiKey.trim();
+  }
+  if (aiProvider === "none") {
+    upsert.ai_api_key = null;
   }
 
   const { data, error } = await supabase

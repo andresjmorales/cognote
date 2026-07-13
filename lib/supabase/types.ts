@@ -160,6 +160,8 @@ export interface Database {
           notify_in_app: boolean;
           notify_email_portal_cancel: boolean;
           notify_email_invoice_paid: boolean;
+          ai_provider: "none" | "openai" | "anthropic";
+          ai_api_key: string | null;
           updated_at: string;
         };
         Insert: {
@@ -194,6 +196,8 @@ export interface Database {
           notify_in_app?: boolean;
           notify_email_portal_cancel?: boolean;
           notify_email_invoice_paid?: boolean;
+          ai_provider?: "none" | "openai" | "anthropic";
+          ai_api_key?: string | null;
         };
         Update: {
           studio_name?: string;
@@ -226,6 +230,8 @@ export interface Database {
           notify_in_app?: boolean;
           notify_email_portal_cancel?: boolean;
           notify_email_invoice_paid?: boolean;
+          ai_provider?: "none" | "openai" | "anthropic";
+          ai_api_key?: string | null;
         };
       };
       lesson_slots: {

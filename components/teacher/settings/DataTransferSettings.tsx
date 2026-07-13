@@ -73,7 +73,7 @@ export function DataTransferSettings() {
 
   return (
     <Card>
-      <h2 className="font-semibold text-lg mb-1">Export &amp; Import</h2>
+      <h2 className="font-semibold text-lg mb-1">Export &amp; Import all CogNote data</h2>
       <p className="text-sm text-muted mb-4">
         Download a full JSON backup of your studio data (students, families,
         schedule, lesson notes, practice history, skills, invoices, and

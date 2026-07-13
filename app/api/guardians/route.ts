@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateShortToken } from "@/lib/token";
+import {
+  insertGuardian,
+  retireEmptyGuardians,
+} from "@/lib/server/families";
 
 export async function GET() {
   const supabase = await createClient();
@@ -47,25 +50,34 @@ export async function POST(req: NextRequest) {
     ? body.emailRecipients
     : "primary";
 
-  const { data: guardian, error } = await supabase
-    .from("guardians")
-    .insert({
-      teacher_id: user.id,
-      name: body.name.trim(),
-      family_name: body.familyName?.trim() || null,
-      email: body.email?.trim() || null,
-      phone: body.phone?.trim() || null,
-      secondary_name: body.secondaryName?.trim() || null,
-      secondary_email: body.secondaryEmail?.trim() || null,
-      secondary_phone: body.secondaryPhone?.trim() || null,
-      email_recipients: emailRecipients,
-      portal_token: generateShortToken(),
-    })
-    .select()
-    .single();
+  const previousGuardianIds: string[] = [];
+  if (Array.isArray(body.studentIds) && body.studentIds.length > 0) {
+    const { data: moving } = await supabase
+      .from("students")
+      .select("id, guardian_id")
+      .in("id", body.studentIds)
+      .eq("teacher_id", user.id);
+    for (const s of moving ?? []) {
+      if (s.guardian_id) previousGuardianIds.push(s.guardian_id);
+    }
+  }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  const { data: guardian, error } = await insertGuardian(supabase, user.id, {
+    name: body.name,
+    familyName: body.familyName,
+    email: body.email,
+    phone: body.phone,
+    secondaryName: body.secondaryName,
+    secondaryEmail: body.secondaryEmail,
+    secondaryPhone: body.secondaryPhone,
+    emailRecipients,
+  });
+
+  if (error || !guardian) {
+    return NextResponse.json(
+      { error: error?.message ?? "Failed to create family" },
+      { status: 500 }
+    );
   }
 
   if (Array.isArray(body.studentIds) && body.studentIds.length > 0) {
@@ -76,7 +88,6 @@ export async function POST(req: NextRequest) {
       .eq("teacher_id", user.id);
   }
 
-  // Brand-new students created inline with the family (onboarding flow)
   if (Array.isArray(body.newStudents)) {
     const rows = body.newStudents
       .filter((s: { name?: string }) => s?.name?.trim())
@@ -90,6 +101,12 @@ export async function POST(req: NextRequest) {
       await supabase.from("students").insert(rows);
     }
   }
+
+  await retireEmptyGuardians(
+    supabase,
+    user.id,
+    previousGuardianIds.filter((id) => id !== guardian.id)
+  );
 
   return NextResponse.json(guardian);
 }

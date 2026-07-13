@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { retireEmptyGuardians } from "@/lib/server/families";
 
 export async function PUT(
   req: NextRequest,
@@ -16,12 +17,28 @@ export async function PUT(
   }
 
   const body = await req.json();
+
+  let previousGuardianId: string | null = null;
+  if (body.guardianId !== undefined) {
+    const { data: existing } = await supabase
+      .from("students")
+      .select("guardian_id")
+      .eq("id", id)
+      .eq("teacher_id", user.id)
+      .maybeSingle();
+    previousGuardianId = existing?.guardian_id ?? null;
+  }
+
   const { data, error } = await supabase
     .from("students")
     .update({
       ...(body.name !== undefined && { name: body.name }),
-      ...(body.parentContact !== undefined && { parent_contact: body.parentContact }),
-      ...(body.guardianId !== undefined && { guardian_id: body.guardianId || null }),
+      ...(body.parentContact !== undefined && {
+        parent_contact: body.parentContact,
+      }),
+      ...(body.guardianId !== undefined && {
+        guardian_id: body.guardianId || null,
+      }),
       ...(body.level !== undefined && { level: body.level?.trim() || null }),
       ...(body.birthdate !== undefined && { birthdate: body.birthdate || null }),
       ...(body.defaultRateCents !== undefined && {
@@ -38,6 +55,13 @@ export async function PUT(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (
+    previousGuardianId &&
+    previousGuardianId !== (body.guardianId || null)
+  ) {
+    await retireEmptyGuardians(supabase, user.id, [previousGuardianId]);
   }
 
   return NextResponse.json(data);
@@ -57,6 +81,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: existing } = await supabase
+    .from("students")
+    .select("guardian_id")
+    .eq("id", id)
+    .eq("teacher_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("students")
     .delete()
@@ -65,6 +96,10 @@ export async function DELETE(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (existing?.guardian_id) {
+    await retireEmptyGuardians(supabase, user.id, [existing.guardian_id]);
   }
 
   return NextResponse.json({ ok: true });

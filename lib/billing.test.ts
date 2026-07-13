@@ -139,7 +139,11 @@ describe("lessonAmountCents", () => {
 
 describe("deriveInvoiceItems", () => {
   it("creates one line per billable lesson with a rate", () => {
-    const items = deriveInvoiceItems([baseLesson], DEFAULT_POLICY);
+    const policy: StudioPolicy = {
+      ...DEFAULT_POLICY,
+      rate_basis: "per_lesson",
+    };
+    const items = deriveInvoiceItems([baseLesson], policy);
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
       guardianId: "g-1",
@@ -200,6 +204,10 @@ describe("deriveInvoiceItems", () => {
   });
 
   it("groups by guardian and sums totals", () => {
+    const policy: StudioPolicy = {
+      ...DEFAULT_POLICY,
+      rate_basis: "per_lesson",
+    };
     const items = deriveInvoiceItems(
       [
         baseLesson,
@@ -223,7 +231,7 @@ describe("deriveInvoiceItems", () => {
           },
         },
       ],
-      DEFAULT_POLICY
+      policy
     );
     const groups = groupItemsByGuardian(items);
     expect(groups.size).toBe(2);

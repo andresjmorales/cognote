@@ -30,12 +30,14 @@ export default function HelpPage() {
           </li>
           <li>
             <strong>Add students</strong> from the Students tab. A name is
-            enough to start.
+            enough to start. Add an email/phone (or mark adult student) to
+            create a family portal automatically, or upload a spreadsheet under
+            Settings → Import students.
           </li>
           <li>
-            <strong>Group students into families</strong> on the Families tab.
-            A family holds the parent&apos;s contact info and gets a private
-            portal link. Siblings share one family.
+            <strong>Group students into families</strong> on the Families tab
+            when siblings share a household. Moving the last student out of a
+            singleton family retires that empty family (unless it has invoices).
           </li>
           <li>
             <strong>Add weekly lesson slots</strong> on the Schedule tab so
@@ -65,9 +67,11 @@ export default function HelpPage() {
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
             Students hold practice assignments, analytics, skills, and notes.
-            Families hold parent contact info and the portal link. Linking a
-            student to a family is what enables emailed notes, practice links,
-            invoices, and the portal.
+            Families hold parent contact info and the portal link. When you add
+            a student with an email or phone (or mark them as an adult
+            student), CogNote creates a singleton family so portal and billing
+            work immediately. Linking a student into another family moves them;
+            empty singleton families without invoices are removed.
           </p>
           <p className="text-muted">
             If a portal link is shared too widely, use{" "}
@@ -224,6 +228,12 @@ export default function HelpPage() {
             cancellation/make-up policy, billing, payments, and notifications.
             The <strong>About the Studio</strong> section (policies in your own
             words, website, contact) appears on every family portal.
+          </p>
+          <p className="text-muted">
+            Use <strong>Import students</strong> under Settings to upload a CSV
+            or Excel sheet, map columns, preview, and create students/families.
+            Mapping works without AI; an optional BYO key under Optional AI can
+            suggest column mappings.
           </p>
           <p className="text-muted">
             Use Export / Import under Settings to back up or move studio data
