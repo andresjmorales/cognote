@@ -31,7 +31,7 @@
     "resend": "^6.17.1",
     "stripe": "^22.3.1",
     "vexflow": "^5.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
