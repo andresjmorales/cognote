@@ -140,7 +140,7 @@ export function FamilyForm({
           </p>
           <input
             type="text"
-            placeholder="e.g. The Parker Family (optional — defaults to the guardian's name)"
+            placeholder="e.g. The Parker Family (optional; defaults to the guardian's name)"
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
             className={inputClass}
@@ -275,7 +275,7 @@ export function FamilyForm({
                     }`}
                     title={
                       inOtherFamily
-                        ? "Currently in another family — selecting moves them here"
+                        ? "Currently in another family; selecting moves them here"
                         : undefined
                     }
                   >

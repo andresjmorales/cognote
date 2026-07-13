@@ -64,5 +64,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
+  await ensureStudioPolicyRow(serviceClient, userId);
+
   return NextResponse.json({ ok: true });
 }

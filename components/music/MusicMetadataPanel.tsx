@@ -122,11 +122,11 @@ export function MusicMetadataPanel({ item }: { item: Item }) {
             value={item.tags.length > 0 ? item.tags.join(", ") : "—"}
           />
           <MetaRow
-            label="Licence"
+            label="License"
             value={LICENSE_LABELS[item.license_code] ?? item.license_code}
           />
           <MetaRow
-            label="Licence URL"
+            label="License URL"
             value={
               item.license_url ? (
                 <a
@@ -207,7 +207,7 @@ export function MusicMetadataPanel({ item }: { item: Item }) {
               />
             </div>
             <div>
-              <label className="block text-xs text-muted mb-1">Licence</label>
+              <label className="block text-xs text-muted mb-1">License</label>
               <select
                 name="license_code"
                 defaultValue={item.license_code}
@@ -221,7 +221,7 @@ export function MusicMetadataPanel({ item }: { item: Item }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-muted mb-1">Licence URL</label>
+              <label className="block text-xs text-muted mb-1">License URL</label>
               <input
                 name="license_url"
                 type="url"

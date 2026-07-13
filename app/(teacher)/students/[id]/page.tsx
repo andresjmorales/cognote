@@ -266,7 +266,7 @@ export default async function StudentDetailPage({
           ) : (
             <p className="text-muted text-sm">
               <Link href="/families" className="hover:text-primary transition-colors">
-                No family linked — set one up
+                No family linked. Set one up
               </Link>
             </p>
           )}

@@ -57,12 +57,25 @@ export async function createTeacherNotification(
     href && args.origin
       ? `${args.origin.replace(/\/$/, "")}${href.startsWith("/") ? href : `/${href}`}`
       : href;
-  const text = [
-    args.title,
-    args.body ? `\n${args.body}` : "",
-    absoluteHref ? `\n\nOpen in CogNote: ${absoluteHref}` : "",
-    `\n\n— ${studio}`,
-  ].join("");
+
+  // Invoice-paid emails read as a short receipt; other types stay title + body.
+  const text =
+    args.type === "invoice_paid"
+      ? [
+          "Payment receipt",
+          "",
+          args.body ?? args.title,
+          absoluteHref ? `\nView invoice: ${absoluteHref}` : "",
+          `\n${studio}`,
+        ]
+          .filter((line) => line !== undefined)
+          .join("\n")
+      : [
+          args.title,
+          args.body ? `\n${args.body}` : "",
+          absoluteHref ? `\n\nOpen in CogNote: ${absoluteHref}` : "",
+          `\n\n${studio}`,
+        ].join("");
 
   const result = await sendEmail({
     to: teacher.email,

@@ -139,7 +139,7 @@ export function GenerateInvoicesModal({
             {preview.drafts.length === 0 ? (
               <p className="text-sm text-muted">
                 {preview.skippedAlreadyInvoiced > 0
-                  ? "Nothing new to invoice — everything billable in this period is already covered."
+                  ? "Nothing new to invoice. Everything billable in this period is already covered."
                   : "No billable lessons in this period. Mark attendance first, or adjust billability in Settings."}
               </p>
             ) : (

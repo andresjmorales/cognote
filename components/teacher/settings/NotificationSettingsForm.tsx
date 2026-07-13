@@ -42,7 +42,7 @@ export function NotificationSettingsForm({ policy }: { policy: StudioPolicy }) {
       <h2 className="font-semibold text-lg mb-1">Notifications</h2>
       <p className="text-sm text-muted mb-4">
         In-app bell (no push yet) and optional email for family portal
-        cancellations and Stripe invoice payments.
+        cancellations and Stripe payment receipts.
       </p>
       <form onSubmit={handleSave} className="space-y-3">
         <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -81,8 +81,10 @@ export function NotificationSettingsForm({ policy }: { policy: StudioPolicy }) {
             onChange={(e) => setEmailPaid(e.target.checked)}
           />
           <span>
-            <span className="font-medium">Email me when an invoice is paid online</span>
-            <span className="block text-xs text-muted">Stripe Checkout payments.</span>
+            <span className="font-medium">Email me a receipt when an invoice is paid online</span>
+            <span className="block text-xs text-muted">
+              Stripe Checkout payments. Includes family, amount, and period.
+            </span>
           </span>
         </label>
         <Button type="submit" size="sm" disabled={busy}>

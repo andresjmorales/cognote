@@ -136,7 +136,7 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
             value={studioInfo}
             onChange={(e) => setStudioInfo(e.target.value)}
             placeholder={
-              "Anything families should know — cancellation policy, make-up rules, tuition, recital dates..."
+              "Anything families should know: cancellation policy, make-up rules, tuition, recital dates..."
             }
             rows={4}
             maxLength={5000}

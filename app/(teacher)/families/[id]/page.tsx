@@ -165,7 +165,7 @@ export default async function FamilyDetailPage({
               </>
             ) : (
               <div className="text-sm text-muted">
-                None — add one with Edit Family
+                None. Add one with Edit Family
               </div>
             )}
           </div>

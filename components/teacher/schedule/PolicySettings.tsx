@@ -74,7 +74,7 @@ export function PolicySettings({
       </button>
       {!open && (
         <p className="text-xs text-muted mt-1">
-          {windowHours}h cancellation window · your rules, not ours — everything here is
+          {windowHours}h cancellation window · your rules, not ours. Everything here is
           a setting.
         </p>
       )}

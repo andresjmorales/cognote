@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { retireEmptyGuardians } from "@/lib/server/families";
 
 export async function PUT(
   req: NextRequest,
@@ -44,8 +45,22 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Sync membership: studentIds is the full desired set for this family
+  const previousGuardianIds: string[] = [];
+
   if (Array.isArray(body.studentIds)) {
+    if (body.studentIds.length > 0) {
+      const { data: moving } = await supabase
+        .from("students")
+        .select("id, guardian_id")
+        .in("id", body.studentIds)
+        .eq("teacher_id", user.id);
+      for (const s of moving ?? []) {
+        if (s.guardian_id && s.guardian_id !== id) {
+          previousGuardianIds.push(s.guardian_id);
+        }
+      }
+    }
+
     await supabase
       .from("students")
       .update({ guardian_id: null })
@@ -60,7 +75,6 @@ export async function PUT(
     }
   }
 
-  // Brand-new students created inline with the family
   if (Array.isArray(body.newStudents)) {
     const rows = body.newStudents
       .filter((s: { name?: string }) => s?.name?.trim())
@@ -74,6 +88,8 @@ export async function PUT(
       await supabase.from("students").insert(rows);
     }
   }
+
+  await retireEmptyGuardians(supabase, user.id, previousGuardianIds);
 
   return NextResponse.json(guardian);
 }
@@ -92,7 +108,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // students.guardian_id is ON DELETE SET NULL — students are kept
   const { error } = await supabase
     .from("guardians")
     .delete()
