@@ -3,7 +3,7 @@ import { sendEmail } from "@/lib/email";
 import { getPolicy } from "@/lib/server/scheduling";
 import type { StudioPolicy } from "@/lib/schedule";
 
-export type NotificationType = "portal_cancel" | "invoice_paid";
+export type NotificationType = "portal_cancel" | "invoice_paid" | "event_rsvp";
 
 export async function createTeacherNotification(
   supabase: SupabaseClient,
@@ -38,7 +38,9 @@ export async function createTeacherNotification(
   const wantEmail =
     args.type === "portal_cancel"
       ? policy.notify_email_portal_cancel
-      : policy.notify_email_invoice_paid;
+      : args.type === "invoice_paid"
+        ? policy.notify_email_invoice_paid
+        : false;
 
   if (!wantEmail) return { emailed: false };
 

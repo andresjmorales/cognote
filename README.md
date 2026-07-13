@@ -40,7 +40,9 @@ Two surfaces, one platform:
 - **Sheet music library** — upload PDF / MusicXML / MXL to a private library; search free scores (Mutopia PDF + OpenScore Lieder MXL import; OpenScore Quartets / IMSLP as links); assign to students; families view in the portal (browser PDF viewer + OpenSheetMusicDisplay)
 - **Analytics dashboard** — per-note accuracy, session history, and practice trends per student
 - **Calendar feeds** — .ics download and a subscribable calendar URL per family; cancelled lessons drop out automatically
-- **Dark mode (teacher Studio)** — toggle in the nav; practice quizzes, flashcards, free practice, and `/try` stay light for readable staff notation
+- **Events & recitals** — create studio events with performers and repertoire; families RSVP on the portal; events appear on the Schedule week view; optional invite email
+- **Practice streaks (opt-in)** — Settings toggle (off by default); completed quizzes count by default; show streak/badges on the student page and portal when enabled
+- **Dark mode (teacher Studio)** — toggle in the account menu; practice quizzes, flashcards, free practice, and `/try` stay light for readable staff notation
 - **Optional AI assists** — BYO API key (Settings → Optional AI): spreadsheet column mapping and student progress summary drafts (append to private notes after edit)
 
 ### Practice & Learning (Students)
@@ -52,7 +54,7 @@ Two surfaces, one platform:
 
 ### Family Portal (Parents)
 
-- **One private link per family** — practice links, assigned sheet music (view/download), upcoming lessons (parents can cancel with a note), notes from the teacher, invoices (pay link or payment instructions), calendar download/subscription, and studio info
+- **One private link per family** — practice links, assigned sheet music (view/download), upcoming lessons (parents can cancel with a note), studio events/RSVPs, notes from the teacher, invoices (pay link or payment instructions), calendar download/subscription, and studio info
 - **Revocable** — teachers can rotate a family's portal link at any time
 - **Parent-facing by design** — students only ever see practice pages; family details stay behind the portal token and teacher-only access
 

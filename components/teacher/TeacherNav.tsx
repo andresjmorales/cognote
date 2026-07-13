@@ -14,6 +14,7 @@ const navItems = [
   { href: "/students", label: "Students" },
   { href: "/families", label: "Families" },
   { href: "/schedule", label: "Schedule" },
+  { href: "/events", label: "Events" },
   { href: "/lessons", label: "Lessons" },
   { href: "/music", label: "Music" },
   { href: "/billing", label: "Billing" },

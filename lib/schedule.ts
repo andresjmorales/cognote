@@ -49,6 +49,11 @@ export interface StudioPolicy {
   /** Optional BYO LLM for assist features (import mapping, future drafts). */
   ai_provider: "none" | "openai" | "anthropic";
   ai_api_key: string | null;
+  // Practice streaks (opt-in)
+  streaks_enabled: boolean;
+  streak_count_quiz: boolean;
+  streak_count_free_practice: boolean;
+  streak_count_flashcards: boolean;
 }
 
 export const DEFAULT_POLICY: StudioPolicy = {
@@ -84,6 +89,10 @@ export const DEFAULT_POLICY: StudioPolicy = {
   notify_email_invoice_paid: true,
   ai_provider: "none",
   ai_api_key: null,
+  streaks_enabled: false,
+  streak_count_quiz: true,
+  streak_count_free_practice: false,
+  streak_count_flashcards: false,
 };
 
 /** Offset (ms) of `timeZone` from UTC at the instant `ts` (UTC ms). */

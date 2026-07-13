@@ -19,6 +19,8 @@ import { EditableStudentName } from "@/components/teacher/EditableStudentName";
 import { SkillsPanel } from "@/components/teacher/skills/SkillsPanel";
 import { getOrSeedDimensions } from "@/lib/server/skills";
 import { getPolicy } from "@/lib/server/scheduling";
+import { loadStudentStreakSummary } from "@/lib/server/streaks";
+import { StudentStreakCard } from "@/components/teacher/StudentStreakCard";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
 import { formatLabel, isActiveSheetMusicAssignment } from "@/lib/sheet-music";
@@ -240,6 +242,8 @@ export default async function StudentDetailPage({
   const noteItems = allItems.filter((i) => isMusicalNote(i.note));
   const conceptItems = allItems.filter((i) => !isMusicalNote(i.note));
 
+  const streakSummary = await loadStudentStreakSummary(supabase, id, policy);
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
@@ -348,6 +352,8 @@ export default async function StudentDetailPage({
           <div className="text-2xl font-bold">{totalQuestions}</div>
         </Card>
       </div>
+
+      <StudentStreakCard summary={streakSummary} />
 
       {/* Progress: skills + attendance */}
       <h2 className="text-lg font-semibold mb-3">Progress</h2>

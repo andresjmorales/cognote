@@ -32,6 +32,16 @@ export interface WeekLesson {
   } | null;
 }
 
+export interface WeekEvent {
+  id: string;
+  title: string;
+  location: string;
+  startsAt: string;
+  endsAt: string | null;
+  /** YYYY-MM-DD in studio timezone */
+  localDate: string;
+}
+
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
@@ -49,6 +59,7 @@ export function WeekView({
   today,
   timezone,
   lessons,
+  events = [],
   students,
   durationOptions,
   cancellationWindowHours,
@@ -57,6 +68,7 @@ export function WeekView({
   today: string;
   timezone: string;
   lessons: WeekLesson[];
+  events?: WeekEvent[];
   students: { id: string; name: string }[];
   durationOptions: number[];
   cancellationWindowHours: number;
@@ -183,14 +195,22 @@ export function WeekView({
             Today
           </Link>
         </div>
-        <Button size="sm" variant="secondary" onClick={() => setShowAdHoc(true)}>
-          Add One-off Lesson
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setShowAdHoc(true)}>
+            Add One-off Lesson
+          </Button>
+          <Link href={`/events/new?date=${today}`}>
+            <Button size="sm" variant="secondary">
+              + Event
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
         {days.map((date, i) => {
           const dayLessons = byDay.get(date) ?? [];
+          const dayEvents = events.filter((e) => e.localDate === date);
           const isToday = date === today;
           return (
             <div
@@ -207,6 +227,22 @@ export function WeekView({
                 {DAY_LABELS[i]} {fmtDate(date)}
               </div>
               <div className="space-y-1.5">
+                {dayEvents.map((event) => (
+                  <Link
+                    key={event.id}
+                    href={`/events/${event.id}`}
+                    className="block w-full text-left rounded-lg border border-accent/50 bg-accent/10 hover:border-accent transition-colors p-2"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-accent">
+                      Event
+                    </div>
+                    <div className="text-xs font-semibold truncate">{event.title}</div>
+                    <div className="text-xs text-muted">
+                      {formatLessonTime(event.startsAt, timezone)}
+                      {event.location ? ` · ${event.location}` : ""}
+                    </div>
+                  </Link>
+                ))}
                 {dayLessons.map((lesson) => {
                   const status = effectiveStatus(lesson);
                   return (

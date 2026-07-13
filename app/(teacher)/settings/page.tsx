@@ -7,6 +7,7 @@ import { PaymentsSettingsForm } from "@/components/teacher/settings/PaymentsSett
 import { DataTransferSettings } from "@/components/teacher/settings/DataTransferSettings";
 import { NotificationSettingsForm } from "@/components/teacher/settings/NotificationSettingsForm";
 import { OptionalAiSettingsForm } from "@/components/teacher/settings/OptionalAiSettingsForm";
+import { StreakSettingsForm } from "@/components/teacher/settings/StreakSettingsForm";
 import { SpreadsheetImportSettings } from "@/components/teacher/settings/SpreadsheetImportSettings";
 import { maskSecret, stripeStatusFromPolicy } from "@/lib/billing";
 
@@ -51,6 +52,7 @@ export default async function SettingsPage() {
           stripeStatus={stripeStatusFromPolicy(policy)}
         />
         <NotificationSettingsForm policy={clientPolicy} />
+        <StreakSettingsForm policy={clientPolicy} />
         <SpreadsheetImportSettings
           aiConfigured={
             policy.ai_provider !== "none" && Boolean(policy.ai_api_key)
