@@ -89,7 +89,7 @@ export function UploadMusicForm() {
       <div className="grid sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-muted mb-1">Title</label>
-          <input name="title" className={fieldClass} placeholder="Optional — uses filename" />
+          <input name="title" className={fieldClass} placeholder="Optional (uses filename)" />
         </div>
         <div>
           <label className="block text-xs font-medium text-muted mb-1">Composer</label>
@@ -111,7 +111,7 @@ export function UploadMusicForm() {
 
       <div className="grid sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-muted mb-1">Licence</label>
+          <label className="block text-xs font-medium text-muted mb-1">License</label>
           <select name="license_code" defaultValue="teacher_owned" className={fieldClass}>
             {LICENSE_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>
@@ -121,7 +121,7 @@ export function UploadMusicForm() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1">Licence URL</label>
+          <label className="block text-xs font-medium text-muted mb-1">License URL</label>
           <input name="license_url" type="url" className={fieldClass} />
         </div>
         <div>

@@ -29,7 +29,7 @@ Two surfaces, one platform:
 - **Scheduling & attendance** — recurring weekly lesson slots with a weekly teacher view; tap a lesson to mark attendance (attended / teacher cancel / student cancel / no-show) and jot a note. Student cancels ask when notice was given (for billing/make-ups). Bulk mark for Attended / No-show / Teacher cancelled. Slots store local time + studio timezone, so a 4:00 PM Tuesday lesson stays 4:00 PM across DST shifts
 - **Policy-driven make-ups** — make-up credits derive from attendance × your studio policy (cancellation window, which statuses earn credit, expiry); rescheduling links each make-up to the originating cancellation
 - **Lesson notes home** — private + family-facing fields; "Save & Email Family" sends the family note via email and posts it to the portal
-- **Notifications** — in-app bell for portal cancellations and Stripe payments; optional email per event in Settings
+- **Notifications** — in-app bell for portal cancellations and Stripe payments; optional email receipt when an invoice is paid online (Settings → Notifications)
 - **Billing & invoices** — generate drafts from attendance × your billability policy and rates (slot → student → studio); edit, send PDF by email, mark paid, export payments CSV; family portal shows invoice history
 - **Payments (optional)** — manual by default (Zelle/Venmo/cash instructions); optional bring-your-own Stripe Checkout links + webhook
 - **Studio settings, not code** — studio name, timezone, lesson time blocks, cancellation/make-up policy, billing rules, payment provider, notifications, data export/import, and an "About the Studio" section shown on the portal

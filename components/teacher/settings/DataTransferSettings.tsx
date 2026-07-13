@@ -77,7 +77,7 @@ export function DataTransferSettings() {
       <p className="text-sm text-muted mb-4">
         Download a full JSON backup of your studio data (students, families,
         schedule, lesson notes, practice history, skills, invoices, and
-        settings — including payment keys). Import restores into this account
+        settings, including payment keys). Import restores into this account
         by upserting matching IDs.
       </p>
 

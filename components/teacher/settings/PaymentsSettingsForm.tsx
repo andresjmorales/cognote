@@ -93,7 +93,7 @@ export function PaymentsSettingsForm({
                 checked={provider === "manual"}
                 onChange={() => setProvider("manual")}
               />
-              Manual (Zelle, Venmo, cash — mark paid yourself)
+              Manual (Zelle, Venmo, cash; mark paid yourself)
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input

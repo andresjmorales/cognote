@@ -4,7 +4,9 @@ import { getPolicy } from "@/lib/server/scheduling";
 import { constructWebhookEvent } from "@/lib/payments";
 import { createTeacherNotification } from "@/lib/server/notifications";
 import { formatMoney } from "@/lib/billing";
+import { familyDisplayName } from "@/lib/guardians";
 import { requestOrigin } from "@/lib/server/http";
+import { oneToOne } from "@/lib/schedule";
 
 /**
  * Stripe webhook per teacher (BYO keys).
@@ -63,7 +65,10 @@ export async function POST(
     const { data: invoice } = await supabase
       .from("invoices")
       .select(
-        "id, status, subtotal_cents, currency, teacher_id, period_start, period_end"
+        `
+        id, status, subtotal_cents, currency, teacher_id, period_start, period_end,
+        guardians ( name, family_name )
+      `
       )
       .eq("id", invoiceId)
       .eq("teacher_id", teacherId)
@@ -104,11 +109,28 @@ export async function POST(
         .eq("id", invoiceId)
         .eq("teacher_id", teacherId);
 
+      const guardian = oneToOne(
+        invoice.guardians as
+          | { name: string; family_name: string | null }
+          | { name: string; family_name: string | null }[]
+          | null
+      );
+      const familyLabel = guardian
+        ? familyDisplayName(guardian)
+        : "Family";
+      const amountLabel = formatMoney(amount, invoice.currency);
+      const periodLabel = `${invoice.period_start} to ${invoice.period_end}`;
+
       await createTeacherNotification(supabase, {
         teacherId,
         type: "invoice_paid",
-        title: "Invoice paid online",
-        body: `${formatMoney(amount, invoice.currency)} · ${invoice.period_start} → ${invoice.period_end}`,
+        title: `Payment received: ${amountLabel}`,
+        body: [
+          `Family: ${familyLabel}`,
+          `Amount: ${amountLabel}`,
+          `Period: ${periodLabel}`,
+          "Method: Stripe (paid online)",
+        ].join("\n"),
         href: `/billing/${invoiceId}`,
         origin: requestOrigin(req),
         policy,

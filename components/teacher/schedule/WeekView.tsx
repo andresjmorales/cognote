@@ -447,7 +447,7 @@ function LessonModal({
               onClick={onClose}
               className="w-8 h-8 rounded-lg text-success hover:bg-success/10 cursor-pointer flex items-center justify-center"
               aria-label="Done"
-              title="Done — confirm and close"
+              title="Done (confirm and close)"
             >
               <svg
                 width="18"
@@ -628,7 +628,7 @@ function LessonModal({
         <textarea
           value={privateBody}
           onChange={(e) => setPrivateBody(e.target.value)}
-          placeholder="Teacher-only — not shown to the family"
+          placeholder="Teacher-only (not shown to the family)"
           rows={3}
           className={inputClass}
         />
@@ -639,7 +639,7 @@ function LessonModal({
         <textarea
           value={familyBody}
           onChange={(e) => setFamilyBody(e.target.value)}
-          placeholder="Shown in the family portal — practice this week…"
+          placeholder="Shown in the family portal: practice this week…"
           rows={4}
           className={inputClass}
         />

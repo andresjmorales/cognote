@@ -283,7 +283,7 @@ export function SlotManager({
                 {dayTimeDurationFields}
                 {rateField}
                 <p className="text-xs text-muted">
-                  Applies to upcoming lessons only — past lessons and marked
+                  Applies to upcoming lessons only. Past lessons and marked
                   attendance stay where they are.
                 </p>
                 {error && <p className="text-error text-xs">{error}</p>}

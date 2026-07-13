@@ -114,7 +114,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
               <span>
                 <span className="font-medium">Per hour (pro-rated)</span>
                 <span className="block text-xs text-muted">
-                  Charge scales with length — e.g. $45/hr → $22.50 for 30 min,
+                  Charge scales with length (e.g. $45/hr → $22.50 for 30 min,
                   $33.75 for 45 min.
                 </span>
               </span>
@@ -158,7 +158,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
 
         <label className="text-sm">
           <span className="block text-xs font-semibold text-muted mb-1">
-            Generate invoices — default dates
+            Generate invoices (default dates)
           </span>
           <select
             value={cadence}

@@ -17,7 +17,7 @@ export default function HelpPage() {
       <div>
         <h1 className="text-3xl font-bold mb-2">Help &amp; Guide</h1>
         <p className="text-muted">
-          Everything you need to know about running your studio on CogNote.
+          How to run your studio day to day on CogNote.
         </p>
       </div>
 
@@ -25,28 +25,31 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Getting Started</h2>
         <ol className="list-decimal list-inside space-y-2 text-sm leading-relaxed">
           <li>
-            <strong>Set up your studio</strong>{" "}in Settings &mdash; studio
-            name, timezone, lesson lengths, and your cancellation/make-up
-            policy.
+            <strong>Set up your studio</strong> in Settings: studio name,
+            timezone, lesson lengths, and your cancellation/make-up policy.
           </li>
           <li>
-            <strong>Add students</strong>{" "}from the Students tab &mdash;
-            just a name is required.
+            <strong>Add students</strong> from the Students tab. A name is
+            enough to start.
           </li>
           <li>
-            <strong>Group students into families</strong>{" "}on the Families
-            tab. A family holds the parent&apos;s name and email and gets a
-            private portal link. Siblings share one family.
+            <strong>Group students into families</strong> on the Families tab.
+            A family holds the parent&apos;s contact info and gets a private
+            portal link. Siblings share one family.
           </li>
           <li>
-            <strong>Add weekly lesson slots</strong>{" "}on the Schedule tab so
+            <strong>Add weekly lesson slots</strong> on the Schedule tab so
             each student&apos;s recurring lesson time shows up automatically.
           </li>
           <li>
-            <strong>Create a practice lesson</strong>{" "}from the Lessons tab
-            and{" "}<strong>assign it</strong>{" "}to a student. If the family
-            has an email on file, the practice link is emailed automatically;
-            otherwise you can share or copy it.
+            <strong>Create a practice lesson</strong> from the Lessons tab and{" "}
+            <strong>assign it</strong> to a student. If the family has an email
+            on file, the practice link is emailed automatically (including the
+            lesson title). Otherwise you can share or copy it.
+          </li>
+          <li>
+            Optional: set a default rate in Settings → Billing, then generate
+            invoices from attendance on the Billing tab.
           </li>
         </ol>
       </Card>
@@ -54,23 +57,22 @@ export default function HelpPage() {
       {/* ---------------- Studio management ---------------- */}
       <SectionHeading
         title="Studio Management"
-        blurb="Families, scheduling, attendance, and everything parents see."
+        blurb="Families, scheduling, attendance, billing, and what parents see."
       />
 
       <Card padding="lg" className="space-y-4">
         <h2 className="text-xl font-semibold">Students &amp; Families</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Students hold everything about the learner: practice assignments,
-            analytics, skills, and notes. Families (guardians) hold the
-            parent&apos;s contact info and the portal link. Assigning a student
-            to a family is what makes emailed lesson notes, practice-link
-            emails, and the portal work.
+            Students hold practice assignments, analytics, skills, and notes.
+            Families hold parent contact info and the portal link. Linking a
+            student to a family is what enables emailed notes, practice links,
+            invoices, and the portal.
           </p>
           <p className="text-muted">
-            If a family&apos;s portal link is ever shared too widely, use{" "}
-            <strong>Reset Link</strong>{" "}on the Families page &mdash; the
-            old link stops working immediately and a new one is generated.
+            If a portal link is shared too widely, use{" "}
+            <strong>Reset Link</strong> on the Families page. The old link stops
+            working immediately and a new one is generated.
           </p>
         </div>
       </Card>
@@ -83,8 +85,8 @@ export default function HelpPage() {
             <p className="text-muted">
               A slot is a recurring lesson time (for example, Tuesdays at 4:00
               PM for 30 minutes). CogNote turns slots into individual lessons
-              on your weekly Schedule view. Times are stored in your studio
-              timezone, so they stay correct across daylight saving changes.
+              on your weekly Schedule view. Times stay correct across daylight
+              saving changes because they use your studio timezone.
             </p>
           </div>
           <div>
@@ -93,8 +95,8 @@ export default function HelpPage() {
               Tap any lesson in the weekly view to mark it: attended, teacher
               cancelled, student cancelled, or no-show. Teacher cancellations
               email the family by default (optional note; you can turn email
-              off). For student cancellations, you&apos;ll choose when notice was
-              given (just now, timely, late, or a specific time) so billing and
+              off). For student cancellations, choose when notice was given
+              (just now, timely, late, or a specific time) so billing and
               make-ups follow your cancellation window. Use{" "}
               <strong>Bulk mark attendance</strong> under the week grid for
               Attended / No-show / Teacher cancelled only.
@@ -103,9 +105,8 @@ export default function HelpPage() {
           <div>
             <h3 className="font-medium">One-off lessons</h3>
             <p className="text-muted">
-              You can also add a single lesson directly on the schedule
-              without creating a recurring slot &mdash; useful for trial
-              lessons or occasional extras.
+              You can add a single lesson on the schedule without a recurring
+              slot. Useful for trials or occasional extras.
             </p>
           </div>
         </div>
@@ -124,8 +125,13 @@ export default function HelpPage() {
           </p>
           <p className="text-muted">
             Payments default to manual (mark paid yourself). To accept cards,
-            switch Settings → Payments to Stripe and paste your own keys —
+            switch Settings → Payments to Stripe and paste your own keys.
             CogNote never holds platform payment keys for lesson tuition.
+          </p>
+          <p className="text-muted">
+            When a family pays online, the Stripe webhook marks the invoice
+            paid and can email you a short receipt (family, amount, period).
+            Turn that on or off under Settings → Notifications.
           </p>
         </div>
       </Card>
@@ -134,12 +140,11 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Make-Up Credits</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Your Settings page controls which cancellations earn a make-up
-            credit (timely cancels, late cancels, no-shows, teacher cancels)
-            and whether credits expire. When a student has an unused credit,
-            you can schedule a make-up lesson from the Schedule tab, and
-            CogNote links it to the original cancellation so nothing is
-            double-counted.
+            Settings controls which cancellations earn a make-up credit (timely
+            cancels, late cancels, no-shows, teacher cancels) and whether
+            credits expire. When a student has an unused credit, schedule a
+            make-up from the Schedule tab. CogNote links it to the original
+            cancellation so nothing is double-counted.
           </p>
         </div>
       </Card>
@@ -149,10 +154,10 @@ export default function HelpPage() {
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
             Every lesson can have a note (&ldquo;today we covered X, practice Y
-            this             week&rdquo;). Notes are private by default. Use{" "}
-            <strong>Save &amp; Email Family</strong>{" "}to send the note to
-            the family&apos;s email and post it on their portal. Replies go
-            straight to your email address, not to CogNote.
+            this week&rdquo;). Notes are private by default. Use{" "}
+            <strong>Save &amp; Email Family</strong> to send the family-facing
+            note by email and post it on their portal. Replies go to your email
+            address, not to CogNote.
           </p>
         </div>
       </Card>
@@ -161,18 +166,35 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">The Family Portal</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Each family gets one private link with everything they need: their
-            students&apos; practice links, the upcoming lesson schedule (parents
-            can cancel an upcoming lesson with an optional note), notes
-            you&apos;ve shared, invoices, your studio info, and a calendar they can
-            download or subscribe to. No account or password required &mdash;
-            remind parents to keep the link private, and reset it from the
-            Families page if needed. Portal cancellations appear in your
-            notification bell (and optionally by email — Settings → Notifications).
+            Each family gets one private link with practice links, assigned
+            sheet music, the upcoming schedule (parents can cancel with an
+            optional note), notes you&apos;ve shared, invoices, your studio
+            info, and a calendar download/subscribe URL. No account or password.
+            Remind parents to keep the link private; reset it from Families if
+            needed.
           </p>
           <p className="text-muted">
-            Students never see the portal. Practice links show only practice;
-            schedules and family details stay parent-facing.
+            Portal cancellations show in your notification bell, and optionally
+            by email (Settings → Notifications). Students never see the portal;
+            practice links show only practice.
+          </p>
+        </div>
+      </Card>
+
+      <Card padding="lg" className="space-y-4">
+        <h2 className="text-xl font-semibold">Sheet Music</h2>
+        <div className="space-y-3 text-sm leading-relaxed">
+          <p className="text-muted">
+            Under Music Library you can upload PDF or MusicXML/MXL files, edit
+            metadata (title, composer, license, tags), and assign scores to
+            students with an optional note and due date. Families view and
+            download assignments in the portal.
+          </p>
+          <p className="text-muted">
+            Use Find Scores to search Mutopia (PDF import for Public Domain /
+            CC BY) and OpenScore Lieder (MXL import). OpenScore Quartets and
+            IMSLP are link-out only. Assign emails include the piece title in
+            the subject and body when a family email is on file.
           </p>
         </div>
       </Card>
@@ -181,30 +203,32 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Skills &amp; Progress</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            On each student&apos;s page you can rate them 1&ndash;5 across
-            skill dimensions like Musicianship, Rhythm, and Sight Reading
-            (add or rename dimensions to fit how you teach). Ratings build a
-            radar chart of current levels and trend lines over time, next to
-            quiz analytics and an attendance summary.
+            On each student&apos;s page you can rate them 1&ndash;5 across skill
+            dimensions like Musicianship, Rhythm, and Sight Reading (add or
+            rename dimensions to fit how you teach). Ratings build a radar chart
+            and trend lines, next to quiz analytics and an attendance summary.
           </p>
           <p className="text-muted">
-            The optional{" "}<strong>level</strong>{" "}field next to the student name
-            anchors them to whatever system you use (RCM level, Faber book,
-            or your own).
+            The optional <strong>level</strong> field next to the student name
+            anchors them to whatever system you use (RCM level, Faber book, or
+            your own).
           </p>
         </div>
       </Card>
 
       <Card padding="lg" className="space-y-4">
-        <h2 className="text-xl font-semibold">Studio Settings &amp; Policies</h2>
+        <h2 className="text-xl font-semibold">Studio Settings &amp; Data</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Settings holds your studio name, timezone, lesson lengths, and
-            your cancellation/make-up policy. It also has an{" "}
-            <strong>About the Studio</strong>{" "}section (policies in your own
-            words, website, contact info) that appears on every family portal.
-            All of it is per-studio configuration &mdash; CogNote never
-            hardcodes anyone&apos;s rules.
+            Settings holds studio name, timezone, lesson lengths,
+            cancellation/make-up policy, billing, payments, and notifications.
+            The <strong>About the Studio</strong> section (policies in your own
+            words, website, contact) appears on every family portal.
+          </p>
+          <p className="text-muted">
+            Use Export / Import under Settings to back up or move studio data
+            (treat export files as confidential; they can include payment
+            keys).
           </p>
         </div>
       </Card>
@@ -212,7 +236,7 @@ export default function HelpPage() {
       {/* ---------------- Practice & lessons ---------------- */}
       <SectionHeading
         title="Practice & Lessons"
-        blurb="The quizzes, flashcards, and practice links your students use."
+        blurb="Quizzes, flashcards, and practice links your students use."
       />
 
       <Card padding="lg" className="space-y-4">
@@ -221,18 +245,17 @@ export default function HelpPage() {
           <div>
             <h3 className="font-medium">Templates</h3>
             <p className="text-muted">
-              Templates are reusable lesson blueprints. When you assign a template to a student,
-              CogNote creates a{" "}<em>copy</em>{" "}of it as a student-specific lesson. Changes to the
-              template afterwards won&apos;t affect already-assigned copies.
+              Templates are reusable lesson blueprints. Assigning a template
+              creates a <em>copy</em> as a student-specific lesson. Later
+              template edits do not change already-assigned copies.
             </p>
           </div>
           <div>
             <h3 className="font-medium">Student-Specific Lessons</h3>
             <p className="text-muted">
-              These are individual lessons tied to one student. You can edit them directly to
-              fine-tune what that particular student is working on. Student-specific lessons can
-              also be assigned &mdash; for example, if a student lost their link or you want to
-              share the same custom lesson with a sibling.
+              These are tied to one student. Edit them to fine-tune what that
+              student is working on. You can re-assign (for example if they
+              lost the link) or share a custom lesson with a sibling.
             </p>
           </div>
         </div>
@@ -244,23 +267,23 @@ export default function HelpPage() {
           <div>
             <h3 className="font-medium">Note Identification</h3>
             <p className="text-muted">
-              Students see a note on the staff and pick its name from multiple-choice answers.
-              You can choose the clef, key signature, accidentals, and specific notes to include.
+              Students see a note on the staff and pick its name. You choose
+              clef, key signature, accidentals, and which notes to include.
             </p>
           </div>
           <div>
             <h3 className="font-medium">Key Signature Identification</h3>
             <p className="text-muted">
-              Students see a key signature on the staff and identify which key it is. You choose
+              Students see a key signature and identify the key. You choose
               which keys to include.
             </p>
           </div>
           <div>
             <h3 className="font-medium">Musical Symbols &amp; Concepts</h3>
             <p className="text-muted">
-              Students are quizzed on musical terms, symbols, and their meanings &mdash; dynamics,
-              tempo markings, articulations, note values, and more. You select which symbols to
-              include from the built-in library.
+              Quizzes on musical terms and symbols: dynamics, tempo markings,
+              articulations, note values, and more. Pick symbols from the
+              built-in library.
             </p>
           </div>
         </div>
@@ -272,28 +295,28 @@ export default function HelpPage() {
           <div>
             <h3 className="font-medium">Lesson</h3>
             <p className="text-muted">
-              A fixed number of questions (set in the lesson). Scores are recorded and visible on
-              the student&apos;s detail page. You can optionally add a per-question time limit
-              (5&ndash;60 seconds) &mdash; unanswered questions count as incorrect. The timer
-              applies to quiz mode only.
+              A fixed number of questions. Scores appear on the student&apos;s
+              detail page. Optional per-question time limit (5&ndash;60
+              seconds); unanswered questions count as incorrect. Timer applies
+              to quiz mode only.
             </p>
           </div>
           <div>
             <h3 className="font-medium">Free Practice</h3>
             <p className="text-muted">
-              Unlimited questions with no timer &mdash; the student practices at their own pace
-              and quits whenever they want.
+              Unlimited questions, no timer. The student practices at their own
+              pace and quits whenever they want.
             </p>
           </div>
           <div>
             <h3 className="font-medium">Flashcards</h3>
             <p className="text-muted">
-              Uses spaced repetition (SM-2 algorithm, like Anki) to focus on the notes or concepts
-              the student struggles with most. Cards the student knows well &ldquo;graduate&rdquo;
-              from the session, while tricky ones keep reappearing.
+              Spaced repetition (SM-2, like Anki) focuses on notes or concepts
+              the student struggles with. Cards they know well graduate from
+              the session; tricky ones keep returning.
             </p>
             <p className="text-muted mt-1">
-              Ratings use kid-friendly labels:&nbsp;
+              Ratings:&nbsp;
               <strong>No clue 😕</strong>{" "}&bull;&nbsp;
               <strong>Tricky 🤔</strong>{" "}&bull;&nbsp;
               <strong>Got it 👍</strong>{" "}&bull;&nbsp;
@@ -306,21 +329,21 @@ export default function HelpPage() {
       <Card padding="lg" className="space-y-4">
         <h2 className="text-xl font-semibold">Student Notes &amp; Difficulty</h2>
         <p className="text-sm text-muted leading-relaxed">
-          Each lesson can have a difficulty level (beginner / intermediate / advanced) and a
-          teacher notes field for your own reminders. Students also have their own notes field
-          on their detail page &mdash; great for tracking lesson observations, practice
-          instructions, or anything you want to remember for that student.
+          Each lesson can have a difficulty (beginner / intermediate /
+          advanced) and a teacher notes field. Students also have a notes field
+          on their detail page for lesson observations or practice
+          instructions.
         </p>
       </Card>
 
       <Card padding="lg" className="space-y-4">
         <h2 className="text-xl font-semibold">Sharing Practice Links</h2>
         <p className="text-sm text-muted leading-relaxed">
-          When you assign a lesson, CogNote emails the practice link to the student&apos;s family
-          automatically if an email is on file (the email includes their portal link too). With no
-          family email, you get a share/copy option instead so you can send it over any messenger.
-          The student opens the link in any browser &mdash; no account needed. Each link is unique
-          per student+lesson and stays active until you remove the assignment.
+          Assigning a lesson emails the practice link (and lesson title) to the
+          family when an email is on file, plus their portal link in the
+          footer. With no family email, you get a share/copy option instead.
+          The student opens the link in any browser; no account needed. Each
+          link is unique per student+lesson until you remove the assignment.
         </p>
       </Card>
 
@@ -328,29 +351,32 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Tips</h2>
         <ul className="list-disc list-inside space-y-2 text-sm text-muted leading-relaxed">
           <li>
-            Start simple &mdash; a 5-note Middle C position lesson with 10 questions is
-            a great first assignment.
+            Start simple: a 5-note Middle C position lesson with 10 questions
+            is a solid first assignment.
           </li>
           <li>
-            Use flashcard mode for students who need extra drilling on specific notes.
+            Use flashcard mode for students who need extra drilling on specific
+            notes.
           </li>
           <li>
-            Check the student detail page to see per-note accuracy and session history.
+            Check the student detail page for per-note accuracy and session
+            history.
           </li>
           <li>
-            Edit a student-specific lesson anytime to add or remove notes as they progress.
+            Edit a student-specific lesson anytime to add or remove notes as
+            they progress.
           </li>
           <li>
-            Mark attendance right after each lesson and jot the note while it&apos;s fresh &mdash;
-            emailing it to the family takes one tap.
+            Mark attendance right after each lesson and jot the note while
+            it&apos;s fresh. Emailing the family takes one tap.
           </li>
           <li>
-            Encourage parents to subscribe to the portal calendar so schedule changes reach them
-            automatically.
+            Encourage parents to subscribe to the portal calendar so schedule
+            changes reach them automatically.
           </li>
           <li>
-            Rate skills every few weeks rather than every lesson &mdash; the trend lines are more
-            meaningful with a little space between ratings.
+            Rate skills every few weeks rather than every lesson. Trend lines
+            are clearer with a little space between ratings.
           </li>
         </ul>
       </Card>

@@ -64,7 +64,7 @@ export function FamilyDetailActions({
           variant="ghost"
           disabled={busy}
           onClick={handleRotate}
-          title="Generate a new family portal link — the old one stops working"
+          title="Generate a new family portal link. The old one stops working."
         >
           Reset Portal Link
         </Button>

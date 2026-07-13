@@ -33,8 +33,8 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-bold">Studio Settings</h1>
         <p className="text-muted text-sm mt-1">
           Your studio name, timezone, lesson lengths, cancellation and make-up
-          policies, billing rules, and payment options. These settings drive
-          scheduling, invoices, and what families see on their portal.
+          policies, billing rules, and payment options. These drive scheduling,
+          invoices, and what families see on their portal.
         </p>
       </div>
 
