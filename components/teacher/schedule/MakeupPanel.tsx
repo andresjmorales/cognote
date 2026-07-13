@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,28 @@ export function MakeupPanel({
   const [time, setTime] = useState("16:00");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const groups = useMemo(() => {
+    const byStudent = new Map<
+      string,
+      { studentId: string; studentName: string; credits: MakeupCredit[] }
+    >();
+    for (const credit of credits) {
+      const existing = byStudent.get(credit.studentId);
+      if (existing) {
+        existing.credits.push(credit);
+      } else {
+        byStudent.set(credit.studentId, {
+          studentId: credit.studentId,
+          studentName: credit.studentName,
+          credits: [credit],
+        });
+      }
+    }
+    return Array.from(byStudent.values()).sort((a, b) =>
+      a.studentName.localeCompare(b.studentName)
+    );
+  }, [credits]);
 
   async function handleSchedule(e: React.FormEvent) {
     e.preventDefault();
@@ -68,22 +90,36 @@ export function MakeupPanel({
           policy below) show up here.
         </p>
       ) : (
-        <div className="space-y-2">
-          {credits.map((credit) => (
-            <div
-              key={credit.attendanceId}
-              className="flex items-center justify-between gap-2 text-sm"
-            >
-              <div>
-                <span className="font-medium">{credit.studentName}</span>{" "}
-                <span className="text-muted">
-                  · {ATTENDANCE_LABELS[credit.status].toLowerCase()} on{" "}
-                  {formatShortDate(credit.missedAt, timezone)}
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <div key={group.studentId}>
+              <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                <h3 className="text-sm font-semibold">{group.studentName}</h3>
+                <span className="text-xs text-muted">
+                  {group.credits.length} credit
+                  {group.credits.length === 1 ? "" : "s"}
                 </span>
               </div>
-              <Button size="sm" variant="secondary" onClick={() => setScheduling(credit)}>
-                Schedule Make-up
-              </Button>
+              <div className="space-y-1.5 pl-0 sm:pl-1 border-l-2 border-border/80 sm:ml-0.5 sm:pl-3">
+                {group.credits.map((credit) => (
+                  <div
+                    key={credit.attendanceId}
+                    className="flex items-center justify-between gap-2 text-sm"
+                  >
+                    <span className="text-muted">
+                      {ATTENDANCE_LABELS[credit.status]} ·{" "}
+                      {formatShortDate(credit.missedAt, timezone)}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setScheduling(credit)}
+                    >
+                      Schedule
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

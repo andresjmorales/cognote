@@ -337,12 +337,12 @@ export default function HelpPage() {
       </Card>
 
       <Card padding="lg" className="space-y-4">
-        <h2 className="text-xl font-semibold">Student Notes &amp; Difficulty</h2>
+        <h2 className="text-xl font-semibold">Student Notes &amp; Plan Labels</h2>
         <p className="text-sm text-muted leading-relaxed">
-          Each lesson can have a difficulty (beginner / intermediate /
-          advanced) and a teacher notes field. Students also have a notes field
-          on their detail page for lesson observations or practice
-          instructions.
+          Each lesson can have optional labels (Easy, Intermediate, Advanced,
+          Fundamentals, or your own tags) for organizing plans — they do not
+          change how the quiz works. Students also have a notes field on their
+          detail page for lesson observations or practice instructions.
         </p>
       </Card>
 

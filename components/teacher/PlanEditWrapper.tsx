@@ -20,7 +20,7 @@ interface PlanEditWrapperProps {
     answer_choices: number;
     notes: string[];
     symbols: any[];
-    difficulty: string;
+    labels: string[];
     teacher_notes: string;
     show_hints: boolean;
     key_sig_scale_mode?: KeySigScaleMode;

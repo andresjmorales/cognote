@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TeacherNav } from "@/components/teacher/TeacherNav";
+import { TeacherThemeProvider } from "@/components/teacher/TeacherThemeProvider";
 
 export default async function TeacherLayout({
   children,
@@ -23,11 +24,11 @@ export default async function TeacherLayout({
     .single();
 
   return (
-    <div className="min-h-screen bg-background">
+    <TeacherThemeProvider>
       <TeacherNav
         teacherName={teacher?.display_name ?? user.email ?? "Teacher"}
       />
       <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
-    </div>
+    </TeacherThemeProvider>
   );
 }

@@ -41,6 +41,9 @@ export async function PUT(
       }),
       ...(body.level !== undefined && { level: body.level?.trim() || null }),
       ...(body.birthdate !== undefined && { birthdate: body.birthdate || null }),
+      ...(body.practiceStartDate !== undefined && {
+        practice_start_date: body.practiceStartDate || null,
+      }),
       ...(body.defaultRateCents !== undefined && {
         default_rate_cents:
           body.defaultRateCents === null || body.defaultRateCents === ""
