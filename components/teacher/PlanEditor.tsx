@@ -205,22 +205,59 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
       time_limit_seconds: timeLimitSeconds,
     };
 
-    let result;
+    let resultId: string | null = null;
     if (mode === "edit" && planId) {
       const { teacher_id, ...updatePayload } = payload;
-      result = await supabase
+      const result = await supabase
         .from("plans")
         .update(updatePayload)
         .eq("id", planId)
         .eq("teacher_id", user.id)
         .select()
         .single();
+      if (result.error) {
+        setError(result.error.message);
+        setLoading(false);
+        return;
+      }
+      resultId = result.data.id;
     } else {
-      result = await supabase.from("plans").insert(payload).select().single();
+      const res = await fetch("/api/lessons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: payload.name,
+          isTemplate: payload.is_template,
+          planType: payload.plan_type,
+          clef: payload.clef,
+          keySignature: payload.key_signature,
+          includeSharps: payload.include_sharps,
+          includeFlats: payload.include_flats,
+          includeChords: payload.include_chords,
+          measuresShown: payload.measures_shown,
+          questionsPerLesson: payload.questions_per_lesson,
+          answerChoices: payload.answer_choices,
+          notes: payload.notes,
+          symbols: payload.symbols,
+          keySigScaleMode: payload.key_sig_scale_mode,
+          keySignatures: payload.key_signatures,
+          labels: payload.labels,
+          teacherNotes: payload.teacher_notes,
+          showHints: payload.show_hints,
+          timeLimitSeconds: payload.time_limit_seconds,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Failed to create lesson");
+        setLoading(false);
+        return;
+      }
+      resultId = data.id;
     }
 
-    if (result.error) {
-      setError(result.error.message);
+    if (!resultId) {
+      setError("Something went wrong");
       setLoading(false);
       return;
     }

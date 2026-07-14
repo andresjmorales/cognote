@@ -35,6 +35,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const {
+    assertWithinHostedLimit,
+    limitReachedResponse,
+  } = await import("@/lib/server/entitlements");
+  const limitCheck = await assertWithinHostedLimit(supabase, user.id, "students");
+  if (!limitCheck.allowed) {
+    return NextResponse.json(limitReachedResponse(limitCheck), { status: 403 });
+  }
+
   const body = await req.json();
   const result = await createStudentWithOptionalFamily(supabase, user.id, {
     name: body.name,

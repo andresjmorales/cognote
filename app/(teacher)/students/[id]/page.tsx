@@ -9,6 +9,7 @@ import { LaunchPlanToStudentButton } from "@/components/teacher/LaunchPlanToStud
 import { AssignSheetMusicToStudentButton } from "@/components/music/AssignSheetMusicToStudentButton";
 import { UnassignSheetMusicButton } from "@/components/music/UnassignSheetMusicButton";
 import { RemoveStudentButton } from "@/components/teacher/RemoveStudentButton";
+import { ArchiveStudentButton } from "@/components/teacher/ArchiveStudentButton";
 import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { StudentNotesEditor } from "@/components/teacher/StudentNotesEditor";
 import { StudentAiSummaryCard } from "@/components/teacher/StudentAiSummaryCard";
@@ -299,6 +300,11 @@ export default async function StudentDetailPage({
               composer: item.composer ?? undefined,
               assigned: activeMusicIds.has(item.id),
             }))}
+          />
+          <ArchiveStudentButton
+            studentId={id}
+            studentName={student.name}
+            archived={Boolean(student.archived_at)}
           />
           <RemoveStudentButton studentId={id} studentName={student.name} />
         </div>

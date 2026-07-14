@@ -38,10 +38,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Create a new teacher row tied to the authenticated user's ID
+  const { hostedSignupFields } = await import("@/lib/entitlements");
+  const hosted = hostedSignupFields();
   const { error } = await serviceClient.from("teachers").insert({
     id: user.id,
     email: user.email!,
     display_name: displayName || user.email?.split("@")[0] || "Teacher",
+    hosted_plan: hosted.hosted_plan,
+    trial_ends_at: hosted.trial_ends_at,
   });
 
   if (error) {

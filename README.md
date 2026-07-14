@@ -72,8 +72,11 @@ Two surfaces, one platform:
 CogNote is under active development toward a complete studio suite. Coming next (in rough order):
 
 - **Reminders & automation** — lesson reminders, overdue-invoice nudges, practice-inactivity alerts
-- **Recitals & events** — RSVP links and per-student repertoire
-- **More learning tools** — ear training (interval/chord recognition), practice streaks and badges
+- **More learning tools** — ear training (interval/chord recognition)
+
+### Hosted option
+
+Self-host is free forever (MIT). The official hosted instance can enforce soft free-tier limits after a trial; Pro is $7/mo. See [/hosting](/hosting) on a hosted deploy, or self-host docs below. Teacher lesson Stripe (BYO) is separate from any CogNote hosted subscription.
 
 ---
 
@@ -384,6 +387,8 @@ Connect your GitHub repo to [Vercel](https://vercel.com) and set these environme
 | `RESEND_API_KEY` | Resend Dashboard → API Keys (only needed when `EMAIL_PROVIDER=resend`) |
 | `EMAIL_FROM_ADDRESS` | Optional; defaults to `notifications@cognote.studio`. Must be on a Resend-verified domain |
 | `BETA_ACCESS_CODE` | Optional; when set, sign-ups require this code and everyone else can join the waitlist. Leave unset for open sign-ups (self-hosting) |
+| `COGNOTE_DEPLOYMENT` | `self_hosted` (default) or `hosted`. Only the official hosted deploy should use `hosted` (soft limits + hosting upgrade) |
+| `HOSTED_*` / `HOSTED_STRIPE_*` / `STRIPE_PRICE_ID_PRO_MONTHLY` | Optional platform subscription vars — see `.env.example`. Not needed for self-host or teacher BYO lesson Stripe |
 
 For local dev with Mailpit, set `EMAIL_PROVIDER=smtp` in `.env.local` — emails appear in the Mailpit UI ([http://127.0.0.1:54324](http://127.0.0.1:54324)). `SMTP_HOST`/`SMTP_PORT` default to `127.0.0.1:54325` (the port exposed in `supabase/config.toml`; rerun `npx supabase start` after changing it).
 

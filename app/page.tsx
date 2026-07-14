@@ -80,18 +80,28 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b border-border bg-surface shrink-0">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
-          <span className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
+          >
             <BrandMark
               size={BRAND_ICON_SIZE.header}
               className="h-8 w-8"
             />
             CogNote
-          </span>
-          <Link href="/login">
-            <Button size="sm" variant="secondary">
-              Teacher Login
-            </Button>
           </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/hosting">
+              <Button size="sm" variant="secondary">
+                Hosting options
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="sm" variant="secondary">
+                Teacher Login
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -170,10 +180,13 @@ export default function LandingPage() {
               Open source. Your data is always yours.
             </h2>
             <p className="text-muted text-sm max-w-2xl mx-auto mb-5">
-              CogNote is MIT-licensed and free to self-host. The full stack
-              runs locally with no cloud accounts, so your studio never
-              depends on anyone else. Built by a working piano studio for its
-              own daily use.
+              CogNote is MIT-licensed and free to self-host. Run the full stack
+              locally with no cloud accounts required. Want us to host it
+              instead? See{" "}
+              <a href="/hosting" className="text-primary font-semibold">
+                hosting options
+              </a>
+              . Built by a working piano studio for its own daily use.
             </p>
             <a
               href={GITHUB_REPO_URL}
