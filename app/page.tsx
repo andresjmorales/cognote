@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/button";
 import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
+import { getDeploymentMode } from "@/lib/entitlements";
 
 const GITHUB_REPO_URL = "https://github.com/andresjmorales/cognote";
 
@@ -75,6 +76,8 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 
 export default function LandingPage() {
+  const showHostingOptions = getDeploymentMode() === "hosted";
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -91,11 +94,13 @@ export default function LandingPage() {
             CogNote
           </Link>
           <div className="flex items-center gap-2">
-            <Link href="/hosting">
-              <Button size="sm" variant="secondary">
-                Hosting options
-              </Button>
-            </Link>
+            {showHostingOptions && (
+              <Link href="/hosting">
+                <Button size="sm" variant="secondary">
+                  Hosting options
+                </Button>
+              </Link>
+            )}
             <Link href="/login">
               <Button size="sm" variant="secondary">
                 Teacher Login
@@ -180,13 +185,20 @@ export default function LandingPage() {
               Open source. Your data is always yours.
             </h2>
             <p className="text-muted text-sm max-w-2xl mx-auto mb-5">
-              CogNote is MIT-licensed and free to self-host. Run the full stack
-              locally with no cloud accounts required. Want us to host it
-              instead? See{" "}
-              <a href="/hosting" className="text-primary font-semibold">
-                hosting options
-              </a>
-              . Built by a working piano studio for its own daily use.
+              CogNote is MIT-licensed and free to self-host. Your studio&apos;s
+              data stays yours — export anytime, or run the same software on
+              your own stack. Built by a working piano studio for its own daily
+              use.
+              {showHostingOptions && (
+                <>
+                  {" "}
+                  Prefer we run it for you? See{" "}
+                  <a href="/hosting" className="text-primary font-semibold">
+                    hosting options
+                  </a>
+                  .
+                </>
+              )}
             </p>
             <a
               href={GITHUB_REPO_URL}

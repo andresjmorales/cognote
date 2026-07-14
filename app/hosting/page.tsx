@@ -13,6 +13,30 @@ import { isHostedCheckoutConfigured } from "@/lib/hosted-billing/stripe";
 
 export const metadata = { title: "Hosting options — CogNote" };
 
+function PageChrome({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-surface">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
+          >
+            <BrandMark size={BRAND_ICON_SIZE.header} className="h-8 w-8" />
+            CogNote
+          </Link>
+          <Link href="/login">
+            <Button size="sm" variant="secondary">
+              Teacher Login
+            </Button>
+          </Link>
+        </div>
+      </header>
+      {children}
+    </div>
+  );
+}
+
 export default function HostingOptionsPage() {
   const deployment = getDeploymentMode();
   const limits = getHostedLimits();
@@ -22,23 +46,7 @@ export default function HostingOptionsPage() {
 
   if (deployment === "self_hosted") {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-surface">
-          <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
-            >
-              <BrandMark size={BRAND_ICON_SIZE.header} className="h-8 w-8" />
-              CogNote
-            </Link>
-            <Link href="/login">
-              <Button size="sm" variant="secondary">
-                Teacher Login
-              </Button>
-            </Link>
-          </div>
-        </header>
+      <PageChrome>
         <main className="max-w-xl mx-auto px-4 py-16 text-center">
           <h1 className="text-3xl font-bold mb-3 font-[family-name:var(--font-nunito)]">
             No subscription on this install
@@ -62,54 +70,36 @@ export default function HostingOptionsPage() {
             </a>
           </div>
         </main>
-      </div>
+      </PageChrome>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-surface">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
-          >
-            <BrandMark size={BRAND_ICON_SIZE.header} className="h-8 w-8" />
-            CogNote
-          </Link>
-          <Link href="/login">
-            <Button size="sm" variant="secondary">
-              Teacher Login
-            </Button>
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 py-14">
+    <PageChrome>
+      <main className="max-w-5xl mx-auto px-4 py-14">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold mb-3 font-[family-name:var(--font-nunito)]">
             Free to self-host. Or let us host it.
           </h1>
           <p className="text-muted max-w-2xl mx-auto text-sm leading-relaxed">
-            CogNote is open source (MIT). Run it yourself for free with the
-            full product, or use our hosted instance — we handle updates,
-            backups, and email. Hosted includes a free tier with caps; Pro
-            removes them.
+            CogNote is open source (MIT). Run it yourself, or use our hosted
+            instance. Hosted starts with a {trialDays}-day full trial, then
+            stays free with soft caps — or go Pro for unlimited creates.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-10">
-          <section className="border border-border rounded-2xl p-6 bg-surface">
+        <div className="grid md:grid-cols-3 gap-5 mb-10">
+          <section className="border border-border rounded-2xl p-6 bg-surface flex flex-col">
             <h2 className="text-xl font-bold mb-1">Self-hosted</h2>
             <p className="text-3xl font-bold text-primary mb-3">$0</p>
-            <p className="text-sm text-muted mb-4">
+            <p className="text-sm text-muted mb-4 flex-1">
               You run the stack (Docker / Supabase, email, backups). No CogNote
-              fee. Export anytime.
+              fee. Same app as hosted.
             </p>
             <ul className="text-sm space-y-2 mb-6 text-muted">
-              <li>Unlimited students, lessons, and sheet music</li>
-              <li>Optional: your own Stripe for family tuition</li>
-              <li>Same app as hosted</li>
+              <li>Unlimited students, lessons, sheet music</li>
+              <li>Optional: your own Stripe for tuition</li>
+              <li>Export anytime</li>
             </ul>
             <a
               href="https://github.com/andresjmorales/cognote#getting-started"
@@ -122,28 +112,50 @@ export default function HostingOptionsPage() {
             </a>
           </section>
 
-          <section className="border border-primary/40 rounded-2xl p-6 bg-surface">
-            <h2 className="text-xl font-bold mb-1">Hosted</h2>
+          <section className="border border-border rounded-2xl p-6 bg-surface flex flex-col">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">
+              Hosted
+            </p>
+            <h2 className="text-xl font-bold mb-1">Free</h2>
+            <p className="text-3xl font-bold text-primary mb-3">$0</p>
+            <p className="text-sm text-muted mb-4 flex-1">
+              We run updates, backups, and email. After the {trialDays}-day
+              trial you keep using CogNote with soft caps.
+            </p>
+            <ul className="text-sm space-y-2 mb-6 text-muted">
+              <li>Up to {limits.maxStudents} active students</li>
+              <li>
+                {limits.maxPlans} practice lessons, {limits.maxSheetItems} sheet
+                music items
+              </li>
+              <li>Sending invoices stays free</li>
+            </ul>
+            <Link href="/login">
+              <Button variant="secondary" className="w-full">
+                Create account
+              </Button>
+            </Link>
+          </section>
+
+          <section className="border border-primary/40 rounded-2xl p-6 bg-surface flex flex-col">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">
+              Hosted
+            </p>
+            <h2 className="text-xl font-bold mb-1">Pro</h2>
             <p className="text-3xl font-bold text-primary mb-1">
               {price}
               <span className="text-base font-semibold text-muted">/mo</span>
             </p>
             <p className="text-xs text-muted mb-3">
-              Pro · {trialDays}-day full trial, then free with caps
+              {trialDays}-day full trial included for new accounts
             </p>
-            <p className="text-sm text-muted mb-4">
-              We run it for you. Tuition you collect stays yours — CogNote
-              doesn&apos;t take a cut.
+            <p className="text-sm text-muted mb-4 flex-1">
+              Same hosting as Free plan, without any caps on creation.
             </p>
             <ul className="text-sm space-y-2 mb-6 text-muted">
-              <li>
-                Free after trial: {limits.maxStudents} active students,{" "}
-                {limits.maxPlans} practice lessons, {limits.maxSheetItems}{" "}
-                sheet music items
-              </li>
-              <li>Pro: no create caps; export or self-host anytime</li>
-              <li>Archived students don&apos;t count toward the free limit</li>
-              <li>Sending invoices stays free (no paywall on tuition)</li>
+              <li>Unlimited students, lessons, sheet music</li>
+              <li>Export or switch to self-host anytime</li>
+              <li>Same family portal and practice tools</li>
             </ul>
             <div className="flex flex-col gap-2">
               <Link href="/login">
@@ -172,6 +184,6 @@ export default function HostingOptionsPage() {
           </a>
         </p>
       </main>
-    </div>
+    </PageChrome>
   );
 }

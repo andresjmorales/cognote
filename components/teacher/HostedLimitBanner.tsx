@@ -87,8 +87,7 @@ export function HostedPlanSummary({
         </ul>
       )}
       <p className="text-xs text-muted">
-        Hosted Pro is {price}/mo. Tuition you collect from families stays
-        yours.
+        Hosted Pro is {price}/mo.
       </p>
     </div>
   );
