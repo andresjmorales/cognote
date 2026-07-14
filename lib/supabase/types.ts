@@ -39,17 +39,35 @@ export interface Database {
           email: string;
           display_name: string;
           created_at: string;
+          hosted_plan: string;
+          trial_ends_at: string | null;
+          gifted_until: string | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          founding_number: number | null;
         };
         Insert: {
           id: string;
           email: string;
           display_name: string;
           created_at?: string;
+          hosted_plan?: string;
+          trial_ends_at?: string | null;
+          gifted_until?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          founding_number?: number | null;
         };
         Update: {
           id?: string;
           email?: string;
           display_name?: string;
+          hosted_plan?: string;
+          trial_ends_at?: string | null;
+          gifted_until?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          founding_number?: number | null;
         };
       };
       students: {
@@ -64,6 +82,7 @@ export interface Database {
           birthdate: string | null;
           practice_start_date: string | null;
           default_rate_cents: number | null;
+          archived_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -77,6 +96,7 @@ export interface Database {
           birthdate?: string | null;
           practice_start_date?: string | null;
           default_rate_cents?: number | null;
+          archived_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -88,6 +108,7 @@ export interface Database {
           birthdate?: string | null;
           practice_start_date?: string | null;
           default_rate_cents?: number | null;
+          archived_at?: string | null;
         };
       };
       guardians: {

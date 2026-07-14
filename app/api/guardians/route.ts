@@ -98,6 +98,21 @@ export async function POST(req: NextRequest) {
         birthdate: s.birthdate || null,
       }));
     if (rows.length > 0) {
+      const {
+        assertWithinHostedLimit,
+        limitReachedResponse,
+      } = await import("@/lib/server/entitlements");
+      const limitCheck = await assertWithinHostedLimit(
+        supabase,
+        user.id,
+        "students",
+        rows.length
+      );
+      if (!limitCheck.allowed) {
+        return NextResponse.json(limitReachedResponse(limitCheck), {
+          status: 403,
+        });
+      }
       await supabase.from("students").insert(rows);
     }
   }

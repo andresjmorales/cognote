@@ -2,12 +2,23 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { AddStudentForm } from "@/components/teacher/AddStudentForm";
+import { HostedLimitBanner } from "@/components/teacher/HostedLimitBanner";
 import { familyDisplayName } from "@/lib/guardians";
 import { ageFromBirthdate } from "@/lib/students";
+import { getDeploymentMode, resolveEffectivePlan } from "@/lib/entitlements";
+import {
+  countActiveStudents,
+  loadTeacherEntitlements,
+  persistDemotionIfNeeded,
+} from "@/lib/server/entitlements";
 
 export const metadata = { title: "Students" };
 
-export default async function StudentsPage() {
+export default async function StudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -15,12 +26,14 @@ export default async function StudentsPage() {
 
   if (!user) return null;
 
-  const [{ data: students }, { data: guardians }] = await Promise.all([
-    supabase
-      .from("students")
-      .select(
-        `
-        id, name, birthdate, parent_contact, created_at,
+  const params = await searchParams;
+  const showArchived = params.show === "archived";
+
+  let studentsQuery = supabase
+    .from("students")
+    .select(
+      `
+        id, name, birthdate, parent_contact, archived_at, created_at,
         guardians ( name, family_name ),
         student_plans (
           id,
@@ -28,9 +41,18 @@ export default async function StudentsPage() {
           practice_sessions ( id, total_correct, total_questions, started_at, completed_at )
         )
       `
-      )
-      .eq("teacher_id", user.id)
-      .order("name"),
+    )
+    .eq("teacher_id", user.id)
+    .order("name");
+
+  if (showArchived) {
+    studentsQuery = studentsQuery.not("archived_at", "is", null);
+  } else {
+    studentsQuery = studentsQuery.is("archived_at", null);
+  }
+
+  const [{ data: students }, { data: guardians }] = await Promise.all([
+    studentsQuery,
     supabase
       .from("guardians")
       .select("id, name, family_name")
@@ -43,6 +65,29 @@ export default async function StudentsPage() {
     name: familyDisplayName(g),
   }));
 
+  let limitBanner: React.ReactNode = null;
+  if (getDeploymentMode() === "hosted") {
+    const stored = await loadTeacherEntitlements(supabase, user.id);
+    const entitlement = resolveEffectivePlan(stored);
+    await persistDemotionIfNeeded(
+      supabase,
+      user.id,
+      stored,
+      entitlement.demotedFrom
+    );
+    if (entitlement.softLimitsApply) {
+      const activeCount = await countActiveStudents(supabase, user.id);
+      if (activeCount >= entitlement.limits.maxStudents) {
+        limitBanner = (
+          <HostedLimitBanner
+            monthlyPriceCents={entitlement.monthlyPriceCents}
+            message={`Free plan allows ${entitlement.limits.maxStudents} active students. Archive one, upgrade to Pro, or export and self-host.`}
+          />
+        );
+      }
+    }
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -51,15 +96,35 @@ export default async function StudentsPage() {
           Click a student to see their progress: practice accuracy, skill
           ratings, attendance, and assigned lessons.
         </p>
+        <p className="text-xs text-muted mt-2">
+          {showArchived ? (
+            <Link href="/students" className="text-primary font-semibold">
+              Show active
+            </Link>
+          ) : (
+            <Link
+              href="/students?show=archived"
+              className="text-primary font-semibold"
+            >
+              Show archived
+            </Link>
+          )}
+        </p>
       </div>
+
+      {limitBanner}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           {!students?.length ? (
             <Card className="text-center text-muted py-12">
               <div className="text-4xl mb-3">👋</div>
-              <p className="text-lg">No students yet</p>
-              <p className="text-sm">Add your first student using the form.</p>
+              <p className="text-lg">
+                {showArchived ? "No archived students" : "No students yet"}
+              </p>
+              {!showArchived && (
+                <p className="text-sm">Add your first student using the form.</p>
+              )}
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
@@ -90,15 +155,22 @@ export default async function StudentsPage() {
                   student.birthdate != null
                     ? ageFromBirthdate(student.birthdate)
                     : null;
-                const familyLine = student.guardians
-                  ? familyDisplayName(student.guardians)
+                const guardianRow = Array.isArray(student.guardians)
+                  ? student.guardians[0]
+                  : student.guardians;
+                const familyLine = guardianRow
+                  ? familyDisplayName(guardianRow)
                   : student.parent_contact || null;
                 const subtitle = [familyLine, age !== null ? `age ${age}` : null]
                   .filter(Boolean)
                   .join(" · ");
 
                 return (
-                  <Link key={student.id} href={`/students/${student.id}`} className="block">
+                  <Link
+                    key={student.id}
+                    href={`/students/${student.id}`}
+                    className="block"
+                  >
                     <Card
                       padding="sm"
                       className="hover:border-primary/40 transition-colors cursor-pointer"
@@ -107,6 +179,11 @@ export default async function StudentsPage() {
                         <div>
                           <div className="font-semibold text-lg">
                             {student.name}
+                            {student.archived_at && (
+                              <span className="ml-2 text-xs font-normal text-muted">
+                                Archived
+                              </span>
+                            )}
                           </div>
                           {subtitle && (
                             <div className="text-sm text-muted">{subtitle}</div>
@@ -114,7 +191,8 @@ export default async function StudentsPage() {
                         </div>
                         <div className="text-right text-sm">
                           <div className="text-muted">
-                            {totalSessions} session{totalSessions !== 1 && "s"}
+                            {totalSessions} session
+                            {totalSessions !== 1 && "s"}
                           </div>
                           {accuracy !== null && (
                             <div

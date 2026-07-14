@@ -50,6 +50,9 @@ export async function PUT(
             ? null
             : Math.max(0, Math.round(Number(body.defaultRateCents))),
       }),
+      ...(body.archived !== undefined && {
+        archived_at: body.archived ? new Date().toISOString() : null,
+      }),
     })
     .eq("id", id)
     .eq("teacher_id", user.id)

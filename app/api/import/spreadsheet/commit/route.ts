@@ -45,6 +45,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const {
+    assertWithinHostedLimit,
+    limitReachedResponse,
+  } = await import("@/lib/server/entitlements");
+  // Pre-check against unique new names after skip logic would be ideal; gate on
+  // raw valid row count so free-tier imports cannot blow past the cap.
+  const importLimitCheck = await assertWithinHostedLimit(
+    supabase,
+    user.id,
+    "students",
+    rows.length
+  );
+  if (!importLimitCheck.allowed) {
+    return NextResponse.json(
+      {
+        ...limitReachedResponse(importLimitCheck),
+        issues,
+      },
+      { status: 403 }
+    );
+  }
+
   const { data: existingStudents } = await supabase
     .from("students")
     .select("id, name")

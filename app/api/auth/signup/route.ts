@@ -53,10 +53,14 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!existing) {
+    const { hostedSignupFields } = await import("@/lib/entitlements");
+    const hosted = hostedSignupFields();
     const { error: teacherError } = await serviceClient.from("teachers").insert({
       id: userId,
       email,
       display_name: displayName || email.split("@")[0],
+      hosted_plan: hosted.hosted_plan,
+      trial_ends_at: hosted.trial_ends_at,
     });
     if (teacherError) {
       console.error("Failed to create teacher row:", teacherError);

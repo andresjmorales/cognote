@@ -70,7 +70,12 @@ export function AddStudentForm({
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error ?? "Failed to add student");
+      const base = data.error ?? "Failed to add student";
+      setError(
+        data.code === "HOSTED_LIMIT_REACHED" && data.upgradePath
+          ? `${base} See ${data.upgradePath}.`
+          : base
+      );
       setLoading(false);
       return;
     }

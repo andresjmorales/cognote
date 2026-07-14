@@ -39,6 +39,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const {
+    assertWithinHostedLimit,
+    limitReachedResponse,
+  } = await import("@/lib/server/entitlements");
+  const sheetLimit = await assertWithinHostedLimit(
+    supabase,
+    user.id,
+    "sheet_music"
+  );
+  if (!sheetLimit.allowed) {
+    return NextResponse.json(limitReachedResponse(sheetLimit), { status: 403 });
+  }
+
   const body = await req.json().catch(() => null);
   const resultId = typeof body?.resultId === "string" ? body.resultId : "";
   if (!resultId) {

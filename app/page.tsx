@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/button";
 import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
+import { getDeploymentMode } from "@/lib/entitlements";
 
 const GITHUB_REPO_URL = "https://github.com/andresjmorales/cognote";
 
@@ -75,23 +76,37 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 
 export default function LandingPage() {
+  const showHostingOptions = getDeploymentMode() === "hosted";
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="border-b border-border bg-surface shrink-0">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
-          <span className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-xl font-bold text-primary tracking-tight"
+          >
             <BrandMark
               size={BRAND_ICON_SIZE.header}
               className="h-8 w-8"
             />
             CogNote
-          </span>
-          <Link href="/login">
-            <Button size="sm" variant="secondary">
-              Teacher Login
-            </Button>
           </Link>
+          <div className="flex items-center gap-2">
+            {showHostingOptions && (
+              <Link href="/hosting">
+                <Button size="sm" variant="secondary">
+                  Hosting options
+                </Button>
+              </Link>
+            )}
+            <Link href="/login">
+              <Button size="sm" variant="secondary">
+                Teacher Login
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -170,10 +185,20 @@ export default function LandingPage() {
               Open source. Your data is always yours.
             </h2>
             <p className="text-muted text-sm max-w-2xl mx-auto mb-5">
-              CogNote is MIT-licensed and free to self-host. The full stack
-              runs locally with no cloud accounts, so your studio never
-              depends on anyone else. Built by a working piano studio for its
-              own daily use.
+              CogNote is MIT-licensed and free to self-host. Your studio&apos;s
+              data stays yours — export anytime, or run the same software on
+              your own stack. Built by a working piano studio for its own daily
+              use.
+              {showHostingOptions && (
+                <>
+                  {" "}
+                  Prefer we run it for you? See{" "}
+                  <a href="/hosting" className="text-primary font-semibold">
+                    hosting options
+                  </a>
+                  .
+                </>
+              )}
             </p>
             <a
               href={GITHUB_REPO_URL}

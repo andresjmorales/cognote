@@ -34,6 +34,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const {
+    assertWithinHostedLimit,
+    limitReachedResponse,
+  } = await import("@/lib/server/entitlements");
+  const planLimit = await assertWithinHostedLimit(supabase, user.id, "plans");
+  if (!planLimit.allowed) {
+    return NextResponse.json(limitReachedResponse(planLimit), { status: 403 });
+  }
+
   const body = await req.json();
   const { data, error } = await supabase
     .from("plans")
@@ -41,6 +50,7 @@ export async function POST(req: NextRequest) {
       teacher_id: user.id,
       name: body.name,
       is_template: body.isTemplate ?? false,
+      plan_type: body.planType ?? "note_identification",
       clef: body.clef ?? "treble",
       key_signature: body.keySignature ?? "C major",
       include_sharps: body.includeSharps ?? false,
@@ -50,6 +60,12 @@ export async function POST(req: NextRequest) {
       questions_per_lesson: body.questionsPerLesson ?? 10,
       answer_choices: body.answerChoices ?? 4,
       notes: body.notes ?? [],
+      symbols: body.symbols ?? [],
+      key_sig_scale_mode: body.keySigScaleMode ?? "major",
+      key_signatures: body.keySignatures ?? [],
+      labels: body.labels ?? [],
+      teacher_notes: body.teacherNotes ?? "",
+      show_hints: body.showHints ?? true,
       time_limit_seconds: body.timeLimitSeconds ?? 0,
     })
     .select()
