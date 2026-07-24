@@ -15,6 +15,8 @@ export function HostingSettingsForm({
   foundingNumber,
   monthlyPriceCents,
   checkoutConfigured,
+  hasStripeCustomer,
+  stripeCancelAt,
   usage,
 }: {
   plan: HostedPlan;
@@ -24,6 +26,8 @@ export function HostingSettingsForm({
   foundingNumber: number | null;
   monthlyPriceCents: number;
   checkoutConfigured: boolean;
+  hasStripeCustomer: boolean;
+  stripeCancelAt: string | null;
   usage: {
     students: number;
     plans: number;
@@ -31,14 +35,16 @@ export function HostingSettingsForm({
     limits: { maxStudents: number; maxPlans: number; maxSheetItems: number };
   };
 }) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"checkout" | "portal" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const canUpgrade =
     softLimitsApply || plan === "trial" || plan === "free" || plan === "gifted";
+  const canManageBilling =
+    checkoutConfigured && hasStripeCustomer && (plan === "pro" || !!stripeCancelAt);
 
   async function startCheckout() {
-    setBusy(true);
+    setBusy("checkout");
     setMessage(null);
     try {
       const res = await fetch("/api/hosted-billing/checkout", {
@@ -47,7 +53,7 @@ export function HostingSettingsForm({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setMessage(data.error ?? "Could not start checkout");
-        setBusy(false);
+        setBusy(null);
         return;
       }
       if (data.url) {
@@ -55,10 +61,35 @@ export function HostingSettingsForm({
         return;
       }
       setMessage("No checkout URL returned");
-      setBusy(false);
+      setBusy(null);
     } catch {
       setMessage("Could not start checkout");
-      setBusy(false);
+      setBusy(null);
+    }
+  }
+
+  async function openPortal() {
+    setBusy("portal");
+    setMessage(null);
+    try {
+      const res = await fetch("/api/hosted-billing/portal", {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(data.error ?? "Could not open billing portal");
+        setBusy(null);
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setMessage("No portal URL returned");
+      setBusy(null);
+    } catch {
+      setMessage("Could not open billing portal");
+      setBusy(null);
     }
   }
 
@@ -78,15 +109,20 @@ export function HostingSettingsForm({
         monthlyPriceCents={monthlyPriceCents}
         usage={usage}
       />
+      {stripeCancelAt && plan === "pro" && (
+        <p className="text-xs text-muted mt-2">
+          Cancels on {new Date(stripeCancelAt).toLocaleDateString()}
+        </p>
+      )}
       <div className="flex flex-wrap gap-2 mt-4">
         {canUpgrade && checkoutConfigured && (
           <Button
             type="button"
             size="sm"
-            disabled={busy || plan === "pro" || plan === "founding"}
+            disabled={busy !== null || plan === "pro" || plan === "founding"}
             onClick={startCheckout}
           >
-            {busy ? "…" : "Upgrade to Pro"}
+            {busy === "checkout" ? "…" : "Upgrade to Pro"}
           </Button>
         )}
         {canUpgrade && !checkoutConfigured && (
@@ -95,6 +131,17 @@ export function HostingSettingsForm({
               Email support to upgrade
             </Button>
           </a>
+        )}
+        {canManageBilling && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={busy !== null}
+            onClick={openPortal}
+          >
+            {busy === "portal" ? "…" : "Manage billing"}
+          </Button>
         )}
         <Link href="/hosting">
           <Button type="button" size="sm" variant="secondary">

@@ -59,10 +59,42 @@ export function getDeploymentMode(
   return v === "hosted" ? "hosted" : "self_hosted";
 }
 
-export function isBetaGateEnabled(
-  env: Record<string, string | undefined> = process.env
+function parsePublicFlag(raw: string | undefined): boolean | undefined {
+  const v = raw?.trim().toLowerCase();
+  if (v === "true" || v === "1" || v === "yes") return true;
+  if (v === "false" || v === "0" || v === "no") return false;
+  return undefined;
+}
+
+/**
+ * Whether signup/login should show the beta-code field and waitlist chrome.
+ *
+ * - `NEXT_PUBLIC_BETA_ONLY=true|false` wins when set (hosted invite-only vs open signup)
+ * - otherwise falls back to `BETA_ACCESS_CODE` being set (server-only secret)
+ *
+ * Orthogonal to `COGNOTE_DEPLOYMENT` — self-host can use a beta code; hosted can
+ * open signup while keeping soft limits.
+ *
+ * Optional `env` is for unit tests. Call with no args in app code so Next can
+ * inline `NEXT_PUBLIC_BETA_ONLY` (dynamic `process.env[name]` breaks on client).
+ */
+export function requiresBetaCode(
+  env?: Record<string, string | undefined>
 ): boolean {
-  return Boolean(env.BETA_ACCESS_CODE?.trim());
+  const betaOnlyRaw = env
+    ? env.NEXT_PUBLIC_BETA_ONLY
+    : process.env.NEXT_PUBLIC_BETA_ONLY;
+  const explicit = parsePublicFlag(betaOnlyRaw);
+  if (explicit !== undefined) return explicit;
+  const code = env ? env.BETA_ACCESS_CODE : process.env.BETA_ACCESS_CODE;
+  return Boolean(code?.trim());
+}
+
+/** @deprecated Prefer `requiresBetaCode` — same behavior. */
+export function isBetaGateEnabled(
+  env?: Record<string, string | undefined>
+): boolean {
+  return requiresBetaCode(env);
 }
 
 export function getHostedTrialDays(

@@ -44,6 +44,7 @@ export interface Database {
           gifted_until: string | null;
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
+          stripe_cancel_at: string | null;
           founding_number: number | null;
         };
         Insert: {
@@ -56,6 +57,7 @@ export interface Database {
           gifted_until?: string | null;
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
+          stripe_cancel_at?: string | null;
           founding_number?: number | null;
         };
         Update: {
@@ -67,6 +69,7 @@ export interface Database {
           gifted_until?: string | null;
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
+          stripe_cancel_at?: string | null;
           founding_number?: number | null;
         };
       };

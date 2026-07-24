@@ -4,6 +4,7 @@ import {
   formatHostedPrice,
   getDeploymentMode,
   hostedSignupFields,
+  requiresBetaCode,
   resolveEffectivePlan,
   HOSTED_LIMIT_ERROR_CODE,
   type TeacherEntitlementRow,
@@ -25,6 +26,45 @@ describe("getDeploymentMode", () => {
 
   it("recognizes hosted", () => {
     expect(getDeploymentMode({ COGNOTE_DEPLOYMENT: "hosted" })).toBe("hosted");
+  });
+});
+
+describe("requiresBetaCode", () => {
+  it("is off when nothing is set", () => {
+    expect(requiresBetaCode({})).toBe(false);
+  });
+
+  it("falls back to BETA_ACCESS_CODE when BETA_ONLY unset", () => {
+    expect(requiresBetaCode({ BETA_ACCESS_CODE: "secret" })).toBe(true);
+  });
+
+  it("lets NEXT_PUBLIC_BETA_ONLY override the code", () => {
+    expect(
+      requiresBetaCode({
+        NEXT_PUBLIC_BETA_ONLY: "false",
+        BETA_ACCESS_CODE: "still-there",
+      })
+    ).toBe(false);
+    expect(
+      requiresBetaCode({
+        NEXT_PUBLIC_BETA_ONLY: "true",
+      })
+    ).toBe(true);
+  });
+
+  it("is independent of COGNOTE_DEPLOYMENT", () => {
+    expect(
+      requiresBetaCode({
+        COGNOTE_DEPLOYMENT: "hosted",
+        NEXT_PUBLIC_BETA_ONLY: "false",
+      })
+    ).toBe(false);
+    expect(
+      requiresBetaCode({
+        COGNOTE_DEPLOYMENT: "self_hosted",
+        BETA_ACCESS_CODE: "x",
+      })
+    ).toBe(true);
   });
 });
 

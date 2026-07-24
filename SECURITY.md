@@ -26,7 +26,7 @@ CogNote is a multi-tenant studio app: each teacher’s data is isolated, and fam
 
 - Teachers sign in with **Supabase Auth** (email/password).
 - Teacher-facing routes under `app/(teacher)/` require a session; unauthenticated users are redirected to login.
-- Optional **`BETA_ACCESS_CODE`**: when set, sign-up requires the code (enforced server-side). Leave unset for open self-hosted sign-ups.
+- Optional beta gate: **`NEXT_PUBLIC_BETA_ONLY`** (UI) + **`BETA_ACCESS_CODE`** (server-only secret). Orthogonal to `COGNOTE_DEPLOYMENT`. Leave both unset for open self-hosted sign-ups. Failed code guesses are rate-limited per IP (best-effort in-memory).
 
 ### Authorization (database)
 
@@ -52,8 +52,9 @@ CogNote is a multi-tenant studio app: each teacher’s data is isolated, and fam
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only; full DB access |
 | `TOKEN_ENCRYPTION_KEY` | Server only; used for encrypting sensitive tokens at rest where applicable |
 | `RESEND_API_KEY` / SMTP | Server only |
-| Stripe secret + webhook signing secret | Stored per-teacher in `studio_policies`; **never** returned in full to the client (masked in Settings) |
-| Stripe webhook | Verifies `stripe-signature` with the teacher’s webhook secret before marking invoices paid |
+| Teacher Stripe secret + webhook signing secret | Stored per-teacher in `studio_policies` for lesson payments; **never** returned in full to the client (masked in Settings) |
+| Teacher Stripe webhook | Verifies `stripe-signature` with the teacher’s webhook secret before marking invoices paid |
+| Platform `HOSTED_STRIPE_SECRET_KEY` / `HOSTED_STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID_PRO_MONTHLY` | Vercel/env only — CogNote Hosted Pro Checkout + portal + webhook. Prefer a restricted key. Never `NEXT_PUBLIC_*`. Distinct from teacher BYO keys. |
 
 Export/import of studio data can include payment keys — treat export files as confidential.
 
