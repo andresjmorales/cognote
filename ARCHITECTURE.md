@@ -120,6 +120,7 @@ Migrations live in `supabase/migrations/`.
 | PUT/DELETE | `/api/skills/dimensions/[id]` | Rename / delete dimension |
 | GET | `/api/dashboard/summary` | Dashboard metrics |
 | POST | `/api/hosted-billing/checkout` | CogNote Hosted Pro Checkout (platform Stripe) |
+| POST | `/api/hosted-billing/portal` | Stripe Customer Portal (cancel / payment method) |
 | POST | `/api/hosted-billing/webhook` | Platform subscription webhooks |
 
 ### Student & family (token-based, no auth)
@@ -142,7 +143,7 @@ Lesson tuition Stripe (BYO per teacher) uses `/api/webhooks/stripe/[teacherId]` 
 | unset / `self_hosted` | Full product; no CogNote soft limits or Account hosting panel. Landing page hides “Hosting options”. |
 | `hosted` | Soft limits on free plan; `/hosting` + Account hosting UI; optional platform Stripe |
 
-`BETA_ACCESS_CODE` is independent: when set, signup requires the code (Vercel env, not Supabase).
+`NEXT_PUBLIC_BETA_ONLY` + `BETA_ACCESS_CODE` are independent of deployment: beta UI/API vs soft limits / hosting marketing. Never put the access code in `NEXT_PUBLIC_*`.
 
 ## Spaced repetition
 

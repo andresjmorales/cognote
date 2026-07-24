@@ -1,24 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requiresBetaCode } from "@/lib/entitlements";
+import {
+  BETA_GUESS_LIMIT,
+  BETA_GUESS_WINDOW_MS,
+  checkRateLimit,
+  clientIpFromRequest,
+  hitRateLimit,
+} from "@/lib/rateLimit";
 
 /**
- * Beta-gated sign-up. When BETA_ACCESS_CODE is set, new accounts require the
- * code; self-hosters who leave it unset get open sign-ups. Runs entirely
- * server-side so the gate can't be skipped by calling Supabase directly from
- * the login page.
+ * Sign-up. When `requiresBetaCode()` (NEXT_PUBLIC_BETA_ONLY or BETA_ACCESS_CODE),
+ * new accounts need the server-only access code. Self-hosters who leave both
+ * unset get open sign-ups. Failed beta guesses are rate-limited per IP.
  */
 export async function POST(req: NextRequest) {
   const { email, password, displayName, accessCode } = await req.json();
 
   if (typeof email !== "string" || typeof password !== "string") {
-    return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Email and password are required" },
+      { status: 400 }
+    );
   }
 
+  const betaRequired = requiresBetaCode();
   const requiredCode = process.env.BETA_ACCESS_CODE?.trim();
-  if (requiredCode) {
-    if (typeof accessCode !== "string" || accessCode.trim() !== requiredCode) {
+  const guessKey = betaRequired
+    ? `beta-guess:${clientIpFromRequest(req)}`
+    : null;
+
+  if (betaRequired) {
+    if (!requiredCode) {
+      console.error(
+        "signup: NEXT_PUBLIC_BETA_ONLY requires BETA_ACCESS_CODE on the server"
+      );
       return NextResponse.json(
-        { error: "Invalid access code. CogNote Studio is in private beta — join the waitlist and we'll be in touch." },
+        { error: "Beta signup is misconfigured. Contact support." },
+        { status: 503 }
+      );
+    }
+
+    if (guessKey) {
+      const limited = checkRateLimit(
+        guessKey,
+        BETA_GUESS_LIMIT,
+        BETA_GUESS_WINDOW_MS
+      );
+      if (!limited.ok) {
+        return NextResponse.json(
+          {
+            error: `Too many access code attempts. Try again in ${limited.retryAfterSec}s.`,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
+    if (typeof accessCode !== "string" || accessCode.trim() !== requiredCode) {
+      if (guessKey) hitRateLimit(guessKey, BETA_GUESS_WINDOW_MS);
+      return NextResponse.json(
+        {
+          error:
+            "Invalid access code. CogNote Studio is in private beta — join the waitlist and we'll be in touch.",
+        },
         { status: 403 }
       );
     }
@@ -35,10 +80,11 @@ export async function POST(req: NextRequest) {
   }
 
   // In local dev Supabase auto-confirms; sign in to establish the session.
-  const { data: signIn, error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { data: signIn, error: signInError } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
   if (signInError) {
     // Most likely "email not confirmed" — account exists, session pending.
     return NextResponse.json({ ok: true, needsConfirmation: true });
@@ -64,7 +110,10 @@ export async function POST(req: NextRequest) {
     });
     if (teacherError) {
       console.error("Failed to create teacher row:", teacherError);
-      return NextResponse.json({ error: "Failed to set up account" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to set up account" },
+        { status: 500 }
+      );
     }
   }
 

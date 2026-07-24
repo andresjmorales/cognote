@@ -35,7 +35,9 @@ export default async function AccountPage({
 
   const { data: teacher } = await supabase
     .from("teachers")
-    .select("display_name, email, created_at")
+    .select(
+      "display_name, email, created_at, stripe_customer_id, stripe_cancel_at"
+    )
     .eq("id", user.id)
     .single();
 
@@ -73,6 +75,8 @@ export default async function AccountPage({
           foundingNumber={stored?.founding_number ?? null}
           monthlyPriceCents={entitlement.monthlyPriceCents}
           checkoutConfigured={isHostedCheckoutConfigured()}
+          hasStripeCustomer={Boolean(teacher?.stripe_customer_id)}
+          stripeCancelAt={teacher?.stripe_cancel_at ?? null}
           usage={{
             students,
             plans,

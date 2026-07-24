@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // During the private beta, teacher rows are only created via /api/auth/signup
+  // During private beta, teacher rows are only created via /api/auth/signup
   // (which checks the access code) — this route must not be a backdoor.
-  if (process.env.BETA_ACCESS_CODE?.trim()) {
+  const { requiresBetaCode } = await import("@/lib/entitlements");
+  if (requiresBetaCode()) {
     return NextResponse.json(
       { error: "CogNote Studio is in private beta — sign up with an access code." },
       { status: 403 }
