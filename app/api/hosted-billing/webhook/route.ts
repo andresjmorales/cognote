@@ -129,8 +129,10 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== "subscription") break;
-        const teacherId =
-          session.metadata?.teacher_id || session.client_reference_id;
+        // Attribute only via our metadata key (not bare client_reference_id) —
+        // other Checkout sessions on the same Stripe account may set that to
+        // unrelated ids. Unknown sessions are ignored (HTTP 200).
+        const teacherId = session.metadata?.teacher_id;
         const subscriptionId =
           typeof session.subscription === "string"
             ? session.subscription
@@ -139,7 +141,15 @@ export async function POST(req: NextRequest) {
           typeof session.customer === "string"
             ? session.customer
             : session.customer?.id;
-        if (!teacherId || !subscriptionId) break;
+        if (!teacherId || !subscriptionId) {
+          if (!teacherId) {
+            console.info(
+              "hosted billing webhook: ignoring checkout with no mapped teacher",
+              session.id
+            );
+          }
+          break;
+        }
         await applyPro(service, teacherId, {
           stripe_subscription_id: subscriptionId,
           ...(customerId ? { stripe_customer_id: customerId } : {}),
