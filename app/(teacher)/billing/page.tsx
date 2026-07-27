@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
 import { toLocalDateString } from "@/lib/schedule";
-import { defaultInvoicePeriod } from "@/lib/billing";
+import { defaultInvoicePeriod, stripeStatusFromPolicy } from "@/lib/billing";
 import { familyDisplayName } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
 import { Card } from "@/components/ui/card";
 import { BillingListActions } from "@/components/teacher/billing/BillingList";
 import { InvoiceList } from "@/components/teacher/billing/InvoiceList";
+import { PaymentSettingsButton } from "@/components/teacher/billing/PaymentSettingsButton";
 
 export const metadata = { title: "Billing" };
 
@@ -48,6 +49,14 @@ export default async function BillingPage() {
     };
   });
 
+  const clientPolicy = {
+    ...policy,
+    stripe_secret_key: null,
+    stripe_publishable_key: null,
+    stripe_webhook_secret: null,
+    ai_api_key: null,
+  };
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -55,14 +64,22 @@ export default async function BillingPage() {
           <h1 className="text-2xl font-bold">Billing</h1>
           <p className="text-muted text-sm mt-1">
             Typical month: Generate for last month → review drafts → select all
-            → Send. Rates and billability live in Settings.
+            → Send. Rates and billability live in Studio; configure Stripe or
+            payment instructions via Payment settings.
           </p>
         </div>
-        <BillingListActions
-          defaultStart={period.start}
-          defaultEnd={period.end}
-          currency={policy.currency}
-        />
+        <div className="flex flex-wrap gap-2">
+          <PaymentSettingsButton
+            policy={clientPolicy}
+            teacherId={user.id}
+            stripeStatus={stripeStatusFromPolicy(policy)}
+          />
+          <BillingListActions
+            defaultStart={period.start}
+            defaultEnd={period.end}
+            currency={policy.currency}
+          />
+        </div>
       </div>
 
       <Card padding="sm">

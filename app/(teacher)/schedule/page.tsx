@@ -211,8 +211,8 @@ export default async function SchedulePage({
           <MakeupPanel credits={credits} timezone={policy.timezone} />
           <p className="text-sm text-muted">
             Cancellation window, make-up rules, and time blocks live in{" "}
-            <Link href="/settings" className="text-primary hover:underline">
-              Studio Settings
+            <Link href="/studio" className="text-primary hover:underline">
+              Studio
             </Link>
             .
           </p>

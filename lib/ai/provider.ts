@@ -16,7 +16,7 @@ export async function suggestMappingWithAi(args: {
   if (args.provider === "none" || !args.apiKey.trim()) {
     return {
       mapping: {},
-      error: "No AI provider configured. Add a key in Settings → Optional AI.",
+      error: "No AI provider configured. Add a key in Account settings → Optional AI.",
     };
   }
 
@@ -97,7 +97,7 @@ export async function draftStudentSummaryWithAi(args: {
   if (args.provider === "none" || !args.apiKey.trim()) {
     return {
       summary: "",
-      error: "No AI provider configured. Add a key in Settings → Optional AI.",
+      error: "No AI provider configured. Add a key in Account settings → Optional AI.",
     };
   }
 

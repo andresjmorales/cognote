@@ -98,7 +98,7 @@ export function HostingSettingsForm({
       <h2 className="font-semibold mb-1">Hosting plan</h2>
       <p className="text-sm text-muted mb-3">
         Your CogNote subscription on this hosted site. Family tuition (Zelle,
-        Venmo, or your own Stripe) is separate — see Studio Settings → Payments.
+        Venmo, or your own Stripe) is separate — see Billing → Payment settings.
       </p>
       <HostedPlanSummary
         plan={plan}

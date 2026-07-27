@@ -25,14 +25,15 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Getting Started</h2>
         <ol className="list-decimal list-inside space-y-2 text-sm leading-relaxed">
           <li>
-            <strong>Set up your studio</strong> in Settings: studio name,
-            timezone, lesson lengths, and your cancellation/make-up policy.
+            <strong>Set up your studio</strong> under Studio: studio name,
+            lesson lengths, and your cancellation/make-up policy. Set timezone
+            in Account settings (defaults from your browser at signup).
           </li>
           <li>
             <strong>Add students</strong> from the Students tab. A name is
             enough to start. Add an email/phone (or mark adult student) to
             create a family portal automatically, or upload a spreadsheet under
-            Settings → Import students.
+            Account settings → Import students.
           </li>
           <li>
             <strong>Group students into families</strong> on the Families tab
@@ -50,7 +51,7 @@ export default function HelpPage() {
             lesson title). Otherwise you can share or copy it.
           </li>
           <li>
-            Optional: set a default rate in Settings → Billing, then generate
+            Optional: set a default rate in Studio → Rates, then generate
             invoices from attendance on the Billing tab.
           </li>
         </ol>
@@ -120,22 +121,23 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Billing &amp; Payments</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Set your default rate (per lesson or per hour), billability rules,
-            and payment instructions in Settings. Optional per-student and
-            per-slot rates override the studio default. On the Billing tab,
-            generate draft invoices for a date range from marked attendance,
-            edit line items, then Send to email a PDF and post the invoice to
-            the family portal.
+            Set your default rate (per lesson or per hour) and billability rules
+            in Studio → Rates. Payment instructions and Stripe live under
+            Billing → Payment settings. Optional per-student and per-slot rates
+            override the studio default. On the Billing tab, generate draft
+            invoices for a date range from marked attendance, edit line items,
+            then Send to email a PDF and post the invoice to the family portal.
           </p>
           <p className="text-muted">
             Payments default to manual (mark paid yourself). To accept cards,
-            switch Settings → Payments to Stripe and paste your own keys.
-            CogNote never holds platform payment keys for lesson tuition.
+            open Billing → Payment settings, switch to Stripe, and paste your
+            own keys. CogNote never holds platform payment keys for lesson
+            tuition.
           </p>
           <p className="text-muted">
             When a family pays online, the Stripe webhook marks the invoice
             paid and can email you a short receipt (family, amount, period).
-            Turn that on or off under Settings → Notifications.
+            Turn that on or off under Account settings → Notifications.
           </p>
         </div>
       </Card>
@@ -144,11 +146,11 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Make-Up Credits</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Settings controls which cancellations earn a make-up credit (timely
-            cancels, late cancels, no-shows, teacher cancels) and whether
-            credits expire. When a student has an unused credit, schedule a
-            make-up from the Schedule tab. CogNote links it to the original
-            cancellation so nothing is double-counted.
+            Studio → Make-up policy controls which cancellations earn a make-up
+            credit (timely cancels, late cancels, no-shows, teacher cancels)
+            and whether credits expire. When a student has an unused credit,
+            schedule a make-up from the Schedule tab. CogNote links it to the
+            original cancellation so nothing is double-counted.
           </p>
         </div>
       </Card>
@@ -179,8 +181,8 @@ export default function HelpPage() {
           </p>
           <p className="text-muted">
             Portal cancellations show in your notification bell, and optionally
-            by email (Settings → Notifications). Students never see the portal;
-            practice links show only practice.
+            by email (Account settings → Notifications). Students never see the
+            portal; practice links show only practice.
           </p>
         </div>
       </Card>
@@ -221,24 +223,25 @@ export default function HelpPage() {
       </Card>
 
       <Card padding="lg" className="space-y-4">
-        <h2 className="text-xl font-semibold">Studio Settings &amp; Data</h2>
+        <h2 className="text-xl font-semibold">Studio, Account &amp; Data</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Settings holds studio name, timezone, lesson lengths,
-            cancellation/make-up policy, billing, payments, and notifications.
-            The <strong>About the Studio</strong> section (policies in your own
+            <strong>Studio</strong> holds studio name, lesson lengths,
+            cancellation/make-up policy, rates, and practice streaks. The{" "}
+            <strong>About the Studio</strong> section (policies in your own
             words, website, contact) appears on every family portal.
           </p>
           <p className="text-muted">
-            Use <strong>Import students</strong> under Settings to upload a CSV
-            or Excel sheet, map columns, preview, and create students/families.
+            <strong>Account settings</strong> holds timezone, notifications,
+            optional AI, spreadsheet import, and full data export/import.
             Mapping works without AI; an optional BYO key under Optional AI can
             suggest column mappings.
           </p>
           <p className="text-muted">
-            Use Export / Import under Settings to back up or move studio data
-            (treat export files as confidential; they can include payment
-            keys).
+            Use Export / Import under Account settings to back up or move studio
+            data (treat export files as confidential; they can include payment
+            keys). Configure Stripe or payment instructions from Billing →
+            Payment settings.
           </p>
         </div>
       </Card>

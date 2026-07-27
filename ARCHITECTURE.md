@@ -26,9 +26,9 @@ cognote/
 │   │   ├── students/           # List + [id] detail (skills, progress, archive)
 │   │   ├── families/
 │   │   ├── schedule/
-│   │   ├── settings/           # Studio policy, billing, BYO Stripe, import
-│   │   ├── account/            # Profile + hosted plan (when COGNOTE_DEPLOYMENT=hosted)
-│   │   ├── billing/
+│   │   ├── studio/             # Studio identity, make-up policy, rates, streaks
+│   │   ├── account/            # Profile, timezone, notifications, AI, import/export (+ hosted plan when COGNOTE_DEPLOYMENT=hosted)
+│   │   ├── billing/            # Invoices + Payment settings (BYO Stripe)
 │   │   ├── events/
 │   │   ├── music/              # Sheet music library
 │   │   └── lessons/

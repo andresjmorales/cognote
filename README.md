@@ -29,10 +29,10 @@ Two surfaces, one platform:
 - **Scheduling & attendance** — recurring weekly lesson slots with a weekly teacher view; tap a lesson to mark attendance (attended / teacher cancel / student cancel / no-show) and jot a note. Student cancels ask when notice was given (for billing/make-ups). Bulk mark for Attended / No-show / Teacher cancelled. Slots store local time + studio timezone, so a 4:00 PM Tuesday lesson stays 4:00 PM across DST shifts
 - **Policy-driven make-ups** — make-up credits derive from attendance × your studio policy (cancellation window, which statuses earn credit, expiry); rescheduling links each make-up to the originating cancellation
 - **Lesson notes home** — private + family-facing fields; "Save & Email Family" sends the family note via email and posts it to the portal
-- **Notifications** — in-app bell for portal cancellations and Stripe payments; optional email receipt when an invoice is paid online (Settings → Notifications)
+- **Notifications** — in-app bell for portal cancellations and Stripe payments; optional email receipt when an invoice is paid online (Account settings → Notifications)
 - **Billing & invoices** — generate drafts from attendance × your billability policy and rates (slot → student → studio; default rate basis is per-hour); edit, send PDF by email, mark paid, export payments CSV; family portal shows invoice history
 - **Payments (optional)** — manual by default (Zelle/Venmo/cash instructions); optional bring-your-own Stripe Checkout links + webhook
-- **Studio settings, not code** — studio name, timezone, lesson time blocks, cancellation/make-up policy, billing rules, payment provider, notifications, spreadsheet student import, optional BYO AI assist, data export/import, and an "About the Studio" section shown on the portal
+- **Studio settings, not code** — studio name, lesson time blocks, cancellation/make-up policy, rates, and practice streaks under Studio; timezone, notifications, spreadsheet import, optional BYO AI, and data export/import under Account; payment provider under Billing → Payment settings; plus an "About the Studio" section shown on the portal
 - **Skills & progress tracking** — rate students 1–5 across teacher-defined skill dimensions (Musicianship, Rhythm, Sight Reading, ...); radar chart of current levels, trend lines over time, attendance summary, and an optional level anchor (RCM, Faber)
 - **Customizable lesson plans** — three plan types: note identification (C2–C7, both clefs), key signature identification, and musical symbols & concepts; reusable templates assigned in one click; optional organizational labels (Easy / Intermediate / Advanced / Fundamentals or custom)
 - **Timed quizzes** — optional per-question time limit (5–60 seconds) on any plan
@@ -41,9 +41,9 @@ Two surfaces, one platform:
 - **Analytics dashboard** — per-note accuracy, session history, and practice trends per student
 - **Calendar feeds** — .ics download and a subscribable calendar URL per family; cancelled lessons drop out automatically
 - **Events & recitals** — create studio events with performers and repertoire; families RSVP on the portal; events appear on the Schedule week view; optional invite email
-- **Practice streaks (opt-in)** — Settings toggle (off by default); completed quizzes count by default; show streak/badges on the student page and portal when enabled
+- **Practice streaks (opt-in)** — Studio toggle (off by default); completed quizzes count by default; show streak/badges on the student page and portal when enabled
 - **Dark mode (teacher Studio)** — toggle in the account menu; practice quizzes, flashcards, free practice, and `/try` stay light for readable staff notation
-- **Optional AI assists** — BYO API key (Settings → Optional AI): spreadsheet column mapping and student progress summary drafts (append to private notes after edit)
+- **Optional AI assists** — BYO API key (Account settings → Optional AI): spreadsheet column mapping and student progress summary drafts (append to private notes after edit)
 
 ### Practice & Learning (Students)
 
@@ -202,12 +202,12 @@ Use **cloud** Supabase keys on Vercel, not Docker local keys.
 
 ### 6. Family tuition payments (optional)
 
-Manual mark-paid works with zero config (Settings → payment instructions).
+Manual mark-paid works with zero config (Billing → Payment settings → payment instructions).
 
 **Teacher BYO Stripe** (lesson invoices — not CogNote subscriptions):
 
 1. Stripe account (test mode first)
-2. Settings → Payments → paste Secret + Publishable keys
+2. Billing → Payment settings → paste Secret + Publishable keys
 3. Webhook to `https://<host>/api/webhooks/stripe/<your-teacher-id>`, event `checkout.session.completed`
 4. Paste signing secret; test with `4242…`
 

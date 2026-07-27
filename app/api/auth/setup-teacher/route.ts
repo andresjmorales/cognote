@@ -12,8 +12,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { displayName } = await req.json();
+  const { displayName, timezone } = await req.json();
   const serviceClient = createServiceClient();
+  const tz = typeof timezone === "string" ? timezone : null;
 
   // Check if a teacher row already exists for this auth user
   const { data: existing } = await serviceClient
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) {
     const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
-    await ensureStudioPolicyRow(serviceClient, user.id);
+    await ensureStudioPolicyRow(serviceClient, user.id, tz);
     return NextResponse.json({ ok: true });
   }
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
-  await ensureStudioPolicyRow(serviceClient, user.id);
+  await ensureStudioPolicyRow(serviceClient, user.id, tz);
 
   return NextResponse.json({ ok: true });
 }

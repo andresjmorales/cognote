@@ -42,7 +42,7 @@ export const DEFAULT_HOSTED_FREE_MAX_STUDENTS = 5;
 export const DEFAULT_HOSTED_FREE_MAX_PLANS = 5;
 export const DEFAULT_HOSTED_FREE_MAX_SHEET_ITEMS = 5;
 export const DEFAULT_HOSTED_TRIAL_DAYS = 30;
-export const DEFAULT_HOSTED_MONTHLY_PRICE_CENTS = 700;
+export const DEFAULT_HOSTED_MONTHLY_PRICE_CENTS = 500;
 
 export const HOSTED_LIMIT_ERROR_CODE = "HOSTED_LIMIT_REACHED";
 
@@ -356,7 +356,7 @@ export function evaluateLimit(
   };
 }
 
-/** Human label for Settings / hosting options. */
+/** Human label for Account / hosting options. */
 export function planDisplayName(plan: HostedPlan): string {
   switch (plan) {
     case "trial":

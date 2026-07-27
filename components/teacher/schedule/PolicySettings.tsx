@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { StudioPolicy } from "@/lib/schedule";
@@ -12,6 +13,7 @@ const inputClass =
 /**
  * Studio policies are per-teacher settings, not hardcoded rules (ROADMAP §3).
  * These options drive make-up credit derivation and billing billability.
+ * Timezone is edited in Account settings; shown here as a read-only reminder.
  */
 export function PolicySettings({
   policy,
@@ -25,7 +27,6 @@ export function PolicySettings({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [timezone, setTimezone] = useState(policy.timezone);
   const [windowHours, setWindowHours] = useState(policy.cancellation_window_hours);
   const [timelyEarns, setTimelyEarns] = useState(policy.timely_cancel_earns_makeup);
   const [lateEarns, setLateEarns] = useState(policy.late_cancel_earns_makeup);
@@ -43,7 +44,6 @@ export function PolicySettings({
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        timezone,
         cancellationWindowHours: windowHours,
         timelyCancelEarnsMakeup: timelyEarns,
         lateCancelEarnsMakeup: lateEarns,
@@ -69,34 +69,32 @@ export function PolicySettings({
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between cursor-pointer"
       >
-        <h2 className="font-semibold">Studio Policy</h2>
+        <h2 className="font-semibold">Make-up policy</h2>
         <span className="text-muted text-sm">{open ? "▴" : "▾"}</span>
       </button>
       {!open && (
         <p className="text-xs text-muted mt-1">
-          {windowHours}h cancellation window · your rules, not ours. Everything here is
-          a setting.
+          {windowHours}h cancellation window · your rules, not ours.
         </p>
       )}
 
       {open && (
         <form onSubmit={handleSave} className="flex flex-col gap-3 mt-3">
-          <label className="text-sm">
+          <div className="text-sm">
             <span className="block text-xs font-semibold text-muted mb-1">
               Studio timezone
             </span>
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className={`${inputClass} w-full`}
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
-              ))}
-            </select>
-          </label>
+            <p className="px-3 py-2 rounded-lg border border-border bg-surface-dim text-muted text-sm">
+              {policy.timezone}
+            </p>
+            <p className="text-xs text-muted mt-1">
+              Used for schedule times and make-up windows.{" "}
+              <Link href="/account" className="text-primary hover:underline">
+                Change in Account settings
+              </Link>
+              .
+            </p>
+          </div>
 
           <label className="text-sm">
             <span className="block text-xs font-semibold text-muted mb-1">
@@ -183,23 +181,3 @@ export function PolicySettings({
     </Card>
   );
 }
-
-const TIMEZONES = [
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Phoenix",
-  "America/Los_Angeles",
-  "America/Anchorage",
-  "Pacific/Honolulu",
-  "America/Toronto",
-  "America/Vancouver",
-  "America/Mexico_City",
-  "Europe/London",
-  "Europe/Paris",
-  "Europe/Berlin",
-  "Europe/Madrid",
-  "Australia/Sydney",
-  "Asia/Tokyo",
-  "America/Tegucigalpa",
-];

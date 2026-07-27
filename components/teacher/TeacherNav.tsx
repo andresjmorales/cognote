@@ -18,7 +18,7 @@ const navItems = [
   { href: "/lessons", label: "Lessons" },
   { href: "/music", label: "Music" },
   { href: "/billing", label: "Billing" },
-  { href: "/settings", label: "Settings" },
+  { href: "/studio", label: "Studio" },
 ];
 
 function initialsFromName(name: string): string {

@@ -3,6 +3,13 @@ import { Card } from "@/components/ui/card";
 import { AccountSettings } from "@/components/teacher/AccountSettings";
 import { HostingSettingsForm } from "@/components/teacher/settings/HostingSettingsForm";
 import { HostedLimitBanner } from "@/components/teacher/HostedLimitBanner";
+import { TimezoneSettingsForm } from "@/components/teacher/settings/TimezoneSettingsForm";
+import { NotificationSettingsForm } from "@/components/teacher/settings/NotificationSettingsForm";
+import { OptionalAiSettingsForm } from "@/components/teacher/settings/OptionalAiSettingsForm";
+import { SpreadsheetImportSettings } from "@/components/teacher/settings/SpreadsheetImportSettings";
+import { DataTransferSettings } from "@/components/teacher/settings/DataTransferSettings";
+import { getPolicy } from "@/lib/server/scheduling";
+import { maskSecret } from "@/lib/billing";
 import {
   getDeploymentMode,
   resolveEffectivePlan,
@@ -40,6 +47,15 @@ export default async function AccountPage({
     )
     .eq("id", user.id)
     .single();
+
+  const policy = await getPolicy(supabase, user.id);
+  const clientPolicy = {
+    ...policy,
+    stripe_secret_key: null,
+    stripe_publishable_key: null,
+    stripe_webhook_secret: null,
+    ai_api_key: null,
+  };
 
   let hostingSection: React.ReactNode = null;
   let limitBanner: React.ReactNode = null;
@@ -89,7 +105,7 @@ export default async function AccountPage({
   }
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Account Settings</h1>
 
       {params.hosted === "success" && (
@@ -123,10 +139,28 @@ export default async function AccountPage({
         </div>
       </Card>
 
-      <AccountSettings
-        initialName={teacher?.display_name ?? ""}
-        currentEmail={user.email ?? teacher?.email ?? ""}
-      />
+      <div className="space-y-6">
+        <AccountSettings
+          initialName={teacher?.display_name ?? ""}
+          currentEmail={user.email ?? teacher?.email ?? ""}
+        />
+
+        <TimezoneSettingsForm timezone={policy.timezone} />
+        <NotificationSettingsForm policy={clientPolicy} />
+        <OptionalAiSettingsForm
+          policy={clientPolicy}
+          aiStatus={{
+            configured: Boolean(policy.ai_api_key),
+            masked: maskSecret(policy.ai_api_key),
+          }}
+        />
+        <SpreadsheetImportSettings
+          aiConfigured={
+            policy.ai_provider !== "none" && Boolean(policy.ai_api_key)
+          }
+        />
+        <DataTransferSettings />
+      </div>
     </div>
   );
 }

@@ -23,7 +23,6 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
   );
   const [currency, setCurrency] = useState(policy.currency || "USD");
   const [cadence, setCadence] = useState<InvoiceCadence>(policy.invoice_cadence);
-  const [instructions, setInstructions] = useState(policy.payment_instructions);
   const [billAttended, setBillAttended] = useState(policy.bill_attended);
   const [billNoShow, setBillNoShow] = useState(policy.bill_no_show);
   const [billTeacherCancel, setBillTeacherCancel] = useState(
@@ -56,7 +55,6 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
         rateBasis,
         currency: currency.trim().toUpperCase() || "USD",
         invoiceCadence: cadence,
-        paymentInstructions: instructions,
         billAttended,
         billNoShow,
         billTeacherCancel,
@@ -80,7 +78,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
 
   return (
     <Card padding="sm">
-      <h2 className="font-semibold mb-3">Billing</h2>
+      <h2 className="font-semibold mb-3">Rates</h2>
       <form onSubmit={handleSave} className="flex flex-col gap-4">
         <fieldset>
           <legend className="text-xs font-semibold text-muted mb-1">
@@ -232,26 +230,9 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           </div>
         </fieldset>
 
-        <label className="text-sm">
-          <span className="block text-xs font-semibold text-muted mb-1">
-            Payment instructions
-          </span>
-          <textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="e.g. Zelle to you@email.com · Venmo @yourstudio · cash at lesson"
-            rows={3}
-            maxLength={2000}
-            className={`${inputClass} w-full resize-y`}
-          />
-          <span className="block text-xs text-muted mt-1">
-            Shown on invoices and the family portal when using manual payments.
-          </span>
-        </label>
-
         <div className="flex items-center gap-3">
           <Button type="submit" size="sm" disabled={busy}>
-            {busy ? "Saving..." : "Save Billing"}
+            {busy ? "Saving..." : "Save Rates"}
           </Button>
           {message && <span className="text-xs text-muted">{message}</span>}
         </div>

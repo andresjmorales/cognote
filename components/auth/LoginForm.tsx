@@ -82,6 +82,7 @@ export function LoginForm({ betaRequired }: { betaRequired: boolean }) {
             password,
             displayName: displayName || email.split("@")[0],
             accessCode: betaRequired ? accessCode : undefined,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -103,7 +104,10 @@ export function LoginForm({ betaRequired }: { betaRequired: boolean }) {
         await fetch("/api/auth/setup-teacher", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ displayName: email.split("@")[0] }),
+          body: JSON.stringify({
+            displayName: email.split("@")[0],
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          }),
         });
       }
 
@@ -115,6 +119,13 @@ export function LoginForm({ betaRequired }: { betaRequired: boolean }) {
       if (msg.toLowerCase().includes("email not confirmed")) {
         setError(
           "Please check your email and click the confirmation link to activate your account."
+        );
+      } else if (
+        msg === "Failed to fetch" ||
+        /networkerror|fetch failed|load failed/i.test(msg)
+      ) {
+        setError(
+          "Can't reach the auth server. Check your connection — and if you're running locally, start Docker Desktop then run npx supabase start."
         );
       } else {
         setError(msg);

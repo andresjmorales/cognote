@@ -29,7 +29,7 @@ export async function loadTeacherEntitlements(
 }
 
 /**
- * Persist lazy demotion (trial/gift → free) so Settings stays honest.
+ * Persist lazy demotion (trial/gift → free) so Account hosting stays honest.
  * Safe to call often; no-op when nothing changed.
  */
 export async function persistDemotionIfNeeded(

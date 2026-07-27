@@ -201,6 +201,6 @@ describe("hostedSignupFields", () => {
 
 describe("formatHostedPrice", () => {
   it("formats whole dollars", () => {
-    expect(formatHostedPrice(700)).toBe("$7");
+    expect(formatHostedPrice(500)).toBe("$5");
   });
 });
