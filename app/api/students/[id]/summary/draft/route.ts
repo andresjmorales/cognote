@@ -47,7 +47,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Optional AI is not configured. Add a provider and key under Settings → Optional AI.",
+          "Optional AI is not configured. Add a provider and key under Account settings → Optional AI.",
       },
       { status: 400 }
     );

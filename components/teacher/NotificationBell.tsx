@@ -147,11 +147,11 @@ export function NotificationBell() {
           <div className="px-3 py-2 border-t border-border text-[11px] text-muted">
             Email alerts are controlled in{" "}
             <Link
-              href="/settings"
+              href="/account"
               className="text-primary hover:underline"
               onClick={() => setOpen(false)}
             >
-              Settings
+              Account settings
             </Link>
             .
           </div>

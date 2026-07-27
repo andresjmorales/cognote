@@ -15,7 +15,8 @@ import {
  * unset get open sign-ups. Failed beta guesses are rate-limited per IP.
  */
 export async function POST(req: NextRequest) {
-  const { email, password, displayName, accessCode } = await req.json();
+  const { email, password, displayName, accessCode, timezone } =
+    await req.json();
 
   if (typeof email !== "string" || typeof password !== "string") {
     return NextResponse.json(
@@ -118,7 +119,11 @@ export async function POST(req: NextRequest) {
   }
 
   const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
-  await ensureStudioPolicyRow(serviceClient, userId);
+  await ensureStudioPolicyRow(
+    serviceClient,
+    userId,
+    typeof timezone === "string" ? timezone : null
+  );
 
   return NextResponse.json({ ok: true });
 }

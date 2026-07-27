@@ -8,7 +8,7 @@ import {
 
 /**
  * Stripe Customer Portal for CogNote Hosted Pro (cancel / payment method).
- * Distinct from teacher BYO lesson Stripe in Settings → Payments.
+ * Distinct from teacher BYO lesson Stripe in Billing → Payment settings.
  */
 export async function POST(request: Request) {
   if (getDeploymentMode() !== "hosted") {

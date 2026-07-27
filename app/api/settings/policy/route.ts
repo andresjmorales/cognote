@@ -73,9 +73,8 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
 
   if (body.timezone) {
-    try {
-      new Intl.DateTimeFormat("en-US", { timeZone: body.timezone });
-    } catch {
+    const { isValidTimezone } = await import("@/lib/timezones");
+    if (!isValidTimezone(body.timezone)) {
       return NextResponse.json({ error: "Invalid timezone" }, { status: 400 });
     }
   }
