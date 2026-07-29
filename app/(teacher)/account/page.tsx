@@ -43,7 +43,7 @@ export default async function AccountPage({
   const { data: teacher } = await supabase
     .from("teachers")
     .select(
-      "display_name, email, created_at, stripe_customer_id, stripe_cancel_at"
+      "display_name, avatar_url, email, created_at, stripe_customer_id, stripe_cancel_at"
     )
     .eq("id", user.id)
     .single();
@@ -142,6 +142,7 @@ export default async function AccountPage({
       <div className="space-y-6">
         <AccountSettings
           initialName={teacher?.display_name ?? ""}
+          initialAvatarUrl={teacher?.avatar_url ?? null}
           currentEmail={user.email ?? teacher?.email ?? ""}
         />
 

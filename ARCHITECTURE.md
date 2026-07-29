@@ -27,7 +27,7 @@ cognote/
 │   │   ├── families/
 │   │   ├── schedule/
 │   │   ├── studio/             # Studio identity, make-up policy, rates, streaks
-│   │   ├── account/            # Profile, timezone, notifications, AI, import/export (+ hosted plan when COGNOTE_DEPLOYMENT=hosted)
+│   │   ├── account/            # Profile (name + photo), timezone, notifications, AI, import/export (+ hosted plan when COGNOTE_DEPLOYMENT=hosted)
 │   │   ├── billing/            # Invoices + Payment settings (BYO Stripe)
 │   │   ├── events/
 │   │   ├── music/              # Sheet music library
@@ -66,6 +66,7 @@ cognote/
 ```
 teachers
   ├── hosted_plan / trial_ends_at / gifted_until / stripe_*   (hosted CogNote sub; ignored unless COGNOTE_DEPLOYMENT=hosted)
+  ├── avatar_url                   (public Storage URL; avatars bucket)
   ├── studio_policies              (timezone, cancellation, make-ups, billing, BYO Stripe, AI, streaks, …)
   ├── guardians (families)         (name, email, revocable portal_token)
   ├── students                     (guardian_id FK; archived_at for free-tier counting)

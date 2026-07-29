@@ -38,6 +38,7 @@ export interface Database {
           id: string;
           email: string;
           display_name: string;
+          avatar_url: string | null;
           created_at: string;
           hosted_plan: string;
           trial_ends_at: string | null;
@@ -51,6 +52,7 @@ export interface Database {
           id: string;
           email: string;
           display_name: string;
+          avatar_url?: string | null;
           created_at?: string;
           hosted_plan?: string;
           trial_ends_at?: string | null;
@@ -64,6 +66,7 @@ export interface Database {
           id?: string;
           email?: string;
           display_name?: string;
+          avatar_url?: string | null;
           hosted_plan?: string;
           trial_ends_at?: string | null;
           gifted_until?: string | null;

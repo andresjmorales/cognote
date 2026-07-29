@@ -11,20 +11,59 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { displayName } = await req.json();
+  const body = await req.json();
+  const { displayName, avatarUrl } = body as {
+    displayName?: unknown;
+    avatarUrl?: unknown;
+  };
 
-  if (!displayName || typeof displayName !== "string" || !displayName.trim()) {
-    return NextResponse.json({ error: "Display name is required" }, { status: 400 });
+  const patch: { display_name?: string; avatar_url?: string | null } = {};
+
+  if (displayName !== undefined) {
+    if (
+      !displayName ||
+      typeof displayName !== "string" ||
+      !displayName.trim()
+    ) {
+      return NextResponse.json(
+        { error: "Display name is required" },
+        { status: 400 }
+      );
+    }
+    patch.display_name = displayName.trim();
+  }
+
+  if (avatarUrl !== undefined) {
+    if (avatarUrl !== null && typeof avatarUrl !== "string") {
+      return NextResponse.json(
+        { error: "Invalid avatar URL" },
+        { status: 400 }
+      );
+    }
+    if (typeof avatarUrl === "string" && avatarUrl.length > 2048) {
+      return NextResponse.json(
+        { error: "Avatar URL too long" },
+        { status: 400 }
+      );
+    }
+    patch.avatar_url = avatarUrl;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   const { error } = await supabase
     .from("teachers")
-    .update({ display_name: displayName.trim() })
+    .update(patch)
     .eq("id", user.id);
 
   if (error) {
     console.error("Failed to update profile:", error);
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update profile" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true });

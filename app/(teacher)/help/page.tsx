@@ -232,10 +232,10 @@ export default function HelpPage() {
             words, website, contact) appears on every family portal.
           </p>
           <p className="text-muted">
-            <strong>Account settings</strong> holds timezone, notifications,
-            optional AI, spreadsheet import, and full data export/import.
-            Mapping works without AI; an optional BYO key under Optional AI can
-            suggest column mappings.
+            <strong>Account settings</strong> holds profile name and photo,
+            timezone, notifications, optional AI, spreadsheet import, and full
+            data export/import. Mapping works without AI; an optional BYO key
+            under Optional AI can suggest column mappings.
           </p>
           <p className="text-muted">
             Use Export / Import under Account settings to back up or move studio
