@@ -28,7 +28,13 @@ function initialsFromName(name: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-function AccountMenu({ teacherName }: { teacherName: string }) {
+function AccountMenu({
+  teacherName,
+  avatarUrl,
+}: {
+  teacherName: string;
+  avatarUrl: string | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggleTheme } = useTeacherTheme();
@@ -73,13 +79,26 @@ function AccountMenu({ teacherName }: { teacherName: string }) {
         aria-expanded={open}
         aria-haspopup="menu"
         title={teacherName}
-        className={`flex items-center justify-center h-9 w-9 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+        className={`flex items-center justify-center h-9 w-9 rounded-full text-xs font-semibold transition-colors cursor-pointer overflow-hidden ${
           open || accountActive
-            ? "bg-primary text-white"
-            : "bg-surface-dim text-foreground hover:bg-border"
+            ? avatarUrl
+              ? "ring-2 ring-primary ring-offset-2 ring-offset-surface"
+              : "bg-primary text-white"
+            : avatarUrl
+              ? "ring-1 ring-border hover:ring-primary/50"
+              : "bg-surface-dim text-foreground hover:bg-border"
         }`}
       >
-        {initialsFromName(teacherName)}
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          initialsFromName(teacherName)
+        )}
       </button>
 
       {open && (
@@ -157,7 +176,13 @@ function AccountMenu({ teacherName }: { teacherName: string }) {
   );
 }
 
-export function TeacherNav({ teacherName }: { teacherName: string }) {
+export function TeacherNav({
+  teacherName,
+  avatarUrl,
+}: {
+  teacherName: string;
+  avatarUrl: string | null;
+}) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -197,7 +222,7 @@ export function TeacherNav({ teacherName }: { teacherName: string }) {
 
         <div className="flex items-center gap-1 shrink-0">
           <NotificationBell />
-          <AccountMenu teacherName={teacherName} />
+          <AccountMenu teacherName={teacherName} avatarUrl={avatarUrl} />
           <button
             type="button"
             className="md:hidden p-2.5 -mr-2 text-muted hover:text-foreground cursor-pointer"

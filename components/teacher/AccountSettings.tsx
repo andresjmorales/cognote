@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ProfilePhotoField } from "@/components/avatar/ProfilePhotoField";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export function AccountSettings({
   initialName,
+  initialAvatarUrl,
   currentEmail,
 }: {
   initialName: string;
+  initialAvatarUrl: string | null;
   currentEmail: string;
 }) {
   const router = useRouter();
@@ -138,32 +141,39 @@ export function AccountSettings({
 
   return (
     <div className="space-y-6">
-      {/* Display Name */}
+      {/* Profile photo + display name */}
       <Card padding="lg">
         <h2 className="text-lg font-semibold mb-4">Profile</h2>
-        <form onSubmit={handleNameSave} className="space-y-3">
-          <div>
-            <label htmlFor="displayName" className="text-sm font-medium block mb-1">
-              Display Name
-            </label>
-            <input
-              id="displayName"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              required
-            />
-          </div>
-          {nameMessage && (
-            <p className={`text-sm ${nameMessage.type === "success" ? "text-success" : "text-error"}`}>
-              {nameMessage.text}
-            </p>
-          )}
-          <Button type="submit" size="sm" disabled={nameSaving || name.trim() === initialName}>
-            {nameSaving ? "Saving..." : "Save Name"}
-          </Button>
-        </form>
+        <div className="space-y-5">
+          <ProfilePhotoField
+            initialUrl={initialAvatarUrl}
+            displayName={name || initialName}
+            onUrlChange={() => router.refresh()}
+          />
+          <form onSubmit={handleNameSave} className="space-y-3">
+            <div>
+              <label htmlFor="displayName" className="text-sm font-medium block mb-1">
+                Display Name
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                required
+              />
+            </div>
+            {nameMessage && (
+              <p className={`text-sm ${nameMessage.type === "success" ? "text-success" : "text-error"}`}>
+                {nameMessage.text}
+              </p>
+            )}
+            <Button type="submit" size="sm" disabled={nameSaving || name.trim() === initialName}>
+              {nameSaving ? "Saving..." : "Save Name"}
+            </Button>
+          </form>
+        </div>
       </Card>
 
       {/* Change Email */}

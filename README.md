@@ -32,7 +32,7 @@ Two surfaces, one platform:
 - **Notifications** — in-app bell for portal cancellations and Stripe payments; optional email receipt when an invoice is paid online (Account settings → Notifications)
 - **Billing & invoices** — generate drafts from attendance × your billability policy and rates (slot → student → studio; default rate basis is per-hour); edit, send PDF by email, mark paid, export payments CSV; family portal shows invoice history
 - **Payments (optional)** — manual by default (Zelle/Venmo/cash instructions); optional bring-your-own Stripe Checkout links + webhook
-- **Studio settings, not code** — studio name, lesson time blocks, cancellation/make-up policy, rates, and practice streaks under Studio; timezone, notifications, spreadsheet import, optional BYO AI, and data export/import under Account; payment provider under Billing → Payment settings; plus an "About the Studio" section shown on the portal
+- **Studio settings** — studio name, lesson time blocks, cancellation/make-up policy, rates, and practice streaks under Studio; timezone, notifications, spreadsheet import, optional BYO AI, and data export/import under Account; payment provider under Billing → Payment settings; plus an "About the Studio" section shown on the portal
 - **Skills & progress tracking** — rate students 1–5 across teacher-defined skill dimensions (Musicianship, Rhythm, Sight Reading, ...); radar chart of current levels, trend lines over time, attendance summary, and an optional level anchor (RCM, Faber)
 - **Customizable lesson plans** — three plan types: note identification (C2–C7, both clefs), key signature identification, and musical symbols & concepts; reusable templates assigned in one click; optional organizational labels (Easy / Intermediate / Advanced / Fundamentals or custom)
 - **Timed quizzes** — optional per-question time limit (5–60 seconds) on any plan
@@ -42,8 +42,6 @@ Two surfaces, one platform:
 - **Calendar feeds** — .ics download and a subscribable calendar URL per family; cancelled lessons drop out automatically
 - **Events & recitals** — create studio events with performers and repertoire; families RSVP on the portal; events appear on the Schedule week view; optional invite email
 - **Practice streaks (opt-in)** — Studio toggle (off by default); completed quizzes count by default; show streak/badges on the student page and portal when enabled
-- **Dark mode (teacher Studio)** — toggle in the account menu; practice quizzes, flashcards, free practice, and `/try` stay light for readable staff notation
-- **Optional AI assists** — BYO API key (Account settings → Optional AI): spreadsheet column mapping and student progress summary drafts (append to private notes after edit)
 
 ### Practice & Learning (Students)
 
