@@ -28,9 +28,17 @@
   --font-display: "Nunito", ui-sans-serif, system-ui, sans-serif;
 }
 
+html,
+body {
+  background-color: var(--color-background);
+  min-height: 100%;
+}
+
 /*
- * Teacher Studio dark theme. data-teacher-theme on the layout wrapper only —
- * practice / portal / landing keep :root light tokens.
+ * Teacher Studio dark theme. Applied on the layout wrapper and mirrored onto
+ * <html> while the teacher shell is mounted so overscroll matches dark mode.
+ * Practice / portal / landing do not mount TeacherThemeProvider, so they keep
+ * light :root tokens.
  */
 [data-teacher-theme="dark"] {
   color-scheme: dark;
