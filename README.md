@@ -123,7 +123,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). If port 3000 is stuck, use `npm run dev:fresh` (frees 3000–3002).
 
-**Seed data:** `db reset` loads `supabase/seed.sql` (test teacher, students, plans). Local only — never use those credentials in production.
+**Seed data:** `npx supabase db reset --yes` loads `supabase/seed.sql` — a local-only demo studio (families, schedule/make-ups, plans, practice + portal tokens, skills, invoices, events, streaks, sheet-music metadata). Credentials and tokens live in that file only; production `db push` does not seed. If reset prints a 502 while restarting containers, run `npx supabase stop && npx supabase start` before signing in.
 
 **Try a lesson without a teacher account:** the landing page **Try a Lesson** button opens `/try` — same practice UI students see, no seed data required.
 

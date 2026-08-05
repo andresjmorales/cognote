@@ -41,8 +41,10 @@ export default function HelpPage() {
             singleton family retires that empty family (unless it has invoices).
           </li>
           <li>
-            <strong>Add weekly lesson slots</strong> on the Schedule tab so
-            each student&apos;s recurring lesson time shows up automatically.
+            <strong>Add weekly lesson slots</strong>
+            {" "}
+            on the Schedule tab so each student&apos;s recurring lesson time
+            shows up automatically.
           </li>
           <li>
             <strong>Create a practice lesson</strong> from the Lessons tab and{" "}

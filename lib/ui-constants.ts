@@ -10,3 +10,6 @@ export const LOADING_COPY = {
   default: "Loading...",
   flashcards: "Loading flashcards...",
 } as const;
+
+/** How many student cards to preview on the teacher dashboard before “View all”. */
+export const DASHBOARD_STUDENT_PREVIEW_LIMIT = 5;

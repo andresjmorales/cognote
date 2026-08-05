@@ -87,7 +87,7 @@ export function RichTextEditor({
           active={editor.isActive("italic")}
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
-          <em>I</em>
+          <em>i</em>
         </ToolbarButton>
         <ToolbarButton
           title="Bullet list"
