@@ -75,10 +75,25 @@ body {
   margin: 0.35em 0;
 }
 
+/* Tailwind preflight clears list-style; TipTap lists need markers restored.
+   Outside + padding keeps bullet and text on one line (TipTap wraps li content in <p>). */
 .ProseMirror ul,
 .ProseMirror ol {
-  padding-left: 1.25rem;
+  padding-left: 1.5rem;
   margin: 0.35em 0;
+  list-style-position: outside;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li p {
+  margin: 0.15em 0;
 }
 
 .ProseMirror h3 {
@@ -93,8 +108,21 @@ body {
 
 .rich-text-html ul,
 .rich-text-html ol {
-  padding-left: 1.25rem;
+  padding-left: 1.5rem;
   margin: 0.35em 0;
+  list-style-position: outside;
+}
+
+.rich-text-html ul {
+  list-style-type: disc;
+}
+
+.rich-text-html ol {
+  list-style-type: decimal;
+}
+
+.rich-text-html li p {
+  margin: 0.15em 0;
 }
 
 .rich-text-html h3 {

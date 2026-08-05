@@ -15,6 +15,7 @@ import {
   oneToOne,
 } from "@/lib/schedule";
 import type { AttendanceStatus } from "@/lib/supabase/types";
+import { DASHBOARD_STUDENT_PREVIEW_LIMIT } from "@/lib/ui-constants";
 
 export const metadata = { title: "Dashboard" };
 
@@ -145,6 +146,19 @@ export default async function DashboardPage() {
     return status && !note;
   });
 
+  const allStudents = students ?? [];
+  const studentPreview = [...allStudents]
+    .sort((a: any, b: any) => {
+      const aNext = nextByStudent.get(a.id)?.starts_at as string | undefined;
+      const bNext = nextByStudent.get(b.id)?.starts_at as string | undefined;
+      if (aNext && bNext) return aNext.localeCompare(bNext);
+      if (aNext) return -1;
+      if (bNext) return 1;
+      return String(a.name).localeCompare(String(b.name));
+    })
+    .slice(0, DASHBOARD_STUDENT_PREVIEW_LIMIT);
+  const studentsHidden = Math.max(0, allStudents.length - studentPreview.length);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -173,11 +187,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Link href="/students">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer group bg-primary/5">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted">Students</div>
-              <span className="text-muted text-xs group-hover:text-primary transition-colors">View all →</span>
-            </div>
-            <div className="text-3xl font-bold mt-1">{students?.length ?? 0}</div>
+            <div className="text-sm text-muted">Students</div>
+            <div className="text-3xl font-bold mt-1">{allStudents.length}</div>
           </Card>
         </Link>
         <Link href="/lessons">
@@ -264,8 +275,20 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <h2 className="text-lg font-semibold mb-3">Students</h2>
-          {!students?.length ? (
+          <div className="flex items-baseline justify-between gap-3 mb-3">
+            <h2 className="text-lg font-semibold">Students</h2>
+            {allStudents.length > 0 && (
+              <Link
+                href="/students"
+                className="text-sm text-primary hover:underline shrink-0"
+              >
+                {studentsHidden > 0
+                  ? `View all ${allStudents.length} →`
+                  : "Manage students →"}
+              </Link>
+            )}
+          </div>
+          {!allStudents.length ? (
             <Card className="text-center text-muted">
               <p>No students yet.</p>
               <Link href="/students" className="text-primary text-sm hover:underline">
@@ -274,7 +297,7 @@ export default async function DashboardPage() {
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
-              {students.slice(0, 6).map((s: any) => {
+              {studentPreview.map((s: any) => {
                 const family = s.guardians ? familyDisplayName(s.guardians) : null;
                 const age = s.birthdate ? ageFromBirthdate(s.birthdate) : null;
                 const activeAssignments = (s.student_plans ?? []).filter(isActiveStudentPlan);
@@ -324,9 +347,9 @@ export default async function DashboardPage() {
                   </Link>
                 );
               })}
-              {students.length > 6 && (
-                <Link href="/students" className="text-sm text-primary hover:underline">
-                  View all students →
+              {studentsHidden > 0 && (
+                <Link href="/students" className="text-sm text-muted hover:text-primary hover:underline">
+                  +{studentsHidden} more on the Students page
                 </Link>
               )}
             </div>

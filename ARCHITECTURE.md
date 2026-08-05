@@ -54,6 +54,8 @@ cognote/
 │   └── srs.ts                  # SM-2 spaced repetition
 ├── public/symbols/             # Bravura SVG glyphs
 ├── scripts/                    # e.g. extract-bravura-glyphs.js
+├── e2e/                        # Playwright smoke (local seeded stack)
+├── playwright.config.ts
 ├── supabase/
 │   ├── migrations/
 │   ├── seed.sql                # Local test data only

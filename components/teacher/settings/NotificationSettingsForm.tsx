@@ -87,10 +87,12 @@ export function NotificationSettingsForm({ policy }: { policy: StudioPolicy }) {
             </span>
           </span>
         </label>
-        <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "Saving…" : "Save notification settings"}
-        </Button>
-        {message && <p className="text-sm text-muted">{message}</p>}
+        <div className="flex items-center gap-3">
+          <Button type="submit" size="sm" disabled={busy}>
+            {busy ? "Saving…" : "Save notification settings"}
+          </Button>
+          {message && <span className="text-xs text-muted">{message}</span>}
+        </div>
       </form>
     </Card>
   );

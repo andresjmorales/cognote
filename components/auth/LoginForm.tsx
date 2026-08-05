@@ -122,10 +122,10 @@ export function LoginForm({ betaRequired }: { betaRequired: boolean }) {
         );
       } else if (
         msg === "Failed to fetch" ||
-        /networkerror|fetch failed|load failed/i.test(msg)
+        /networkerror|fetch failed|load failed|network error/i.test(msg)
       ) {
         setError(
-          "Can't reach the auth server. Check your connection — and if you're running locally, start Docker Desktop then run npx supabase start."
+          "Can't reach CogNote's auth service. Check your connection, try another network or turn off VPN (school/work filters sometimes block it). If you're developing locally, start Docker Desktop then run npx supabase start."
         );
       } else {
         setError(msg);

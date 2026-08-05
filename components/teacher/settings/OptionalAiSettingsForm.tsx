@@ -130,10 +130,12 @@ export function OptionalAiSettingsForm({
           </div>
         )}
 
-        <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "Saving…" : "Save AI settings"}
-        </Button>
-        {message && <p className="text-sm text-muted">{message}</p>}
+        <div className="flex items-center gap-3">
+          <Button type="submit" size="sm" disabled={busy}>
+            {busy ? "Saving…" : "Save AI settings"}
+          </Button>
+          {message && <span className="text-xs text-muted">{message}</span>}
+        </div>
       </form>
     </Card>
   );
