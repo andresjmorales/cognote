@@ -197,11 +197,12 @@ export function cleanImslpFieldValue(raw: string): string | undefined {
   value = value.replace(/\[\[([^|\]]+)\|[^\]]+\]\]/g, "$1");
   value = value.replace(/\[\[([^\]]+)\]\]/g, "$1");
 
+  // Decode one entity level (`&amp;` last) so `&amp;lt;` stays `&lt;`, not `<`.
   value = value
     .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&")
     .replace(/\s*;\s*;+/g, ";")
     .replace(/\s+/g, " ")
     .replace(/\s*;\s*/g, "; ")

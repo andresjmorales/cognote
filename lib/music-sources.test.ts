@@ -105,4 +105,9 @@ describe("IMSLP field cleanup", () => {
     expect(cleanImslpFieldValue("Key {{Key")).toBe("Key");
     expect(cleanImslpFieldValue("{{Key|D}}")).toBe("D major");
   });
+
+  it("decodes a single HTML entity level", () => {
+    expect(cleanImslpFieldValue("flute &amp; piano")).toBe("flute & piano");
+    expect(cleanImslpFieldValue("a &lt; b")).toBe("a < b");
+  });
 });
