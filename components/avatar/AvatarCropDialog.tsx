@@ -23,6 +23,10 @@ type Props = {
  * Square crop with an inscribed circle overlay so the circular avatar
  * result is visible while framing.
  */
+function isSafeCropSrc(value: string): boolean {
+  return value.startsWith("blob:") || value.startsWith("data:image/");
+}
+
 export function AvatarCropDialog({ src, onCancel, onConfirm, busy = false }: Props) {
   const imgRef = useRef<HTMLImageElement>(null);
   const dragRef = useRef<{
@@ -37,6 +41,8 @@ export function AvatarCropDialog({ src, onCancel, onConfirm, busy = false }: Pro
   const [zoom, setZoom] = useState(AVATAR_ZOOM_MIN);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [exporting, setExporting] = useState(false);
+  // Crop UI only accepts blob:/data:image/ URLs from createObjectURL / file pick.
+  const safeSrc = isSafeCropSrc(src) ? src : undefined;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -178,7 +184,7 @@ export function AvatarCropDialog({ src, onCancel, onConfirm, busy = false }: Pro
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             ref={imgRef}
-            src={src}
+            src={safeSrc}
             alt=""
             draggable={false}
             className="absolute max-w-none pointer-events-none"

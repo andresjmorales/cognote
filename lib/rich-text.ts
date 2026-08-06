@@ -1,15 +1,25 @@
+/** Decode a single level of common HTML entities (`&amp;` last). */
+function decodeBasicHtmlEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, "&");
+}
+
 /** Best-effort HTML → plain text for AI prompts and previews. */
 export function stripHtmlToText(html: string | null | undefined): string {
   if (!html) return "";
-  return html
+  // Strip complete tags, then any leftover `<` from broken/nested markup
+  // (e.g. <scr<script>ipt>) so the result cannot retain HTML openers.
+  const text = html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
+    .replace(/<[^>]*>/g, "")
+    .replace(/</g, "");
+
+  return decodeBasicHtmlEntities(text)
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
