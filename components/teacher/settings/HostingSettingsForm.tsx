@@ -32,7 +32,12 @@ export function HostingSettingsForm({
     students: number;
     plans: number;
     sheetMusic: number;
-    limits: { maxStudents: number; maxPlans: number; maxSheetItems: number };
+    limits: {
+      maxStudents: number;
+      maxPlans: number;
+      maxSheetItems: number;
+      maxSheetItemsPro?: number;
+    };
   };
 }) {
   const [busy, setBusy] = useState<"checkout" | "portal" | null>(null);

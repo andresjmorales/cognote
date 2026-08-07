@@ -99,7 +99,7 @@ export default async function MusicLibraryPage({
             : "No scores match these filters."}
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {filtered.map((item) => {
             const active = (item.sheet_music_assignments ?? []).filter(
               isActiveSheetMusicAssignment
