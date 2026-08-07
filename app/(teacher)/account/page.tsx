@@ -1,9 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
 import { AccountSettings } from "@/components/teacher/AccountSettings";
 import { HostingSettingsForm } from "@/components/teacher/settings/HostingSettingsForm";
 import { HostedLimitBanner } from "@/components/teacher/HostedLimitBanner";
-import { TimezoneSettingsForm } from "@/components/teacher/settings/TimezoneSettingsForm";
 import { NotificationSettingsForm } from "@/components/teacher/settings/NotificationSettingsForm";
 import { OptionalAiSettingsForm } from "@/components/teacher/settings/OptionalAiSettingsForm";
 import { SpreadsheetImportSettings } from "@/components/teacher/settings/SpreadsheetImportSettings";
@@ -82,27 +80,34 @@ export default async function AccountPage({
     }
 
     hostingSection = (
-      <div className="mb-6">
-        <HostingSettingsForm
-          plan={entitlement.plan as HostedPlan}
-          softLimitsApply={entitlement.softLimitsApply}
-          trialEndsAt={entitlement.trialEndsAt?.toISOString() ?? null}
-          giftedUntil={entitlement.giftedUntil?.toISOString() ?? null}
-          foundingNumber={stored?.founding_number ?? null}
-          monthlyPriceCents={entitlement.monthlyPriceCents}
-          checkoutConfigured={isHostedCheckoutConfigured()}
-          hasStripeCustomer={Boolean(teacher?.stripe_customer_id)}
-          stripeCancelAt={teacher?.stripe_cancel_at ?? null}
-          usage={{
-            students,
-            plans,
-            sheetMusic,
-            limits: entitlement.limits,
-          }}
-        />
-      </div>
+      <HostingSettingsForm
+        plan={entitlement.plan as HostedPlan}
+        softLimitsApply={entitlement.softLimitsApply}
+        trialEndsAt={entitlement.trialEndsAt?.toISOString() ?? null}
+        giftedUntil={entitlement.giftedUntil?.toISOString() ?? null}
+        foundingNumber={stored?.founding_number ?? null}
+        monthlyPriceCents={entitlement.monthlyPriceCents}
+        checkoutConfigured={isHostedCheckoutConfigured()}
+        hasStripeCustomer={Boolean(teacher?.stripe_customer_id)}
+        stripeCancelAt={teacher?.stripe_cancel_at ?? null}
+        usage={{
+          students,
+          plans,
+          sheetMusic,
+          limits: entitlement.limits,
+        }}
+      />
     );
   }
+
+  const accountEmail = user.email ?? teacher?.email ?? "";
+  const memberSinceLabel = new Date(
+    teacher?.created_at ?? user.created_at
+  ).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -118,35 +123,18 @@ export default async function AccountPage({
       )}
 
       {limitBanner}
-      {hostingSection}
-
-      <Card padding="sm" className="mb-6">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <div className="text-xs text-muted">Email</div>
-            <div className="font-medium">{user.email ?? teacher?.email}</div>
-          </div>
-          <div>
-            <div className="text-xs text-muted">Member Since</div>
-            <div className="font-medium">
-              {new Date(teacher?.created_at ?? user.created_at).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </div>
-          </div>
-        </div>
-      </Card>
 
       <div className="space-y-6">
         <AccountSettings
           initialName={teacher?.display_name ?? ""}
           initialAvatarUrl={teacher?.avatar_url ?? null}
-          currentEmail={user.email ?? teacher?.email ?? ""}
-        />
+          currentEmail={accountEmail}
+          memberSinceLabel={memberSinceLabel}
+          timezone={policy.timezone}
+        >
+          {hostingSection}
+        </AccountSettings>
 
-        <TimezoneSettingsForm timezone={policy.timezone} />
         <NotificationSettingsForm policy={clientPolicy} />
         <OptionalAiSettingsForm
           policy={clientPolicy}

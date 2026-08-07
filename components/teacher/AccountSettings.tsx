@@ -1,20 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ProfilePhotoField } from "@/components/avatar/ProfilePhotoField";
+import { TimezoneSettingsForm } from "@/components/teacher/settings/TimezoneSettingsForm";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+
+const inputClass =
+  "w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 export function AccountSettings({
   initialName,
   initialAvatarUrl,
   currentEmail,
+  memberSinceLabel,
+  timezone,
+  children,
 }: {
   initialName: string;
   initialAvatarUrl: string | null;
   currentEmail: string;
+  memberSinceLabel: string;
+  timezone: string;
+  /** Rendered between Profile and Password (e.g. hosting plan). */
+  children?: ReactNode;
 }) {
   const router = useRouter();
 
@@ -22,15 +33,31 @@ export function AccountSettings({
   const [nameSaving, setNameSaving] = useState(false);
   const [nameMessage, setNameMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
   const [emailMessage, setEmailMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
   const [pwMessage, setPwMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  function closeEmailForm() {
+    setEmailOpen(false);
+    setNewEmail("");
+    setEmailMessage(null);
+  }
+
+  function closePasswordForm() {
+    setPasswordOpen(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPwMessage(null);
+  }
 
   async function handleNameSave(e: React.FormEvent) {
     e.preventDefault();
@@ -81,7 +108,7 @@ export function AccountSettings({
       } else {
         setEmailMessage({
           type: "success",
-          text: "Confirmation links sent — check both your current and new inboxes to complete the change.",
+          text: "Check both inboxes to confirm the change.",
         });
         setNewEmail("");
       }
@@ -131,6 +158,7 @@ export function AccountSettings({
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
+        setPasswordOpen(false);
       }
     } catch {
       setPwMessage({ type: "error", text: "Something went wrong" });
@@ -141,128 +169,192 @@ export function AccountSettings({
 
   return (
     <div className="space-y-6">
-      {/* Profile photo + display name */}
       <Card padding="lg">
-        <h2 className="text-lg font-semibold mb-4">Profile</h2>
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <h2 className="text-lg font-semibold">Profile</h2>
+          <div className="text-right shrink-0">
+            <div className="text-xs text-muted">Member since</div>
+            <div className="text-sm font-medium">{memberSinceLabel}</div>
+          </div>
+        </div>
+
         <div className="space-y-5">
-          <ProfilePhotoField
-            initialUrl={initialAvatarUrl}
-            displayName={name || initialName}
-            onUrlChange={() => router.refresh()}
-          />
-          <form onSubmit={handleNameSave} className="space-y-3">
-            <div>
-              <label htmlFor="displayName" className="text-sm font-medium block mb-1">
-                Display Name
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                required
-              />
+          <div className="flex items-start gap-4">
+            <ProfilePhotoField
+              initialUrl={initialAvatarUrl}
+              displayName={name || initialName}
+              onUrlChange={() => router.refresh()}
+            />
+            <form onSubmit={handleNameSave} className="flex-1 min-w-0 space-y-2 pt-0.5">
+              <div>
+                <label htmlFor="displayName" className="text-sm font-medium block mb-1">
+                  Display name
+                </label>
+                <input
+                  id="displayName"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={inputClass}
+                  required
+                />
+              </div>
+              {nameMessage && (
+                <p className={`text-sm ${nameMessage.type === "success" ? "text-success" : "text-error"}`}>
+                  {nameMessage.text}
+                </p>
+              )}
+              <Button type="submit" size="sm" disabled={nameSaving || name.trim() === initialName}>
+                {nameSaving ? "Saving..." : "Save name"}
+              </Button>
+            </form>
+          </div>
+
+          <div className="pt-1 border-t border-border space-y-3">
+            <div className="flex items-start justify-between gap-3 pt-4">
+              <div className="min-w-0 text-sm">
+                <div className="text-xs text-muted mb-0.5">Email</div>
+                <div className="font-medium break-all">{currentEmail}</div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (emailOpen) closeEmailForm();
+                  else {
+                    setEmailOpen(true);
+                    setEmailMessage(null);
+                  }
+                }}
+                aria-expanded={emailOpen}
+              >
+                {emailOpen ? "Cancel" : "Change"}
+              </Button>
             </div>
-            {nameMessage && (
-              <p className={`text-sm ${nameMessage.type === "success" ? "text-success" : "text-error"}`}>
-                {nameMessage.text}
-              </p>
+
+            {emailOpen && (
+              <form onSubmit={handleEmailChange} className="space-y-3">
+                <div>
+                  <label htmlFor="newEmail" className="text-sm font-medium block mb-1">
+                    New email
+                  </label>
+                  <input
+                    id="newEmail"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder={currentEmail}
+                    className={inputClass}
+                    required
+                    autoFocus
+                  />
+                  <p className="text-xs text-muted mt-1.5">
+                    Confirmations go to both addresses.
+                  </p>
+                </div>
+                {emailMessage && (
+                  <p className={`text-sm ${emailMessage.type === "success" ? "text-success" : "text-error"}`}>
+                    {emailMessage.text}
+                  </p>
+                )}
+                <Button type="submit" size="sm" disabled={emailSaving || !newEmail.trim()}>
+                  {emailSaving ? "Sending..." : "Send confirmation"}
+                </Button>
+              </form>
             )}
-            <Button type="submit" size="sm" disabled={nameSaving || name.trim() === initialName}>
-              {nameSaving ? "Saving..." : "Save Name"}
-            </Button>
-          </form>
+          </div>
+
+          <div className="pt-1 border-t border-border">
+            <div className="pt-4">
+              <TimezoneSettingsForm timezone={timezone} embedded />
+            </div>
+          </div>
         </div>
       </Card>
 
-      {/* Change Email */}
-      <Card padding="lg">
-        <h2 className="text-lg font-semibold mb-4">Change Email</h2>
-        <form onSubmit={handleEmailChange} className="space-y-3">
-          <div>
-            <label htmlFor="newEmail" className="text-sm font-medium block mb-1">
-              New Email
-            </label>
-            <input
-              id="newEmail"
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder={currentEmail}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              required
-            />
-            <p className="text-xs text-muted mt-1.5">
-              You&apos;ll get confirmation links at both your current and new
-              addresses; the change completes once confirmed.
-            </p>
-          </div>
-          {emailMessage && (
-            <p className={`text-sm ${emailMessage.type === "success" ? "text-success" : "text-error"}`}>
-              {emailMessage.text}
-            </p>
-          )}
-          <Button type="submit" size="sm" disabled={emailSaving || !newEmail.trim()}>
-            {emailSaving ? "Sending..." : "Change Email"}
-          </Button>
-        </form>
-      </Card>
+      {children}
 
-      {/* Change Password */}
       <Card padding="lg">
-        <h2 className="text-lg font-semibold mb-4">Change Password</h2>
-        <form onSubmit={handlePasswordChange} className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <label htmlFor="currentPassword" className="text-sm font-medium block mb-1">
-              Current Password
-            </label>
-            <input
-              id="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              required
-            />
+            <h2 className="text-lg font-semibold">Password</h2>
+            {!passwordOpen && (
+              <p className="text-sm text-muted mt-1">Update your sign-in password.</p>
+            )}
           </div>
-          <div>
-            <label htmlFor="newPassword" className="text-sm font-medium block mb-1">
-              New Password
-            </label>
-            <input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              required
-              minLength={6}
-            />
-          </div>
-          <div>
-            <label htmlFor="confirmPassword" className="text-sm font-medium block mb-1">
-              Confirm New Password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              required
-              minLength={6}
-            />
-          </div>
-          {pwMessage && (
-            <p className={`text-sm ${pwMessage.type === "success" ? "text-success" : "text-error"}`}>
-              {pwMessage.text}
-            </p>
-          )}
-          <Button type="submit" size="sm" disabled={pwSaving || !currentPassword || !newPassword || !confirmPassword}>
-            {pwSaving ? "Updating..." : "Change Password"}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              if (passwordOpen) closePasswordForm();
+              else setPasswordOpen(true);
+            }}
+            aria-expanded={passwordOpen}
+          >
+            {passwordOpen ? "Cancel" : "Change"}
           </Button>
-        </form>
+        </div>
+
+        {passwordOpen && (
+          <form onSubmit={handlePasswordChange} className="space-y-3 mt-4">
+            <div>
+              <label htmlFor="currentPassword" className="text-sm font-medium block mb-1">
+                Current password
+              </label>
+              <input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className={inputClass}
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <label htmlFor="newPassword" className="text-sm font-medium block mb-1">
+                New password
+              </label>
+              <input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className={inputClass}
+                required
+                minLength={6}
+              />
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className="text-sm font-medium block mb-1">
+                Confirm new password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={inputClass}
+                required
+                minLength={6}
+              />
+            </div>
+            {pwMessage && (
+              <p className={`text-sm ${pwMessage.type === "success" ? "text-success" : "text-error"}`}>
+                {pwMessage.text}
+              </p>
+            )}
+            <Button
+              type="submit"
+              size="sm"
+              disabled={pwSaving || !currentPassword || !newPassword || !confirmPassword}
+            >
+              {pwSaving ? "Updating..." : "Update password"}
+            </Button>
+          </form>
+        )}
       </Card>
     </div>
   );

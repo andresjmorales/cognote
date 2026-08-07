@@ -33,7 +33,7 @@ export default function HelpPage() {
             <strong>Add students</strong> from the Students tab. A name is
             enough to start. Add an email/phone (or mark adult student) to
             create a family portal automatically, or upload a spreadsheet under
-            Account settings → Import students.
+            Account settings → Import students from a file.
           </li>
           <li>
             <strong>Group students into families</strong> on the Families tab

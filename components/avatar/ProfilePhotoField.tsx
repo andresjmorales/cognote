@@ -27,6 +27,26 @@ function initialsFromName(name: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
+  );
+}
+
 export function ProfilePhotoField({
   initialUrl,
   displayName,
@@ -157,41 +177,40 @@ export function ProfilePhotoField({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="text-sm font-medium">Profile photo</div>
-      <div className="flex items-center gap-4">
-        <div
-          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-surface-dim text-sm font-semibold flex items-center justify-center text-foreground ring-1 ring-border"
-          aria-hidden
-        >
+    <div className="flex flex-col items-center gap-1.5 shrink-0">
+      <button
+        type="button"
+        onClick={openPicker}
+        disabled={busy}
+        aria-label={url ? "Change profile photo" : "Upload profile photo"}
+        title={url ? "Change photo" : "Upload photo"}
+        className="group relative h-20 w-20 rounded-full bg-surface-dim text-base font-semibold flex items-center justify-center text-foreground ring-1 ring-border disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      >
+        <span className="absolute inset-0 overflow-hidden rounded-full">
           {url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={url} alt="" className="h-full w-full object-cover" />
           ) : (
-            initialsFromName(displayName)
+            <span className="flex h-full w-full items-center justify-center">
+              {initialsFromName(displayName)}
+            </span>
           )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={openPicker}
-            disabled={busy}
-            className="px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-surface-dim disabled:opacity-40 cursor-pointer"
-          >
-            {url ? "Change photo" : "Upload photo"}
-          </button>
-          {url && (
-            <button
-              type="button"
-              onClick={() => void removePhoto()}
-              disabled={busy}
-              className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted hover:text-foreground hover:bg-surface-dim disabled:opacity-40 cursor-pointer"
-            >
-              Remove
-            </button>
-          )}
-        </div>
-      </div>
+          <span className="absolute inset-0 bg-black/35 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+        </span>
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-foreground shadow-sm">
+          <PencilIcon className="scale-90" />
+        </span>
+      </button>
+      {url && (
+        <button
+          type="button"
+          onClick={() => void removePhoto()}
+          disabled={busy}
+          className="text-[11px] text-muted hover:text-foreground cursor-pointer disabled:opacity-40"
+        >
+          Remove
+        </button>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -201,7 +220,7 @@ export function ProfilePhotoField({
       />
       {message && (
         <p
-          className={`text-sm ${
+          className={`text-xs max-w-[5.5rem] text-center ${
             message.type === "success" ? "text-success" : "text-error"
           }`}
         >
