@@ -1,8 +1,9 @@
 /**
  * Hosted CogNote entitlements (see .ai/SUBSCRIPTION.md).
  *
- * Soft limits apply only when COGNOTE_DEPLOYMENT=hosted and the teacher's
- * effective plan is free. Self-host (default) = full product, no paywall.
+ * Free soft limits (students / plans / sheet) apply when COGNOTE_DEPLOYMENT=hosted
+ * and the teacher's effective plan is free. Sheet music also has a high Pro cap
+ * for trial / gifted / pro / founding. Self-host (default) = full product, no paywall.
  */
 
 export type DeploymentMode = "self_hosted" | "hosted";
@@ -22,7 +23,10 @@ export interface TeacherEntitlementRow {
 export interface HostedLimits {
   maxStudents: number;
   maxPlans: number;
+  /** Free-tier sheet music item cap. */
   maxSheetItems: number;
+  /** Trial / gifted / pro / founding sheet music item cap. */
+  maxSheetItemsPro: number;
 }
 
 export interface EffectiveEntitlement {
@@ -41,6 +45,7 @@ export interface EffectiveEntitlement {
 export const DEFAULT_HOSTED_FREE_MAX_STUDENTS = 5;
 export const DEFAULT_HOSTED_FREE_MAX_PLANS = 5;
 export const DEFAULT_HOSTED_FREE_MAX_SHEET_ITEMS = 5;
+export const DEFAULT_HOSTED_PRO_MAX_SHEET_ITEMS = 100;
 export const DEFAULT_HOSTED_TRIAL_DAYS = 30;
 export const DEFAULT_HOSTED_MONTHLY_PRICE_CENTS = 500;
 
@@ -119,7 +124,21 @@ export function getHostedLimits(
       env.HOSTED_FREE_MAX_SHEET_ITEMS,
       DEFAULT_HOSTED_FREE_MAX_SHEET_ITEMS
     ),
+    maxSheetItemsPro: parsePositiveInt(
+      env.HOSTED_PRO_MAX_SHEET_ITEMS,
+      DEFAULT_HOSTED_PRO_MAX_SHEET_ITEMS
+    ),
   };
+}
+
+/** Effective sheet-music item cap for this entitlement, or null if none. */
+export function effectiveSheetMusicLimit(
+  entitlement: EffectiveEntitlement
+): number | null {
+  if (entitlement.deployment === "self_hosted") return null;
+  return entitlement.softLimitsApply
+    ? entitlement.limits.maxSheetItems
+    : entitlement.limits.maxSheetItemsPro;
 }
 
 export function getHostedMonthlyPriceCents(
@@ -157,8 +176,8 @@ function parseDate(raw: string | null | undefined): Date | null {
 
 /**
  * Lazy demotion: expired trial/gift → free. Never trusts a stale plan string
- * alone when dates say otherwise. Pro/founding stay unlimited until Stripe/SQL
- * change them.
+ * alone when dates say otherwise. Pro/founding stay without free soft limits
+ * until Stripe/SQL change them (sheet music still has a Pro item cap).
  */
 export function resolveEffectivePlan(
   teacher: TeacherEntitlementRow | null | undefined,
@@ -283,7 +302,8 @@ export function hostedSignupFields(
 
 export function limitForResource(
   resource: LimitResource,
-  limits: HostedLimits
+  limits: HostedLimits,
+  opts?: { proSheet?: boolean }
 ): number {
   switch (resource) {
     case "students":
@@ -291,7 +311,7 @@ export function limitForResource(
     case "plans":
       return limits.maxPlans;
     case "sheet_music":
-      return limits.maxSheetItems;
+      return opts?.proSheet ? limits.maxSheetItemsPro : limits.maxSheetItems;
   }
 }
 
@@ -315,6 +335,10 @@ export function hostedLimitMessage(
   return `Free hosted plan allows ${limit} ${resourceLabel(resource)}. Upgrade to Pro (${price}/mo), or export and self-host.`;
 }
 
+export function hostedProSheetLimitMessage(limit: number): string {
+  return `Hosted plan allows ${limit} sheet music items. Remove unused scores, or export and self-host for larger libraries.`;
+}
+
 export interface LimitCheckResult {
   allowed: boolean;
   entitlement: EffectiveEntitlement;
@@ -330,6 +354,40 @@ export function evaluateLimit(
   currentCount: number,
   adding = 1
 ): LimitCheckResult {
+  if (entitlement.deployment === "self_hosted") {
+    return {
+      allowed: true,
+      entitlement,
+      currentCount,
+      limit: null,
+    };
+  }
+
+  // Sheet music: free uses free cap; trial/gifted/pro/founding use Pro cap.
+  if (resource === "sheet_music") {
+    const limit = effectiveSheetMusicLimit(entitlement);
+    if (limit == null) {
+      return { allowed: true, entitlement, currentCount, limit: null };
+    }
+    if (currentCount + adding <= limit) {
+      return { allowed: true, entitlement, currentCount, limit };
+    }
+    return {
+      allowed: false,
+      entitlement,
+      currentCount,
+      limit,
+      code: HOSTED_LIMIT_ERROR_CODE,
+      message: entitlement.softLimitsApply
+        ? hostedLimitMessage(
+            resource,
+            limit,
+            entitlement.monthlyPriceCents
+          )
+        : hostedProSheetLimitMessage(limit),
+    };
+  }
+
   if (!entitlement.softLimitsApply) {
     return {
       allowed: true,

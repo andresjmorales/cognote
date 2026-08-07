@@ -132,7 +132,8 @@ export async function assertWithinHostedLimit(
     entitlement.demotedFrom
   );
 
-  if (!entitlement.softLimitsApply) {
+  // Students/plans: unlimited on paid plans. Sheet music: always capped on hosted.
+  if (!entitlement.softLimitsApply && resource !== "sheet_music") {
     return evaluateLimit(entitlement, resource, 0, adding);
   }
 

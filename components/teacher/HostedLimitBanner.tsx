@@ -50,7 +50,12 @@ export function HostedPlanSummary({
     students: number;
     plans: number;
     sheetMusic: number;
-    limits: { maxStudents: number; maxPlans: number; maxSheetItems: number };
+    limits: {
+      maxStudents: number;
+      maxPlans: number;
+      maxSheetItems: number;
+      maxSheetItemsPro?: number;
+    };
   };
 }) {
   const price = formatHostedPrice(monthlyPriceCents);
@@ -61,7 +66,9 @@ export function HostedPlanSummary({
         {plan === "founding" && foundingNumber != null
           ? ` (#${foundingNumber})`
           : ""}
-        {softLimitsApply ? " · free limits apply" : " · no create limits"}
+        {softLimitsApply
+          ? " · free limits apply"
+          : " · no create limits"}
       </p>
       {plan === "trial" && trialEndsAt && (
         <p className="text-muted text-xs">
