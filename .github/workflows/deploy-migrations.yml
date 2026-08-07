@@ -20,6 +20,9 @@ on:
       - "supabase/migrations/**"
   workflow_dispatch: # allow manual runs from the Actions tab
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

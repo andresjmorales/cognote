@@ -106,6 +106,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: endOrderError }, { status: 400 });
   }
 
+  const sendReminder = body.sendReminder === true;
+
   const studentIds: string[] = Array.isArray(body.studentIds)
     ? body.studentIds.filter((id: unknown): id is string => typeof id === "string")
     : [];
@@ -125,8 +127,11 @@ export async function POST(req: NextRequest) {
       location,
       starts_at: startsAt,
       ends_at: endsAt,
+      send_reminder: sendReminder,
     })
-    .select("id, title, description, location, starts_at, ends_at, created_at, updated_at")
+    .select(
+      "id, title, description, location, starts_at, ends_at, send_reminder, reminder_sent_at, created_at, updated_at"
+    )
     .single();
 
   if (insertError || !event) {
@@ -213,6 +218,8 @@ export async function POST(req: NextRequest) {
         location: event.location,
         startsAt: event.starts_at,
         endsAt: event.ends_at,
+        sendReminder: event.send_reminder,
+        reminderSentAt: event.reminder_sent_at,
         createdAt: event.created_at,
         updatedAt: event.updated_at,
       },

@@ -796,6 +796,8 @@ export interface Database {
           location: string;
           starts_at: string;
           ends_at: string | null;
+          send_reminder: boolean;
+          reminder_sent_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -807,6 +809,8 @@ export interface Database {
           location?: string;
           starts_at: string;
           ends_at?: string | null;
+          send_reminder?: boolean;
+          reminder_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -816,6 +820,8 @@ export interface Database {
           location?: string;
           starts_at?: string;
           ends_at?: string | null;
+          send_reminder?: boolean;
+          reminder_sent_at?: string | null;
           updated_at?: string;
         };
       };

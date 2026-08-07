@@ -1,4 +1,9 @@
-import { formatLessonDate, formatLessonTime } from "@/lib/schedule";
+import {
+  addDays,
+  formatLessonDate,
+  formatLessonTime,
+  toLocalDateString,
+} from "@/lib/schedule";
 
 /**
  * Human-readable when for an event in the studio timezone.
@@ -47,6 +52,20 @@ export function formatEventDateKey(iso: string, timezone: string): string {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(iso));
+}
+
+/**
+ * True when `now` falls on the studio-local calendar day before the event's
+ * local start date (used by the daily reminder cron).
+ */
+export function isEventReminderDay(
+  startsAt: string,
+  timezone: string,
+  now: Date = new Date()
+): boolean {
+  const eventLocalDate = formatEventDateKey(startsAt, timezone);
+  const todayLocal = toLocalDateString(now, timezone);
+  return todayLocal === addDays(eventLocalDate, -1);
 }
 
 /** Convert an ISO timestamp to a value for `<input type="datetime-local">`. */
