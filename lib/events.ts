@@ -56,7 +56,7 @@ export function formatEventDateKey(iso: string, timezone: string): string {
 
 /**
  * True when `now` falls on the studio-local calendar day before the event's
- * local start date (used by the hourly reminder cron).
+ * local start date (used by the daily reminder cron).
  */
 export function isEventReminderDay(
   startsAt: string,

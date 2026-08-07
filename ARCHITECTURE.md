@@ -142,7 +142,7 @@ Migrations live in `supabase/migrations/`.
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| GET/POST | `/api/cron/event-reminders` | Hourly: day-before event reminder emails |
+| GET/POST | `/api/cron/event-reminders` | Daily (~14:00 UTC): day-before event reminder emails |
 
 Lesson tuition Stripe (BYO per teacher) uses `/api/webhooks/stripe/[teacherId]` — separate from platform hosted billing.
 

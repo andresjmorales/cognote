@@ -25,8 +25,9 @@ function cronOrigin(req: NextRequest): string {
 }
 
 /**
- * Hourly job: email families the studio-local day before events with
- * send_reminder enabled. Secure with CRON_SECRET (Vercel Cron sends it).
+ * Daily job (Hobby allows once/day): email families the studio-local day
+ * before events with send_reminder enabled. Secure with CRON_SECRET
+ * (Vercel Cron sends it). Schedule: 14:00 UTC ≈ morning US Central.
  */
 export async function GET(req: NextRequest) {
   if (!authorizeCron(req)) {
