@@ -84,7 +84,8 @@ teachers
   │     └── flashcard_progress
   ├── invoices / invoice_items / payments
   ├── music_library_items / sheet_music_assignments
-  └── events / event_performers / event_rsvps
+  └── events / event_students / event_rsvps
+        (send_reminder + reminder_sent_at for day-before emails)
 
 waitlist                           (beta signups)
 ```
@@ -136,6 +137,12 @@ Migrations live in `supabase/migrations/`.
 | PUT | `/api/practice/[token]/session/[id]/complete` | Complete session |
 | GET/PUT | `/api/practice/[token]/flashcards` | Flashcard state |
 | GET | `/api/portal/[token]/calendar` | Family .ics feed |
+
+### Cron (Bearer `CRON_SECRET`)
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET/POST | `/api/cron/event-reminders` | Hourly: day-before event reminder emails |
 
 Lesson tuition Stripe (BYO per teacher) uses `/api/webhooks/stripe/[teacherId]` — separate from platform hosted billing.
 

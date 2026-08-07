@@ -26,6 +26,7 @@ export default async function EventDetailPage({
       .select(
         `
         id, title, description, location, starts_at, ends_at,
+        send_reminder, reminder_sent_at,
         event_students (
           student_id, repertoire, sort_order,
           students ( id, name )
@@ -105,6 +106,8 @@ export default async function EventDetailPage({
           location={event.location}
           startsAt={event.starts_at}
           endsAt={event.ends_at}
+          sendReminder={event.send_reminder}
+          reminderSentAt={event.reminder_sent_at}
           students={students}
           allStudents={allStudents ?? []}
           rsvps={rsvps}

@@ -14,6 +14,7 @@ export type EventFormValues = {
   endsAt: string;
   location: string;
   description: string;
+  sendReminder: boolean;
   studentIds: string[];
   repertoireByStudent: Record<string, string>;
 };
@@ -23,17 +24,21 @@ export function EventForm({
   initial,
   submitLabel,
   onSubmit,
+  reminderSentAt = null,
 }: {
   students: EventFormStudent[];
   initial: EventFormValues;
   submitLabel: string;
   onSubmit: (values: EventFormValues) => Promise<void>;
+  /** ISO timestamp when the day-before reminder was already sent (detail page). */
+  reminderSentAt?: string | null;
 }) {
   const [title, setTitle] = useState(initial.title);
   const [startsAt, setStartsAt] = useState(initial.startsAt);
   const [endsAt, setEndsAt] = useState(initial.endsAt);
   const [location, setLocation] = useState(initial.location);
   const [description, setDescription] = useState(initial.description);
+  const [sendReminder, setSendReminder] = useState(initial.sendReminder);
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(initial.studentIds)
   );
@@ -94,6 +99,7 @@ export function EventForm({
         endsAt,
         location: location.trim(),
         description: description.trim(),
+        sendReminder,
         studentIds,
         repertoireByStudent,
       });
@@ -165,6 +171,35 @@ export function EventForm({
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Details for families…"
         />
+      </div>
+
+      <div className="space-y-1">
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={sendReminder}
+            onChange={(e) => setSendReminder(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium">
+              Email families a reminder the day before
+            </span>
+            <span className="block text-muted font-normal mt-0.5">
+              Sends automatically to invited families (skips those who RSVP’d No).
+            </span>
+          </span>
+        </label>
+        {reminderSentAt && (
+          <p className="text-xs text-muted pl-6">
+            Reminder already sent{" "}
+            {new Date(reminderSentAt).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+            . Changing the start time will allow another reminder.
+          </p>
+        )}
       </div>
 
       <div>

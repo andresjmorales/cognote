@@ -30,6 +30,7 @@ export function NewEventForm({
         endsAt: values.endsAt
           ? fromDatetimeLocalValue(values.endsAt)
           : undefined,
+        sendReminder: values.sendReminder,
         studentIds: values.studentIds,
         repertoireByStudent: values.repertoireByStudent,
       }),
@@ -52,6 +53,7 @@ export function NewEventForm({
           endsAt: "",
           location: "",
           description: "",
+          sendReminder: false,
           studentIds: [],
           repertoireByStudent: {},
         }}

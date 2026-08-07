@@ -138,7 +138,8 @@ export async function GET(
     .from("events")
     .select(
       `
-      id, title, description, location, starts_at, ends_at, created_at, updated_at,
+      id, title, description, location, starts_at, ends_at,
+      send_reminder, reminder_sent_at, created_at, updated_at,
       event_students (
         id, student_id, repertoire, sort_order,
         students ( id, name )
@@ -216,6 +217,8 @@ export async function GET(
       location: event.location,
       startsAt: event.starts_at,
       endsAt: event.ends_at,
+      sendReminder: event.send_reminder,
+      reminderSentAt: event.reminder_sent_at,
       createdAt: event.created_at,
       updatedAt: event.updated_at,
       students,
@@ -283,6 +286,9 @@ export async function PUT(
     updates.ends_at =
       endsAt && !Number.isNaN(Date.parse(endsAt)) ? endsAt : null;
   }
+  if (typeof body.sendReminder === "boolean") {
+    updates.send_reminder = body.sendReminder;
+  }
 
   const nextStartsAt =
     typeof updates.starts_at === "string"
@@ -295,6 +301,14 @@ export async function PUT(
   const endOrderError = validateEventEndAfterStart(nextStartsAt, nextEndsAt);
   if (endOrderError) {
     return NextResponse.json({ error: endOrderError }, { status: 400 });
+  }
+
+  // Rescheduling clears the send marker so a new day-before reminder can fire.
+  if (
+    typeof updates.starts_at === "string" &&
+    updates.starts_at !== existing.starts_at
+  ) {
+    updates.reminder_sent_at = null;
   }
 
   const { error: updateError } = await supabase

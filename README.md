@@ -40,7 +40,7 @@ Two surfaces, one platform:
 - **Sheet music library** — upload PDF / MusicXML / MXL to a private library; search free scores (Mutopia PDF + OpenScore Lieder MXL import; OpenScore Quartets / IMSLP as links); assign to students; families view in the portal (browser PDF viewer + OpenSheetMusicDisplay)
 - **Analytics dashboard** — per-note accuracy, session history, and practice trends per student
 - **Calendar feeds** — .ics download and a subscribable calendar URL per family; cancelled lessons drop out automatically
-- **Events & recitals** — create studio events with performers and repertoire; families RSVP on the portal; events appear on the Schedule week view; optional invite email
+- **Events & recitals** — create studio events with performers and repertoire; families RSVP on the portal; events appear on the Schedule week view; optional invite email and opt-in day-before reminder emails
 - **Practice streaks (opt-in)** — Studio toggle (off by default); completed quizzes count by default; show streak/badges on the student page and portal when enabled
 
 ### Practice & Learning (Students)
@@ -185,6 +185,7 @@ Connect the GitHub repo and set:
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Cloud service_role (server only) |
 | `TOKEN_ENCRYPTION_KEY` | Yes | 32-byte hex; can reuse local or generate new |
 | `EMAIL_PROVIDER` / `RESEND_API_KEY` / `EMAIL_FROM_ADDRESS` | Recommended | See email below |
+| `CRON_SECRET` | Recommended on hosted / if using cron | Bearer token for `/api/cron/*` (Vercel Cron sends it automatically when set) |
 | `NEXT_PUBLIC_BETA_ONLY` | Optional | `true` shows beta code + waitlist UI (redeploy after change) |
 | `BETA_ACCESS_CODE` | Optional | Server-only secret when beta is on. **Never** `NEXT_PUBLIC_*` |
 | `COGNOTE_DEPLOYMENT` | Official hosted only | Omit / `self_hosted` on your deploy. `hosted` only on cognote.studio for Free/Pro limits |

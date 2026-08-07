@@ -29,6 +29,8 @@ export function EventDetailClient({
   location,
   startsAt,
   endsAt,
+  sendReminder,
+  reminderSentAt,
   students,
   allStudents,
   rsvps,
@@ -39,6 +41,8 @@ export function EventDetailClient({
   location: string;
   startsAt: string;
   endsAt: string | null;
+  sendReminder: boolean;
+  reminderSentAt: string | null;
   students: {
     studentId: string;
     name: string;
@@ -65,6 +69,7 @@ export function EventDetailClient({
     endsAt: endsAt ? toDatetimeLocalValue(endsAt) : "",
     location,
     description,
+    sendReminder,
     studentIds: students.map((s) => s.studentId),
     repertoireByStudent: Object.fromEntries(
       students.map((s) => [s.studentId, s.repertoire])
@@ -83,6 +88,7 @@ export function EventDetailClient({
         endsAt: values.endsAt
           ? fromDatetimeLocalValue(values.endsAt)
           : null,
+        sendReminder: values.sendReminder,
         studentIds: values.studentIds,
         repertoireByStudent: values.repertoireByStudent,
       }),
@@ -170,11 +176,12 @@ export function EventDetailClient({
       <Card>
         <h2 className="font-semibold mb-4">Event details</h2>
         <EventForm
-          key={`${eventId}-${startsAt}-${students.map((s) => s.studentId).join(",")}`}
+          key={`${eventId}-${startsAt}-${sendReminder}-${reminderSentAt ?? ""}-${students.map((s) => s.studentId).join(",")}`}
           students={allStudents}
           initial={initial}
           submitLabel="Save changes"
           onSubmit={handleSave}
+          reminderSentAt={reminderSentAt}
         />
       </Card>
 
