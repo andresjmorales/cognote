@@ -8,6 +8,10 @@ name: Deploy Database Migrations
 # only runs files from supabase/migrations/ that aren't recorded yet, in
 # timestamp order.
 #
+# Uses --db-url (not `supabase link`) so CI does not depend on the Management
+# API api-keys schema that broke `link` in CLI v2.112.0
+# (https://github.com/supabase/cli/issues/6115).
+#
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   SUPABASE_ACCESS_TOKEN     Personal access token (supabase.com → Account → Access Tokens)
 #   SUPABASE_PROJECT_ID       Project ref (Dashboard → Project Settings → General)
@@ -22,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   deploy:
@@ -39,8 +44,30 @@ jobs:
         with:
           version: latest
 
-      - name: Link to Supabase project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
-
       - name: Push migrations
-        run: supabase db push
+        run: |
+          ENCODED_PW=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['SUPABASE_DB_PASSWORD'], safe=''))")
+          supabase db push --yes \
+            --db-url "postgresql://postgres:${ENCODED_PW}@db.${SUPABASE_PROJECT_ID}.supabase.co:5432/postgres"
+
+      # Post-merge migrate is not a PR check — surface failures as an issue so
+      # a green PR cannot silently leave prod schema behind.
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Migration deploy failed on ${context.sha.slice(0, 7)}`;
+            const body = [
+              `**Deploy Database Migrations** failed on \`${context.ref}\` (\`${context.sha}\`).`,
+              "",
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              "",
+              "Prod may be missing schema from the latest migration(s). Fix and re-run the workflow (or `supabase db push`), then close this issue.",
+            ].join("\n");
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+            });
