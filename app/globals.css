@@ -1,6 +1,19 @@
 @import "tailwindcss";
 
 /*
+ * Hover only when html.can-hover is set (default) and the device supports
+ * hover. TouchHoverGuard removes can-hover on finger tap so sticky :hover
+ * on hybrid touchscreen laptops does not leave a grey highlight behind.
+ */
+@custom-variant hover {
+  @media (hover: hover) {
+    html.can-hover &:hover {
+      @slot;
+    }
+  }
+}
+
+/*
  * Use @theme (not inline) so utilities reference CSS variables.
  * Teacher dark mode redefines those variables under .dark.
  */

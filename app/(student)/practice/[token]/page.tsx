@@ -77,7 +77,9 @@ export default function PracticePage() {
   const [error, setError] = useState<string | null>(null);
   const [flashcardItems, setFlashcardItems] = useState<FlashcardItem[]>([]);
   const [flashcardsLoaded, setFlashcardsLoaded] = useState(false);
-  const [startingSession, setStartingSession] = useState(false);
+  const [startingSession, setStartingSession] = useState<
+    "lesson" | "free_practice" | null
+  >(null);
   const [isTeacher, setIsTeacher] = useState(false);
   const { showToast } = useToast();
 
@@ -154,7 +156,7 @@ export default function PracticePage() {
         return;
       }
 
-      setStartingSession(true);
+      setStartingSession(m);
       setSessionId(null);
       try {
         const res = await fetch(`/api/practice/${token}/session`, {
@@ -172,7 +174,7 @@ export default function PracticePage() {
       } catch {
         notifySaveIssue();
       }
-      setStartingSession(false);
+      setStartingSession(null);
       setMode(m);
     },
     [token, plan, notifySaveIssue]
@@ -283,25 +285,27 @@ export default function PracticePage() {
               <Button
                 size="xl"
                 onClick={() => startSession("lesson")}
-                disabled={startingSession}
+                disabled={startingSession !== null}
                 className="w-full"
               >
-                {startingSession ? "Loading..." : "Start Quiz"}
+                {startingSession === "lesson" ? "Loading..." : "Start Quiz"}
               </Button>
               <Button
                 size="lg"
                 variant="secondary"
                 onClick={() => startSession("free_practice")}
-                disabled={startingSession}
+                disabled={startingSession !== null}
                 className="w-full"
               >
-                Free Practice
+                {startingSession === "free_practice"
+                  ? "Loading..."
+                  : "Free Practice"}
               </Button>
               <Button
                 size="lg"
                 variant="secondary"
                 onClick={() => startSession("flashcard")}
-                disabled={startingSession}
+                disabled={startingSession !== null}
                 className="w-full"
               >
                 Flashcards
