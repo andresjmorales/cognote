@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 export function RemoveStudentButton({
   studentId,
@@ -12,6 +13,7 @@ export function RemoveStudentButton({
   studentName: string;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
 
@@ -23,14 +25,14 @@ export function RemoveStudentButton({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        alert(err?.error ?? "Failed to remove student");
+        showToast(err?.error ?? "Failed to remove student", "error");
         setRemoving(false);
         return;
       }
       router.push("/students");
       router.refresh();
     } catch {
-      alert("Failed to remove student");
+      showToast("Failed to remove student", "error");
       setRemoving(false);
     }
   }

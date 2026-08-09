@@ -16,7 +16,15 @@ export async function GET(req: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const nextParam = searchParams.get("next");
-  const next = nextParam?.startsWith("/") ? nextParam : "/dashboard";
+  // Same-origin relative paths only: "//evil.com" and "/\evil.com" are
+  // treated as protocol-relative URLs by browsers.
+  const next =
+    nextParam &&
+    nextParam.startsWith("/") &&
+    !nextParam.startsWith("//") &&
+    !nextParam.startsWith("/\\")
+      ? nextParam
+      : "/dashboard";
 
   const redirectTo = req.nextUrl.clone();
   redirectTo.search = "";

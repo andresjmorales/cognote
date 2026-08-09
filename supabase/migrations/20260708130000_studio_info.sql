@@ -1,4 +1,4 @@
--- Phase 7: "Studio info" settings (ROADMAP §10 Phase 7) — human-readable
+-- "Studio info" settings — human-readable
 -- policies, website, and contact info the teacher writes once and families
 -- see on their portal, so they know the studio's rules and can find their
 -- way back to the studio's own site.

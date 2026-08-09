@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   centsToDollarsInput,
   dollarsToCents,
@@ -64,16 +65,21 @@ export function InvoiceDetailClient({
   }[];
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [items, setItems] = useState(initialItems);
   const [notes, setNotes] = useState(initialNotes);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const isDraft = status === "draft";
 
-  useEffect(() => {
+  // Re-sync local edits when the server payload changes (router.refresh after
+  // save/send) — the sanctioned adjust-state-during-render pattern.
+  const [prevInitialItems, setPrevInitialItems] = useState(initialItems);
+  if (prevInitialItems !== initialItems) {
+    setPrevInitialItems(initialItems);
     setItems(initialItems);
     setNotes(initialNotes);
-  }, [initialItems, initialNotes]);
+  }
 
   function updateItem(index: number, patch: Partial<LineItem>) {
     setItems((prev) =>
@@ -107,13 +113,13 @@ export function InvoiceDetailClient({
   }
 
   async function regenerate() {
-    if (
-      !window.confirm(
-        "Replace line items with a fresh calculation from attendance and your current billing settings? Manual edits on this draft will be lost."
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Regenerate line items?",
+      message:
+        "Replace line items with a fresh calculation from attendance and your current billing settings? Manual edits on this draft will be lost.",
+      confirmLabel: "Regenerate",
+    });
+    if (!ok) return;
     setBusy(true);
     setMessage(null);
     const res = await fetch(`/api/billing/invoices/${invoiceId}/regenerate`, {
@@ -134,13 +140,13 @@ export function InvoiceDetailClient({
   }
 
   async function send() {
-    if (
-      !window.confirm(
-        "Send this invoice? Line items will be frozen and the family will be emailed a PDF."
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Send invoice?",
+      message:
+        "Line items will be frozen and the family will be emailed a PDF.",
+      confirmLabel: "Send",
+    });
+    if (!ok) return;
     setBusy(true);
     setMessage(null);
     if (isDraft) {
@@ -185,13 +191,14 @@ export function InvoiceDetailClient({
   }
 
   async function voidInvoice() {
-    if (
-      !window.confirm(
-        "Void this invoice? That cancels the charge — the family should not pay it. Paid invoices cannot be voided (use a refund outside CogNote if needed)."
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Void invoice?",
+      message:
+        "Voiding cancels the charge, so the family should not pay it. Paid invoices cannot be voided (use a refund outside CogNote if needed).",
+      confirmLabel: "Void",
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     const res = await fetch(`/api/billing/invoices/${invoiceId}/void`, {
       method: "POST",

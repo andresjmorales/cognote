@@ -18,7 +18,12 @@ export async function GET() {
 
   const studentIds = (students ?? []).map((s) => s.id);
 
-  let recentSessions: any[] = [];
+  let recentSessions: {
+    id: string;
+    started_at: string;
+    total_correct: number;
+    total_questions: number;
+  }[] = [];
   if (studentIds.length > 0) {
     const { data: sps } = await supabase
       .from("student_plans")

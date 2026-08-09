@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { retireEmptyGuardians } from "@/lib/server/families";
+import { parseBody, guardianUpdateSchema } from "@/lib/server/api-schemas";
 
 export async function PUT(
   req: NextRequest,
@@ -16,7 +17,10 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const parsed = parseBody(guardianUpdateSchema, await req.json().catch(() => null));
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
+
   const update: Record<string, unknown> = {
     name: body.name?.trim(),
     email: body.email?.trim() || null,
@@ -30,7 +34,7 @@ export async function PUT(
     update.secondary_email = body.secondaryEmail?.trim() || null;
   if (body.secondaryPhone !== undefined)
     update.secondary_phone = body.secondaryPhone?.trim() || null;
-  if (["primary", "secondary", "both"].includes(body.emailRecipients))
+  if (body.emailRecipients !== undefined)
     update.email_recipients = body.emailRecipients;
 
   const { data: guardian, error } = await supabase
@@ -77,8 +81,8 @@ export async function PUT(
 
   if (Array.isArray(body.newStudents)) {
     const rows = body.newStudents
-      .filter((s: { name?: string }) => s?.name?.trim())
-      .map((s: { name: string; birthdate?: string }) => ({
+      .filter((s) => s.name.trim())
+      .map((s) => ({
         teacher_id: user.id,
         name: s.name.trim(),
         guardian_id: id,

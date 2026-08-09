@@ -4,6 +4,10 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { materializeLessons, getPolicy } from "@/lib/server/scheduling";
 import { addDays, toLocalDateString, oneToOne } from "@/lib/schedule";
 import { familyDisplayName } from "@/lib/guardians";
+import {
+  rejectIfTokenLookupsBlocked,
+  recordTokenLookupFailure,
+} from "@/lib/server/token-guard";
 
 /**
  * Per-family .ics feed (webcal-subscribable). Token-based like the rest of
@@ -12,10 +16,14 @@ import { familyDisplayName } from "@/lib/guardians";
  * duplicating events on refresh.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  const blocked = rejectIfTokenLookupsBlocked(req);
+  if (blocked) return blocked;
+
   const supabase = createServiceClient();
 
   const { data: guardian } = await supabase
@@ -25,6 +33,7 @@ export async function GET(
     .single();
 
   if (!guardian) {
+    recordTokenLookupFailure(req);
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

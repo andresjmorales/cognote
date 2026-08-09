@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { retireEmptyGuardians } from "@/lib/server/families";
+import { parseBody, studentUpdateSchema } from "@/lib/server/api-schemas";
 
 export async function PUT(
   req: NextRequest,
@@ -16,7 +17,9 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const parsed = parseBody(studentUpdateSchema, await req.json().catch(() => null));
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   let previousGuardianId: string | null = null;
   if (body.guardianId !== undefined) {
@@ -27,6 +30,20 @@ export async function PUT(
       .eq("teacher_id", user.id)
       .maybeSingle();
     previousGuardianId = existing?.guardian_id ?? null;
+
+    // Linking a foreign family would surface this student on another
+    // teacher's portal.
+    if (body.guardianId) {
+      const { data: owned } = await supabase
+        .from("guardians")
+        .select("id")
+        .eq("id", body.guardianId)
+        .eq("teacher_id", user.id)
+        .maybeSingle();
+      if (!owned) {
+        return NextResponse.json({ error: "Family not found" }, { status: 404 });
+      }
+    }
   }
 
   const { data, error } = await supabase

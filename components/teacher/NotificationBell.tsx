@@ -30,9 +30,14 @@ export function NotificationBell() {
   }
 
   useEffect(() => {
-    void load();
+    // Initial load is deferred a tick so the effect body itself stays free of
+    // synchronous state updates (react-hooks/set-state-in-effect).
+    const initial = setTimeout(() => void load(), 0);
     const id = setInterval(() => void load(), 60_000);
-    return () => clearInterval(id);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(id);
+    };
   }, []);
 
   useEffect(() => {

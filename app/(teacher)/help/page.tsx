@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { getDeploymentMode } from "@/lib/entitlements";
 
 export const metadata = { title: "Help" };
 
@@ -12,6 +13,7 @@ function SectionHeading({ title, blurb }: { title: string; blurb: string }) {
 }
 
 export default function HelpPage() {
+  const hosted = getDeploymentMode() === "hosted";
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
@@ -81,6 +83,19 @@ export default function HelpPage() {
             <strong>Reset Link</strong> on the Families page. The old link stops
             working immediately and a new one is generated.
           </p>
+          <div>
+            <h3 className="font-medium">Archiving students</h3>
+            <p className="text-muted">
+              When a student stops lessons, use <strong>Archive</strong> on
+              their detail page instead of deleting them. Archiving hides the
+              student from your active lists while keeping their full history:
+              attendance, invoices, notes, and analytics. Existing practice
+              links keep working, so returning students pick up where they
+              left off. Restore an archived student any time from the Students
+              tab (switch the filter to Archived); archived students do not
+              count toward plan limits.
+            </p>
+          </div>
         </div>
       </Card>
 
@@ -240,13 +255,63 @@ export default function HelpPage() {
             under Optional AI can suggest column mappings.
           </p>
           <p className="text-muted">
-            Use Export / Import under Account settings to back up or move studio
-            data (treat export files as confidential; they can include payment
-            keys). Configure Stripe or payment instructions from Billing →
-            Payment settings.
+            Use Export / Import under Account settings to back up or move
+            studio data. Export files contain your students&apos; records, so
+            treat them as confidential; payment and AI keys are never included.
+            Configure Stripe or payment instructions from Billing → Payment
+            settings.
           </p>
         </div>
       </Card>
+
+      {hosted && (
+        <Card padding="lg" className="space-y-4">
+          <h2 className="text-xl font-semibold">
+            Hosted Plans &amp; Cancellation
+          </h2>
+          <div className="space-y-3 text-sm leading-relaxed">
+            <p className="text-muted">
+              Your hosted plan is managed under Account settings → Plan. If you
+              cancel a paid plan, you keep full Pro access until the end of the
+              period you already paid for. After that, your account moves to
+              the Free plan.
+            </p>
+            <div>
+              <h3 className="font-medium">What happens on the Free plan</h3>
+              <p className="text-muted">
+                Nothing is deleted, hidden, or auto-archived. Every student,
+                family, lesson, invoice, practice history, and sheet music file
+                stays exactly where it was, and family portals and practice
+                links keep working. The Free plan applies soft limits on active
+                students, lesson templates, and sheet music items. If you are
+                over a limit, everything you already have keeps working; you
+                just can&apos;t create <em>new</em> students, lessons, or music
+                uploads until you archive enough to get under the limit or
+                upgrade again.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium">Getting under the limits</h3>
+              <p className="text-muted">
+                Archiving students (see Students &amp; Families above) is the
+                intended way to stay on the Free plan with a small active
+                roster: archived students keep their entire history and do not
+                count toward the limit. Lessons and sheet music can be deleted
+                if no longer needed.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium">Your data is always yours</h3>
+              <p className="text-muted">
+                Full data export (Account settings → Export) works on every
+                plan, including Free, and there is no time limit on it. If you
+                ever want to leave, export your data first; the same file
+                imports into a self-hosted CogNote instance.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* ---------------- Practice & lessons ---------------- */}
       <SectionHeading

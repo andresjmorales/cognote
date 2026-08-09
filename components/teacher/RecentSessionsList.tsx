@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 
 type SessionRow = {
   id: string;
-  mode: string;
+  mode: string | null;
   started_at: string;
   total_correct: number;
   total_questions: number;
@@ -53,7 +53,9 @@ export function RecentSessionsList({ sessions }: { sessions: SessionRow[] }) {
             <Card key={s.id} padding="sm">
               <div className="flex justify-between text-sm">
                 <div>
-                  <span className="capitalize">{s.mode.replace("_", " ")}</span>
+                  <span className="capitalize">
+                    {(s.mode ?? "practice").replace("_", " ")}
+                  </span>
                   {s.plan?.name && (
                     <span className="text-muted ml-2">· {s.plan.name}</span>
                   )}

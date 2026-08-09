@@ -19,6 +19,52 @@ import { DASHBOARD_STUDENT_PREVIEW_LIMIT } from "@/lib/ui-constants";
 
 export const metadata = { title: "Dashboard" };
 
+interface SessionRow {
+  id: string;
+  mode: string | null;
+  started_at: string;
+  completed_at: string | null;
+  total_correct: number;
+  total_questions: number;
+  student_plans: {
+    students: { id: string; name: string; teacher_id: string } | null;
+    plans: { name: string } | null;
+  } | null;
+}
+
+interface LessonRow {
+  id: string;
+  lesson_date: string;
+  starts_at: string;
+  duration_minutes?: number;
+  students: { id: string; name: string }[] | { id: string; name: string } | null;
+  attendance: { status: AttendanceStatus }[] | { status: AttendanceStatus } | null;
+  lesson_notes?: { id: string }[] | { id: string } | null;
+}
+
+interface StudentPracticeSession {
+  id: string;
+  started_at: string;
+  completed_at: string | null;
+  total_correct: number;
+  total_questions: number;
+}
+
+interface StudentRow {
+  id: string;
+  name: string;
+  birthdate: string | null;
+  created_at: string;
+  guardians: { name: string; family_name: string | null } | null;
+  student_plans:
+    | {
+        id: string;
+        unassigned_at: string | null;
+        practice_sessions: StudentPracticeSession[] | null;
+      }[]
+    | null;
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -32,10 +78,10 @@ export default async function DashboardPage() {
   await materializeLessons(supabase, user.id, today, addDays(today, 28));
 
   const [
-    { data: students },
-    { data: recentSessions },
-    { data: upcomingLessons },
-    { data: recentLessons },
+    { data: studentsData },
+    { data: recentSessionsData },
+    { data: upcomingLessonsData },
+    { data: recentLessonsData },
   ] =
     await Promise.all([
       supabase
@@ -96,20 +142,25 @@ export default async function DashboardPage() {
         .limit(12),
     ]);
 
-  const teacherSessions = (recentSessions ?? []).filter(
-    (s: any) => s.student_plans?.students?.teacher_id === user.id
+  const students = (studentsData ?? []) as unknown as StudentRow[];
+  const recentSessions = (recentSessionsData ?? []) as unknown as SessionRow[];
+  const upcomingLessons = (upcomingLessonsData ?? []) as unknown as LessonRow[];
+  const recentLessons = (recentLessonsData ?? []) as unknown as LessonRow[];
+
+  const teacherSessions = recentSessions.filter(
+    (s) => s.student_plans?.students?.teacher_id === user.id
   );
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   const sessionsThisWeek = teacherSessions.filter(
-    (s: any) => new Date(s.started_at) > weekAgo
+    (s) => new Date(s.started_at) > weekAgo
   );
   const weeklyQuestions = sessionsThisWeek.reduce(
-    (sum: number, s: any) => sum + (s.total_questions ?? 0),
+    (sum, s) => sum + (s.total_questions ?? 0),
     0
   );
   const weeklyCorrect = sessionsThisWeek.reduce(
-    (sum: number, s: any) => sum + (s.total_correct ?? 0),
+    (sum, s) => sum + (s.total_correct ?? 0),
     0
   );
   const weeklyAccuracy =
@@ -119,38 +170,34 @@ export default async function DashboardPage() {
     user.user_metadata?.display_name?.trim() ||
     "Dashboard";
 
-  const activeAssignmentCount = (students ?? []).reduce(
-    (count: number, student: any) =>
+  const activeAssignmentCount = students.reduce(
+    (count, student) =>
       count + (student.student_plans ?? []).filter(isActiveStudentPlan).length,
     0
   );
-  const nextLessons = (upcomingLessons ?? []).filter((lesson: any) => {
-    const status = oneToOne(
-      lesson.attendance as { status: AttendanceStatus }[] | { status: AttendanceStatus } | null
-    )?.status;
+  const nextLessons = upcomingLessons.filter((lesson) => {
+    const status = oneToOne(lesson.attendance)?.status;
     return status !== "teacher_cancel" && status !== "student_cancel";
   });
   const nextLesson = nextLessons[0] ?? null;
-  const nextByStudent = new Map<string, any>();
+  const nextByStudent = new Map<string, LessonRow>();
   for (const lesson of nextLessons) {
-    const student = oneToOne(lesson.students as { id: string; name: string }[] | null);
+    const student = oneToOne(lesson.students);
     if (student && !nextByStudent.has(student.id)) {
       nextByStudent.set(student.id, lesson);
     }
   }
-  const needsNoteLesson = (recentLessons ?? []).find((lesson: any) => {
-    const status = oneToOne(
-      lesson.attendance as { status: AttendanceStatus }[] | { status: AttendanceStatus } | null
-    )?.status;
-    const note = oneToOne(lesson.lesson_notes as { id: string }[] | { id: string } | null);
+  const needsNoteLesson = recentLessons.find((lesson) => {
+    const status = oneToOne(lesson.attendance)?.status;
+    const note = oneToOne(lesson.lesson_notes);
     return status && !note;
   });
 
-  const allStudents = students ?? [];
+  const allStudents = students;
   const studentPreview = [...allStudents]
-    .sort((a: any, b: any) => {
-      const aNext = nextByStudent.get(a.id)?.starts_at as string | undefined;
-      const bNext = nextByStudent.get(b.id)?.starts_at as string | undefined;
+    .sort((a, b) => {
+      const aNext = nextByStudent.get(a.id)?.starts_at;
+      const bNext = nextByStudent.get(b.id)?.starts_at;
       if (aNext && bNext) return aNext.localeCompare(bNext);
       if (aNext) return -1;
       if (bNext) return 1;
@@ -297,15 +344,15 @@ export default async function DashboardPage() {
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
-              {studentPreview.map((s: any) => {
+              {studentPreview.map((s) => {
                 const family = s.guardians ? familyDisplayName(s.guardians) : null;
                 const age = s.birthdate ? ageFromBirthdate(s.birthdate) : null;
                 const activeAssignments = (s.student_plans ?? []).filter(isActiveStudentPlan);
                 const sessions = (s.student_plans ?? []).flatMap(
-                  (sp: any) => sp.practice_sessions ?? []
+                  (sp) => sp.practice_sessions ?? []
                 );
                 const latestSession = sessions.sort(
-                  (a: any, b: any) =>
+                  (a, b) =>
                     new Date(b.started_at).getTime() -
                     new Date(a.started_at).getTime()
                 )[0];
@@ -364,7 +411,7 @@ export default async function DashboardPage() {
             </Card>
           ) : (
             <div className="border border-border rounded-lg overflow-hidden">
-              {teacherSessions.slice(0, 5).map((s: any, i: number) => {
+              {teacherSessions.slice(0, 5).map((s, i) => {
                 const pct =
                   s.total_questions > 0
                     ? Math.round((s.total_correct / s.total_questions) * 100)

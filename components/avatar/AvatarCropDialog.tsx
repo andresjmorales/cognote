@@ -12,7 +12,7 @@ import {
 } from "@/lib/avatar/constants";
 
 type Props = {
-  /** Object URL or data URL for the source image. */
+  /** Object URL (URL.createObjectURL) for the source image. */
   src: string;
   onCancel: () => void;
   onConfirm: (blob: Blob) => void | Promise<void>;
@@ -24,7 +24,9 @@ type Props = {
  * result is visible while framing.
  */
 function isSafeCropSrc(value: string): boolean {
-  return value.startsWith("blob:") || value.startsWith("data:image/");
+  // The picker always passes URL.createObjectURL output; anything else
+  // (data:, http:, javascript:) is refused rather than rendered.
+  return value.startsWith("blob:");
 }
 
 export function AvatarCropDialog({ src, onCancel, onConfirm, busy = false }: Props) {

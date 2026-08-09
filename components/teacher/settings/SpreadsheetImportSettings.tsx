@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   IMPORT_FIELDS,
   type ColumnMapping,
@@ -34,6 +35,7 @@ export function SpreadsheetImportSettings({
   aiConfigured: boolean;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,9 +134,11 @@ export function SpreadsheetImportSettings({
   }
 
   async function commit() {
-    const ok = window.confirm(
-      `Import ${previewTotal} student${previewTotal === 1 ? "" : "s"}? Existing students with the same name are skipped.`
-    );
+    const ok = await confirm({
+      title: "Import students?",
+      message: `Import ${previewTotal} student${previewTotal === 1 ? "" : "s"}? Existing students with the same name are skipped.`,
+      confirmLabel: "Import",
+    });
     if (!ok) return;
 
     setBusy(true);

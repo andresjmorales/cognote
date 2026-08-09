@@ -10,6 +10,7 @@ import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton"
 import { PlanEditWrapper } from "@/components/teacher/PlanEditWrapper";
 import { oneToOne } from "@/lib/schedule";
 import { isActiveStudentPlan } from "@/lib/student-plans";
+import type { MusicalSymbol } from "@/lib/symbols";
 
 export async function generateMetadata({
   params,
@@ -77,7 +78,7 @@ export default async function PlanDetailPage({
     .order("name");
 
   const notes = (plan.notes as string[]) ?? [];
-  const symbols = (plan.symbols as any[]) ?? [];
+  const symbols = (plan.symbols as MusicalSymbol[]) ?? [];
   const keySignatures = (plan.key_signatures as string[]) ?? [];
   const labels = (plan.labels as string[] | null) ?? [];
   const isSymbolPlan = plan.plan_type === "symbol_concepts";
@@ -209,7 +210,7 @@ export default async function PlanDetailPage({
           <Card className="mb-6">
             <h2 className="font-semibold mb-3">Symbols &amp; Concepts ({symbols.length})</h2>
             {(() => {
-              const grouped: Record<string, any[]> = {};
+              const grouped: Record<string, MusicalSymbol[]> = {};
               for (const sym of symbols) {
                 const cat = sym.category ?? "Other";
                 if (!grouped[cat]) grouped[cat] = [];
@@ -221,7 +222,7 @@ export default async function PlanDetailPage({
                     {category}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {items.map((sym: any) => (
+                    {items.map((sym) => (
                       <span
                         key={sym.id}
                         className="px-2.5 py-1 bg-accent/10 text-accent rounded-lg text-sm font-medium"

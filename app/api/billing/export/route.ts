@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { familyDisplayName } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
 
-/** CSV export of payments for accounting (ROADMAP §8). */
+/** CSV export of payments for accounting. */
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const {

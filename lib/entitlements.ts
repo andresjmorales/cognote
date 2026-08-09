@@ -1,5 +1,5 @@
 /**
- * Hosted CogNote entitlements (see .ai/SUBSCRIPTION.md).
+ * Hosted CogNote entitlements.
  *
  * Free soft limits (students / plans / sheet) apply when COGNOTE_DEPLOYMENT=hosted
  * and the teacher's effective plan is free. Sheet music also has a high Pro cap

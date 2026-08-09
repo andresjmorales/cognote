@@ -11,7 +11,7 @@ const inputClass =
   "px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm";
 
 /**
- * Studio policies are per-teacher settings, not hardcoded rules (ROADMAP §3).
+ * Studio policies are per-teacher settings, not hardcoded rules.
  * These options drive make-up credit derivation and billing billability.
  * Timezone is edited in Account settings; shown here as a read-only reminder.
  */

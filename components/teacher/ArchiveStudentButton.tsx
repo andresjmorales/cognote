@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 export function ArchiveStudentButton({
   studentId,
@@ -14,6 +15,7 @@ export function ArchiveStudentButton({
   archived: boolean;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
 
   async function toggle() {
@@ -26,13 +28,13 @@ export function ArchiveStudentButton({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        alert(err?.error ?? "Failed to update student");
+        showToast(err?.error ?? "Failed to update student", "error");
         setBusy(false);
         return;
       }
       router.refresh();
     } catch {
-      alert("Failed to update student");
+      showToast("Failed to update student", "error");
     } finally {
       setBusy(false);
     }

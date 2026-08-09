@@ -40,11 +40,16 @@ export async function PUT(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (typeof avatarUrl === "string" && avatarUrl.length > 2048) {
-      return NextResponse.json(
-        { error: "Avatar URL too long" },
-        { status: 400 }
-      );
+    if (typeof avatarUrl === "string") {
+      // Only this teacher's own object in the public avatars bucket is
+      // accepted; arbitrary URLs would be rendered as <img src> in the nav.
+      const allowedPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${user.id}/`;
+      if (avatarUrl.length > 2048 || !avatarUrl.startsWith(allowedPrefix)) {
+        return NextResponse.json(
+          { error: "Invalid avatar URL" },
+          { status: 400 }
+        );
+      }
     }
     patch.avatar_url = avatarUrl;
   }

@@ -1,7 +1,7 @@
 import type { AttendanceStatus } from "@/lib/supabase/types";
 
 /**
- * Scheduling helpers (ROADMAP Phase 2).
+ * Scheduling helpers.
  *
  * Slots store LOCAL day/time; the studio's IANA timezone lives on
  * studio_policies. Each occurrence is converted to a concrete UTC instant
@@ -54,6 +54,8 @@ export interface StudioPolicy {
   streak_count_quiz: boolean;
   streak_count_free_practice: boolean;
   streak_count_flashcards: boolean;
+  /** Last time a family-relevant policy field changed (drives the portal banner). */
+  policies_updated_at: string | null;
 }
 
 export const DEFAULT_POLICY: StudioPolicy = {
@@ -93,6 +95,7 @@ export const DEFAULT_POLICY: StudioPolicy = {
   streak_count_quiz: true,
   streak_count_free_practice: false,
   streak_count_flashcards: false,
+  policies_updated_at: null,
 };
 
 /** Offset (ms) of `timeZone` from UTC at the instant `ts` (UTC ms). */
@@ -227,7 +230,7 @@ export function computeOccurrences(
 
 /**
  * Whether a cancellation/no-show earns a make-up credit under the policy.
- * Policy is an input, never baked in (ROADMAP §3).
+ * Policy is always an input, never a hardcoded rule.
  */
 export function earnsMakeupCredit(
   status: AttendanceStatus,

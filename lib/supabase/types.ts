@@ -669,7 +669,8 @@ export interface Database {
           response_time_ms?: number | null;
           created_at?: string;
         };
-        Update: {};
+        // note_attempts rows are immutable; no updatable columns.
+        Update: Record<string, never>;
       };
       flashcard_progress: {
         Row: {

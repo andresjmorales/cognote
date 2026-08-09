@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import {
   addDays,
   formatLessonTime,
@@ -74,20 +75,17 @@ export function WeekView({
   cancellationWindowHours: number;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [openLesson, setOpenLesson] = useState<WeekLesson | null>(null);
   const [showAdHoc, setShowAdHoc] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   // Optimistic attendance overrides so cards update before the server
   // round-trip finishes (undefined = no override; null = cleared)
   const [statusOverrides, setStatusOverrides] = useState<
     Record<string, AttendanceStatus | null>
   >({});
 
-  function notify(message: string) {
-    setToast(message);
-    setTimeout(() => setToast(null), 2500);
-  }
+  const notify = showToast;
 
   async function markAttendance(
     lesson: WeekLesson,
@@ -101,45 +99,53 @@ export function WeekView({
   ) {
     const hadOverride = lesson.id in statusOverrides;
     const previous = statusOverrides[lesson.id];
-    setStatusOverrides((prev) => ({ ...prev, [lesson.id]: status }));
-    setBusy(true);
-    const res = await fetch(`/api/schedule/lessons/${lesson.id}/attendance`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status,
-        noticeChoice: extra?.noticeChoice,
-        noticeAt: extra?.noticeAt,
-        cancelNote: extra?.cancelNote,
-        notifyFamily: extra?.notifyFamily,
-      }),
-    });
-    setBusy(false);
-    if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      if (status === "teacher_cancel") {
-        if (extra?.notifyFamily !== false) {
-          notify(
-            data.emailed
-              ? "Cancelled — family emailed"
-              : (data.emailError
-                  ? `Cancelled — ${data.emailError}`
-                  : "Cancelled")
-          );
-        } else {
-          notify("Cancelled (family not emailed)");
-        }
-      }
-      router.refresh();
-    } else {
+    const rollback = () =>
       setStatusOverrides((prev) => {
         const next = { ...prev };
         if (hadOverride) next[lesson.id] = previous;
         else delete next[lesson.id];
         return next;
       });
-      const data = await res.json().catch(() => ({}));
-      notify(data.error ?? "Failed to save attendance");
+    setStatusOverrides((prev) => ({ ...prev, [lesson.id]: status }));
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/schedule/lessons/${lesson.id}/attendance`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          noticeChoice: extra?.noticeChoice,
+          noticeAt: extra?.noticeAt,
+          cancelNote: extra?.cancelNote,
+          notifyFamily: extra?.notifyFamily,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (status === "teacher_cancel") {
+          if (extra?.notifyFamily !== false) {
+            notify(
+              data.emailed
+                ? "Cancelled — family emailed"
+                : (data.emailError
+                    ? `Cancelled — ${data.emailError}`
+                    : "Cancelled")
+            );
+          } else {
+            notify("Cancelled (family not emailed)");
+          }
+        }
+        router.refresh();
+      } else {
+        rollback();
+        const data = await res.json().catch(() => ({}));
+        notify(data.error ?? "Failed to save attendance", "error");
+      }
+    } catch {
+      rollback();
+      notify("Failed to save attendance. Check your connection.", "error");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -151,11 +157,19 @@ export function WeekView({
 
   async function deleteAdHoc(lesson: WeekLesson) {
     setBusy(true);
-    const res = await fetch(`/api/schedule/lessons/${lesson.id}`, { method: "DELETE" });
-    setBusy(false);
-    if (res.ok) {
-      setOpenLesson(null);
-      router.refresh();
+    try {
+      const res = await fetch(`/api/schedule/lessons/${lesson.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setOpenLesson(null);
+        router.refresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        notify(data.error ?? "Failed to delete lesson", "error");
+      }
+    } catch {
+      notify("Failed to delete lesson. Check your connection.", "error");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -319,12 +333,6 @@ export function WeekView({
           notify={notify}
         />
       )}
-
-      {toast && (
-        <div className="fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50">
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
@@ -385,7 +393,7 @@ function LessonModal({
   ) => void;
   onDelete: () => void;
   onSaved: () => void;
-  notify: (message: string) => void;
+  notify: (message: string, variant?: "success" | "error" | "info") => void;
 }) {
   const [familyBody, setFamilyBody] = useState(lesson.note?.body ?? "");
   const [privateBody, setPrivateBody] = useState(lesson.note?.privateBody ?? "");
@@ -408,29 +416,34 @@ function LessonModal({
   async function saveNote(sendEmail: boolean) {
     if (!hasAnyNote && !hadExistingNote) return;
     setSavingNote(true);
-    const res = await fetch(`/api/schedule/lessons/${lesson.id}/note`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        body: familyBody,
-        privateBody,
-        sendEmail,
-      }),
-    });
-    setSavingNote(false);
-    if (res.ok) {
-      const data = await res.json();
-      if (sendEmail) {
-        notify(
-          data.emailed
-            ? "Note emailed to the family"
-            : (data.emailError ?? "Saved — email not sent")
-        );
+    try {
+      const res = await fetch(`/api/schedule/lessons/${lesson.id}/note`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: familyBody,
+          privateBody,
+          sendEmail,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (sendEmail) {
+          notify(
+            data.emailed
+              ? "Note emailed to the family"
+              : (data.emailError ?? "Saved — email not sent")
+          );
+        }
+        onSaved();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        notify(data.error ?? "Failed to save note", "error");
       }
-      onSaved();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      notify(data.error ?? "Failed to save note");
+    } catch {
+      notify("Failed to save note. Check your connection.", "error");
+    } finally {
+      setSavingNote(false);
     }
   }
 
@@ -739,7 +752,7 @@ function AdHocModal({
   setBusy: (busy: boolean) => void;
   onClose: () => void;
   onSaved: () => void;
-  notify: (message: string) => void;
+  notify: (message: string, variant?: "success" | "error" | "info") => void;
 }) {
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");
   const [date, setDate] = useState("");
@@ -749,17 +762,22 @@ function AdHocModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const res = await fetch("/api/schedule/lessons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId, date, time, durationMinutes: duration }),
-    });
-    setBusy(false);
-    if (res.ok) {
-      onSaved();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      notify(data.error ?? "Failed to schedule lesson");
+    try {
+      const res = await fetch("/api/schedule/lessons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, date, time, durationMinutes: duration }),
+      });
+      if (res.ok) {
+        onSaved();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        notify(data.error ?? "Failed to schedule lesson", "error");
+      }
+    } catch {
+      notify("Failed to schedule lesson. Check your connection.", "error");
+    } finally {
+      setBusy(false);
     }
   }
 

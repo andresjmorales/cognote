@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlanEditor } from "./PlanEditor";
 import type { KeySigScaleMode } from "@/lib/music";
+import type { MusicalSymbol } from "@/lib/symbols";
 
 interface PlanEditWrapperProps {
   planId: string;
@@ -19,7 +20,7 @@ interface PlanEditWrapperProps {
     questions_per_lesson: number;
     answer_choices: number;
     notes: string[];
-    symbols: any[];
+    symbols: MusicalSymbol[];
     labels: string[];
     teacher_notes: string;
     show_hints: boolean;

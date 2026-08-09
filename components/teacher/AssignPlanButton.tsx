@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { shareOrCopyUrl } from "@/lib/shareOrCopy";
 
 interface Student {
@@ -20,9 +20,9 @@ export function AssignPlanButton({
   students: Student[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,8 +47,7 @@ export function AssignPlanButton({
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        setToast(err?.error ?? "Failed to assign lesson");
-        setTimeout(() => setToast(null), 4000);
+        showToast(err?.error ?? "Failed to assign lesson", "error");
         setAssigning(false);
         setOpen(false);
         return;
@@ -57,9 +56,9 @@ export function AssignPlanButton({
       const data = await res.json();
 
       if (data.alreadyAssigned) {
-        setToast(`"${studentName}" already has this lesson.`);
+        showToast(`"${studentName}" already has this lesson.`, "info");
       } else if (data.emailed) {
-        setToast(`Assigned to ${studentName}! Emailed the family.`);
+        showToast(`Assigned to ${studentName}! Emailed the family.`);
       } else {
         // No family email on file (or email not configured) — fall back to
         // the native share sheet / clipboard.
@@ -69,18 +68,16 @@ export function AssignPlanButton({
           text: `Practice link for ${studentName}`,
         });
         if (result.method === "share") {
-          setToast(`Assigned to ${studentName}! Link shared.`);
+          showToast(`Assigned to ${studentName}! Link shared.`);
         } else if (result.method === "copy") {
-          setToast(`Assigned to ${studentName}! Link copied.`);
+          showToast(`Assigned to ${studentName}! Link copied.`);
         } else {
-          setToast(`Assigned to ${studentName}! Link: ${fullUrl}`);
+          showToast(`Assigned to ${studentName}! Link: ${fullUrl}`);
         }
       }
-      setTimeout(() => setToast(null), 5000);
       router.refresh();
     } catch {
-      setToast("Failed to assign lesson");
-      setTimeout(() => setToast(null), 4000);
+      showToast("Failed to assign lesson", "error");
     }
 
     setAssigning(false);
@@ -117,12 +114,6 @@ export function AssignPlanButton({
               </button>
             ))
           )}
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50 animate-[fadeIn_0.2s]">
-          {toast}
         </div>
       )}
     </div>

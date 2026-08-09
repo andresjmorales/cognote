@@ -1,4 +1,4 @@
--- Phase 3–4: Billing + Stripe BYO keys (ROADMAP §2, §3, §9).
+-- Billing + Stripe BYO keys.
 --
 -- Attendance → invoice items is a pure function of (attendance, policy, rates).
 -- Sent invoices freeze their line items; policy changes affect future

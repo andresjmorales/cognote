@@ -1,13 +1,13 @@
--- Phase 2: Scheduling + attendance (ROADMAP §10 Phase 2, §3, §9).
+-- Scheduling + attendance.
 --
 -- Design notes:
 -- * Slots store LOCAL day/time; the studio's IANA timezone lives on
 --   studio_policies. Each occurrence is materialized to a concrete UTC
 --   instant individually, so a 4:00 PM Tuesday lesson stays 4:00 PM local
---   across DST shifts (ROADMAP Phase 2).
--- * Studio policies are per-teacher settings, never hardcoded rules (§3).
+--   across DST shifts.
+-- * Studio policies are per-teacher settings, never hardcoded rules.
 --   v1 covers timezone + cancellation window + make-up credit rules;
---   Phase 3 adds the billing half.
+--   the billing half comes in a later migration.
 -- * Make-ups link to their originating cancellation via lessons.makeup_for →
 --   attendance.id, so credit banking/expiry/billability are derivable and
 --   the original + make-up can never both bill (§3).

@@ -1,4 +1,4 @@
--- Phase 1: Families/guardians as a structured concept (ROADMAP §1, §9).
+-- Families/guardians as a structured concept.
 --
 -- Guardians own the family-level concerns: portal access now, invoicing and
 -- email later. Siblings share one guardian record.
@@ -15,7 +15,7 @@ CREATE TABLE guardians (
   email        text,
   phone        text,
   -- Unlike practice tokens, portal tokens are revocable: rotating the value
-  -- invalidates the old link (ROADMAP §7 COPPA posture).
+  -- invalidates the old link.
   portal_token text NOT NULL UNIQUE,
   created_at   timestamptz NOT NULL DEFAULT now()
 );

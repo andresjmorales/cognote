@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Supabase CLI artifacts (generated, incl. minified edge runtime bundles)
+    "supabase/.temp/**",
+    // One-off Node build scripts (require() imports, not app code)
+    "scripts/**",
   ]),
 ]);
 

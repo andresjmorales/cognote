@@ -1,4 +1,4 @@
--- Phase 6: Skills + progress (ROADMAP §4, §9, §10 Phase 6).
+-- Skills + progress.
 --
 -- Design notes:
 -- * skill_dimensions are per-teacher and extensible; defaults (Musicianship,

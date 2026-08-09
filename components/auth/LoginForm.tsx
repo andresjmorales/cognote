@@ -11,7 +11,13 @@ type Mode = "signin" | "signup" | "waitlist" | "forgot";
 const inputClass =
   "w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
-export function LoginForm({ betaRequired }: { betaRequired: boolean }) {
+export function LoginForm({
+  betaRequired,
+  showLegalLinks = false,
+}: {
+  betaRequired: boolean;
+  showLegalLinks?: boolean;
+}) {
   const router = useRouter();
   useEffect(() => {
     document.title = "CogNote - Login";
@@ -136,7 +142,7 @@ export function LoginForm({ betaRequired }: { betaRequired: boolean }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <Card padding="lg" className="max-w-sm w-full">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-primary">CogNote</h1>
@@ -266,6 +272,17 @@ export function LoginForm({ betaRequired }: { betaRequired: boolean }) {
           )}
         </p>
       </Card>
+      {showLegalLinks && (
+        <p className="text-xs text-muted mt-4 flex items-center gap-3">
+          <a href="/privacy" className="hover:text-foreground transition-colors">
+            Privacy Policy
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="/terms" className="hover:text-foreground transition-colors">
+            Terms of Service
+          </a>
+        </p>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
 } from "@/lib/server/event-email";
 import { requestOrigin } from "@/lib/server/http";
 import { DEFAULT_POLICY, type StudioPolicy } from "@/lib/schedule";
+import { secureCompare } from "@/lib/server/secure-compare";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -15,7 +16,8 @@ function authorizeCron(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) return false;
   const header = req.headers.get("authorization");
-  return header === `Bearer ${secret}`;
+  if (!header) return false;
+  return secureCompare(header, `Bearer ${secret}`);
 }
 
 function cronOrigin(req: NextRequest): string {

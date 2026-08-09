@@ -242,10 +242,12 @@ export async function PUT(req: NextRequest) {
     }),
   };
 
-  // Stripe keys: only overwrite when a new value is pasted, or explicitly cleared
+  // Stripe keys: only overwrite when a new value is pasted, or explicitly
+  // cleared. Secrets are encrypted at rest (decrypted in getPolicy).
+  const { encryptSecret } = await import("@/lib/token");
   if (body.clearStripeSecretKey) upsert.stripe_secret_key = null;
   else if (typeof body.stripeSecretKey === "string" && body.stripeSecretKey.trim()) {
-    upsert.stripe_secret_key = body.stripeSecretKey.trim();
+    upsert.stripe_secret_key = encryptSecret(body.stripeSecretKey.trim());
   }
   if (body.clearStripePublishableKey) upsert.stripe_publishable_key = null;
   else if (
@@ -259,18 +261,45 @@ export async function PUT(req: NextRequest) {
     typeof body.stripeWebhookSecret === "string" &&
     body.stripeWebhookSecret.trim()
   ) {
-    upsert.stripe_webhook_secret = body.stripeWebhookSecret.trim();
+    upsert.stripe_webhook_secret = encryptSecret(body.stripeWebhookSecret.trim());
   }
 
   if (body.clearAiApiKey) upsert.ai_api_key = null;
   else if (typeof body.aiApiKey === "string" && body.aiApiKey.trim()) {
-    upsert.ai_api_key = body.aiApiKey.trim();
+    upsert.ai_api_key = encryptSecret(body.aiApiKey.trim());
   }
   if (aiProvider === "none") {
     upsert.ai_api_key = null;
   }
 
-  const { data, error } = await supabase
+  // Bump policies_updated_at when a family-relevant field actually changes,
+  // so the portal can show its one-time "policies were updated" banner.
+  const FAMILY_RELEVANT_FIELDS = [
+    "cancellation_window_hours",
+    "timely_cancel_earns_makeup",
+    "late_cancel_earns_makeup",
+    "no_show_earns_makeup",
+    "teacher_cancel_earns_makeup",
+    "makeup_credit_expiry_days",
+    "bill_attended",
+    "bill_no_show",
+    "bill_teacher_cancel",
+    "bill_timely_student_cancel",
+    "bill_late_student_cancel",
+    "bill_makeup",
+    "invoice_cadence",
+  ] as const;
+  const currentPolicy = await getPolicy(supabase, user.id);
+  const familyRelevantChanged = FAMILY_RELEVANT_FIELDS.some(
+    (field) =>
+      field in upsert &&
+      upsert[field] !== (currentPolicy as unknown as Record<string, unknown>)[field]
+  );
+  if (familyRelevantChanged) {
+    upsert.policies_updated_at = new Date().toISOString();
+  }
+
+  const { error } = await supabase
     .from("studio_policies")
     .upsert(upsert, { onConflict: "teacher_id" })
     .select()

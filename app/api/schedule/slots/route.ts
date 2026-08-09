@@ -29,6 +29,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // The slot's student must belong to this teacher.
+  const { data: student } = await supabase
+    .from("students")
+    .select("id")
+    .eq("id", body.studentId)
+    .eq("teacher_id", user.id)
+    .single();
+  if (!student) {
+    return NextResponse.json({ error: "Student not found" }, { status: 404 });
+  }
+
   const policy = await getPolicy(supabase, user.id);
   const today = toLocalDateString(new Date(), policy.timezone);
 

@@ -12,31 +12,9 @@ import {
 } from "@/lib/srs";
 import { noteName, displayNoteName, displayKeySignatureName, shuffle, KEY_SIGNATURES } from "@/lib/music";
 import { SymbolDisplay } from "./VexFlowSymbol";
+import type { FlashcardItem } from "@/lib/flashcards";
 
-interface NoteCard {
-  itemType: "note";
-  note: string;
-  clef: "treble" | "bass";
-  state: FlashcardState;
-}
-
-interface SymbolCard {
-  itemType: "symbol";
-  symbolId: string;
-  symbol: string;
-  term: string;
-  definition: string;
-  state: FlashcardState;
-}
-
-interface KeySignatureCard {
-  itemType: "key_signature";
-  keyName: string;
-  clef: "treble" | "bass";
-  state: FlashcardState;
-}
-
-export type FlashcardItem = NoteCard | SymbolCard | KeySignatureCard;
+export type { FlashcardItem };
 
 export interface FlashcardReviewData {
   itemType: "note" | "symbol" | "key_signature";
@@ -73,10 +51,14 @@ export function FlashcardEngine({
   const vexKeySig = KEY_SIGNATURES[keySignature] ?? "C";
   const current = queue[0] ?? null;
 
+  // Blocks double-taps on the rating buttons; re-armed on each flip so the
+  // next card can be rated. Written only in event handlers (never in render).
   const ratingLockRef = useRef(false);
-  if (!flipped) {
+
+  const flip = useCallback(() => {
     ratingLockRef.current = false;
-  }
+    setFlipped(true);
+  }, []);
 
   const handleRating = useCallback(
     (rating: SRSRating) => {
@@ -154,7 +136,7 @@ export function FlashcardEngine({
       <Card
         className="mb-6 cursor-pointer select-none"
         style={{ minHeight: 280 }}
-        onClick={() => !flipped && setFlipped(true)}
+        onClick={() => !flipped && flip()}
       >
         <div className="flex flex-col items-center justify-center h-full" style={{ minHeight: 248 }}>
           {current.itemType === "note" ? (
@@ -243,7 +225,7 @@ export function FlashcardEngine({
           })
         ) : (
           <div className="col-span-4 flex justify-center">
-            <Button size="lg" onClick={() => setFlipped(true)} className="w-full">
+            <Button size="lg" onClick={flip} className="w-full">
               Show Answer
             </Button>
           </div>

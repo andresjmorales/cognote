@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
 import {
   EventForm,
   type EventFormStudent,
@@ -58,6 +59,7 @@ export function EventDetailClient({
   }[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMessage, setEmailMessage] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -130,14 +132,14 @@ export function EventDetailClient({
       const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        alert(err?.error ?? "Failed to delete event");
+        showToast(err?.error ?? "Failed to delete event", "error");
         setDeleting(false);
         return;
       }
       router.push("/events");
       router.refresh();
     } catch {
-      alert("Failed to delete event");
+      showToast("Failed to delete event", "error");
       setDeleting(false);
     }
   }
