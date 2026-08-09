@@ -21,7 +21,15 @@ export async function getPolicy(
     .select("*")
     .eq("teacher_id", teacherId)
     .maybeSingle();
-  return data ? { ...DEFAULT_POLICY, ...data } : DEFAULT_POLICY;
+  if (!data) return DEFAULT_POLICY;
+  const policy = { ...DEFAULT_POLICY, ...data };
+  // BYO secrets are encrypted at rest; every server-side consumer reads
+  // policies through here, so this is the single decryption point.
+  const { decryptSecret } = await import("@/lib/token");
+  policy.stripe_secret_key = decryptSecret(policy.stripe_secret_key);
+  policy.stripe_webhook_secret = decryptSecret(policy.stripe_webhook_secret);
+  policy.ai_api_key = decryptSecret(policy.ai_api_key);
+  return policy;
 }
 
 /**

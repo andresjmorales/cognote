@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 interface Plan {
   id: string;
@@ -19,9 +20,9 @@ export function LaunchPlanToStudentButton({
   plans: Plan[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [launching, setLaunching] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,8 +52,7 @@ export function LaunchPlanToStudentButton({
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         newWindow?.close();
-        setToast(err?.error ?? "Failed to launch lesson");
-        setTimeout(() => setToast(null), 4000);
+        showToast(err?.error ?? "Failed to launch lesson", "error");
         setLaunching(false);
         setOpen(false);
         return;
@@ -60,13 +60,11 @@ export function LaunchPlanToStudentButton({
 
       const data = await res.json();
       if (newWindow) newWindow.location.href = `/practice/${data.token}?back=/students/${studentId}`;
-      setToast(`Launched "${planName}" for ${studentName}.`);
-      setTimeout(() => setToast(null), 4000);
+      showToast(`Launched "${planName}" for ${studentName}.`);
       router.refresh();
     } catch {
       newWindow?.close();
-      setToast("Failed to launch lesson");
-      setTimeout(() => setToast(null), 4000);
+      showToast("Failed to launch lesson", "error");
     }
 
     setLaunching(false);
@@ -106,12 +104,6 @@ export function LaunchPlanToStudentButton({
               </button>
             ))
           )}
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50 animate-[fadeIn_0.2s]">
-          {toast}
         </div>
       )}
     </div>

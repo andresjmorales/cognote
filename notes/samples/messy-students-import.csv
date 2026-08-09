@@ -2,7 +2,7 @@ Kid,Primary caregiver,Household,E-mail address (billing),Cell #,Other adult,Othe
 Mia Chen,Wei Chen,Chen family,wei.chen@example.com,(512) 555-0142,Lisa Chen,lisa.chen@example.com,3/18/2016,Faber 2A,Piano,Tue 4:00,Prefers early afternoon
 Leo Chen,Wei Chen,Chen family,wei.chen@example.com,(512) 555-0142,Lisa Chen,lisa.chen@example.com,11/2/2013,Faber 3B,Piano,Tue 4:30,Sibling of Mia — same household
 Jordan Blake,Jordan Blake,Blake,jordan.blake@example.com,5125550199,,,1998-07-04,RCM 6,Piano,Wed 6:00,Adult student / self-pay
-Sofia Morales,Gloria Morales,Morales Piano,gloria@moralespianostudio.com,512-555-0100,Andres Morales,andres@example.com,8/22/2017,Primer,Piano,Thu 3:30,
+Sofia Rivera,Gloria Rivera,Rivera household,gloria.rivera@example.com,512-555-0100,Marco Rivera,marco.rivera@example.com,8/22/2017,Primer,Piano,Thu 3:30,
 Noah Patel,Priya Patel,,priya.patel@example.com,,Raj Patel,raj.patel@example.com,12/5/2014,RCM Prep A,Piano,Mon 5:00,No cell on file — email only
 Ava Nguyen,Minh Nguyen,Nguyen,minh.nguyen@example.com,555-0133,,,05-14-2015,Level 1,Violin,Fri 4:00,Transferred from another teacher
 Emma Wright,Chris Wright,Wright Household,chris.wright@example.com,(737) 555-0177,Pat Wright,,2/29/2016,Faber 1B,Piano,Sat 10:00,Leap-year birthday — verify parse

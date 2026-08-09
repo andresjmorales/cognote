@@ -75,6 +75,20 @@ export async function createStudentWithOptionalFamily(
   let guardianId = input.guardianId?.trim() || null;
   let createdFamily = false;
 
+  // Linking a foreign family would surface this student on another
+  // teacher's portal, so the guardian must belong to this teacher.
+  if (guardianId) {
+    const { data: owned } = await supabase
+      .from("guardians")
+      .select("id")
+      .eq("id", guardianId)
+      .eq("teacher_id", teacherId)
+      .maybeSingle();
+    if (!owned) {
+      return { ok: false, error: "Family not found", status: 404 };
+    }
+  }
+
   if (!guardianId) {
     const email = input.contactEmail?.trim() || null;
     const phone = input.contactPhone?.trim() || null;

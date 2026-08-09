@@ -28,6 +28,44 @@ import { formatLabel, isActiveSheetMusicAssignment } from "@/lib/sheet-music";
 import { oneToOne } from "@/lib/schedule";
 import type { MusicFormat } from "@/lib/supabase/types";
 
+interface StudentPlanSessionRow {
+  id: string;
+  mode: string | null;
+  started_at: string;
+  completed_at: string | null;
+  total_correct: number;
+  total_incorrect: number;
+  total_questions: number;
+}
+
+interface StudentPlanRow {
+  id: string;
+  token: string;
+  assigned_at: string;
+  due_date: string | null;
+  unassigned_at: string | null;
+  plans: {
+    id: string;
+    name: string;
+    clef: string | null;
+    key_signature: string | null;
+    notes: string[] | null;
+    plan_type: string | null;
+  } | null;
+  practice_sessions: StudentPlanSessionRow[] | null;
+}
+
+interface AttendedLessonRow {
+  id: string;
+  lesson_date: string;
+  attendance: { status: string }[] | { status: string } | null;
+}
+
+interface NoteAttemptRow {
+  note_displayed: string;
+  is_correct: boolean;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -58,13 +96,13 @@ export default async function StudentDetailPage({
 
   const [
     { data: student },
-    { data: studentPlans },
+    { data: studentPlansData },
     { data: allPlans },
     { data: musicAssignments },
     { data: libraryItems },
     dimensions,
     { data: assessments },
-    { data: attendedLessons },
+    { data: attendedLessonsData },
     { data: lessonNoteRows },
     policy,
   ] = await Promise.all([
@@ -133,19 +171,14 @@ export default async function StudentDetailPage({
 
   if (!student) notFound();
 
-  const activePlans = (studentPlans ?? []).filter(isActiveStudentPlan);
-  const pastPlans = (studentPlans ?? []).filter((sp) => !isActiveStudentPlan(sp));
+  const studentPlans = (studentPlansData ?? []) as unknown as StudentPlanRow[];
+  const attendedLessons = (attendedLessonsData ?? []) as unknown as AttendedLessonRow[];
+
+  const activePlans = studentPlans.filter(isActiveStudentPlan);
+  const pastPlans = studentPlans.filter((sp) => !isActiveStudentPlan(sp));
   const activePlanIds = new Set(
     activePlans
-      .map((sp) => {
-        const plan = oneToOne(
-          sp.plans as
-            | { id: string; name: string }[]
-            | { id: string; name: string }
-            | null
-        );
-        return plan?.id;
-      })
+      .map((sp) => sp.plans?.id)
       .filter((planId): planId is string => typeof planId === "string")
   );
 
@@ -182,9 +215,8 @@ export default async function StudentDetailPage({
 
   // Attendance summary — only lessons that have been marked count.
   const attendanceCounts: Record<string, number> = {};
-  (attendedLessons ?? []).forEach((l: any) => {
-    const status = (Array.isArray(l.attendance) ? l.attendance[0] : l.attendance)
-      ?.status;
+  attendedLessons.forEach((l) => {
+    const status = oneToOne(l.attendance)?.status;
     if (status) attendanceCounts[status] = (attendanceCounts[status] ?? 0) + 1;
   });
   const markedLessons = Object.values(attendanceCounts).reduce((a, b) => a + b, 0);
@@ -193,28 +225,26 @@ export default async function StudentDetailPage({
       ? Math.round(((attendanceCounts.attended ?? 0) / markedLessons) * 100)
       : null;
 
-  const allSessions = (studentPlans ?? []).flatMap((sp: any) =>
-    (sp.practice_sessions ?? []).map((session: any) => ({
+  const allSessions = studentPlans.flatMap((sp) =>
+    (sp.practice_sessions ?? []).map((session) => ({
       ...session,
       plan: sp.plans,
     }))
   );
   const totalSessions = allSessions.length;
-  const completedSessions = allSessions.filter(
-    (s: any) => s.completed_at
-  ).length;
+  const completedSessions = allSessions.filter((s) => s.completed_at).length;
   const totalCorrect = allSessions.reduce(
-    (sum: number, s: any) => sum + (s.total_correct ?? 0),
+    (sum, s) => sum + (s.total_correct ?? 0),
     0
   );
   const totalQuestions = allSessions.reduce(
-    (sum: number, s: any) => sum + (s.total_questions ?? 0),
+    (sum, s) => sum + (s.total_questions ?? 0),
     0
   );
   const overallAccuracy =
     totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : null;
 
-  const sessionIds = allSessions.map((s: any) => s.id);
+  const sessionIds = allSessions.map((s) => s.id);
   const { data: attempts } = sessionIds.length > 0
     ? await supabase
         .from("note_attempts")
@@ -223,7 +253,7 @@ export default async function StudentDetailPage({
     : { data: [] };
 
   const noteStats: Record<string, { correct: number; total: number }> = {};
-  (attempts ?? []).forEach((a: any) => {
+  ((attempts ?? []) as NoteAttemptRow[]).forEach((a) => {
     if (!noteStats[a.note_displayed]) {
       noteStats[a.note_displayed] = { correct: 0, total: 0 };
     }
@@ -475,7 +505,7 @@ export default async function StudentDetailPage({
             </Card>
           ) : (
             <div className="space-y-2">
-              {(activePlans as any[]).map((sp) => {
+              {activePlans.map((sp) => {
                 const sessions = sp.practice_sessions?.length ?? 0;
                 const practiceUrl = `/practice/${sp.token}`;
                 const isSymbolPlan = sp.plans?.plan_type === "symbol_concepts";
@@ -526,7 +556,7 @@ export default async function StudentDetailPage({
             <>
               <h2 className="text-lg font-semibold mb-3 mt-6">Past Lessons</h2>
               <div className="space-y-2">
-                {(pastPlans as any[]).map((sp) => {
+                {pastPlans.map((sp) => {
                   const sessions = sp.practice_sessions?.length ?? 0;
                   const isSymbolPlan = sp.plans?.plan_type === "symbol_concepts";
                   return (

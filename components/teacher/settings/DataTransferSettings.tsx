@@ -4,9 +4,11 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function DataTransferSettings() {
   const router = useRouter();
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -75,9 +77,11 @@ export function DataTransferSettings() {
     <Card>
       <h2 className="font-semibold text-lg mb-1">Export &amp; Import all CogNote data</h2>
       <p className="text-sm text-muted mb-4">
-        Download a full JSON backup of your studio data (students, families,
-        schedule, lesson notes, practice history, skills, invoices, and
-        settings, including payment keys). Import restores into this account
+        Download a full JSON backup of your studio data: students, families,
+        schedule, lesson notes, practice history, skills, invoices, events and
+        RSVPs, sheet music details, and settings. Payment and AI keys are never
+        included, and sheet music files (PDFs) stay in storage, so re-upload
+        them after moving to a new account. Import restores into this account
         by upserting matching IDs.
       </p>
 
@@ -106,11 +110,16 @@ export function DataTransferSettings() {
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            const ok = window.confirm(
-              "Import will upsert rows from this file into your studio (same IDs overwrite). Continue?"
-            );
-            if (ok) void handleImportFile(file);
-            else if (fileRef.current) fileRef.current.value = "";
+            void (async () => {
+              const ok = await confirm({
+                title: "Import data?",
+                message:
+                  "Import will upsert rows from this file into your studio (same IDs overwrite existing rows).",
+                confirmLabel: "Import",
+              });
+              if (ok) void handleImportFile(file);
+              else if (fileRef.current) fileRef.current.value = "";
+            })();
           }}
         />
       </div>

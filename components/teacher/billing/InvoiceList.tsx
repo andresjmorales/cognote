@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatMoney } from "@/lib/billing";
 import { InvoiceStatusBadge } from "@/components/teacher/billing/BillingList";
 
@@ -23,6 +24,7 @@ export interface InvoiceListRow {
  */
 export function InvoiceList({ invoices }: { invoices: InvoiceListRow[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -84,7 +86,19 @@ export function InvoiceList({ invoices }: { invoices: InvoiceListRow[] }) {
                 : ""
             }`;
 
-    if (!window.confirm(confirmMsg)) return;
+    const confirmed = await confirm({
+      title:
+        action === "send"
+          ? "Send invoices?"
+          : action === "delete"
+            ? "Delete invoices?"
+            : "Void invoices?",
+      message: confirmMsg,
+      confirmLabel:
+        action === "send" ? "Send" : action === "delete" ? "Delete" : "Void",
+      variant: action === "send" ? "primary" : "danger",
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setMessage(null);

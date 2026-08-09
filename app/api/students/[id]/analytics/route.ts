@@ -57,7 +57,13 @@ export async function GET(
         .from("note_attempts")
         .select("note_displayed, is_correct, response_time_ms")
         .in("session_id", sessionIds)
-    : { data: [] as any[] };
+    : {
+        data: [] as {
+          note_displayed: string;
+          is_correct: boolean;
+          response_time_ms: number | null;
+        }[],
+      };
 
   // Compute note accuracy
   const noteAccuracy: Record<

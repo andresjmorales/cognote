@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 interface Student {
   id: string;
@@ -29,13 +30,13 @@ export function AssignSheetMusicButton({
   students: Student[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Student | null>(null);
   const [note, setNote] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [notifyFamily, setNotifyFamily] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   function close() {
@@ -69,23 +70,21 @@ export function AssignSheetMusicButton({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setToast(data.error ?? "Failed to assign");
+        showToast(data.error ?? "Failed to assign", "error");
       } else if (data.alreadyAssigned) {
-        setToast(`${selected.name} already has this score.`);
+        showToast(`${selected.name} already has this score.`, "info");
       } else if (data.emailed) {
-        setToast(`Assigned to ${selected.name}! Emailed the family.`);
+        showToast(`Assigned to ${selected.name}! Emailed the family.`);
       } else {
-        setToast(
+        showToast(
           notifyFamily
             ? `Assigned to ${selected.name}. No family email on file (or email not configured).`
             : `Assigned to ${selected.name}.`
         );
       }
-      setTimeout(() => setToast(null), 5000);
       router.refresh();
     } catch {
-      setToast("Failed to assign");
-      setTimeout(() => setToast(null), 4000);
+      showToast("Failed to assign", "error");
     }
     setBusy(false);
     close();
@@ -180,12 +179,6 @@ export function AssignSheetMusicButton({
               {busy ? "Assigning…" : "Confirm"}
             </Button>
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-4 right-4 left-4 sm:left-auto bg-primary text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50">
-          {toast}
         </div>
       )}
     </div>

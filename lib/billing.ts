@@ -2,7 +2,7 @@ import type { AttendanceStatus } from "@/lib/supabase/types";
 import type { StudioPolicy } from "@/lib/schedule";
 
 /**
- * Billing derivation (ROADMAP Phase 3 §3).
+ * Billing derivation.
  *
  * Attendance → invoice items is a pure function of (attendance, policy, rates).
  * Policy is an input, never baked into attendance rows. Make-up lessons that

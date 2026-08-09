@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { SEED, signInAsTeacher, studentListLink } from "./helpers/auth";
 
 /**
- * Roadmap Playwright smoke: sign in · create student · assign (email + copy) ·
+ * Playwright smoke: sign in · create student · assign (email + copy) ·
  * practice via token · portal seed · attendance + note.
  *
  * Needs a running app (`npm run dev`) and a healthy local Supabase with

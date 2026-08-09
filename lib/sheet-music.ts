@@ -91,6 +91,46 @@ export function validateMusicUpload(file: {
   return { ok: true, format };
 }
 
+/**
+ * Content sniffing for uploaded score files. Extensions and browser MIME
+ * types are user-controlled; the stored bytes must actually match the
+ * declared format.
+ */
+export function validateMusicContent(
+  format: MusicFormat,
+  buffer: Buffer
+): { ok: true } | { ok: false; error: string } {
+  if (format === "pdf") {
+    if (buffer.subarray(0, 4).toString("ascii") !== "%PDF") {
+      return { ok: false, error: "File does not look like a PDF" };
+    }
+    return { ok: true };
+  }
+  if (format === "mxl") {
+    const isZip =
+      buffer.length >= 4 &&
+      buffer[0] === 0x50 &&
+      buffer[1] === 0x4b &&
+      buffer[2] === 0x03 &&
+      buffer[3] === 0x04;
+    if (!isZip) {
+      return { ok: false, error: "File does not look like an MXL (ZIP) archive" };
+    }
+    return { ok: true };
+  }
+  // MusicXML: text file whose first non-whitespace character (after an
+  // optional UTF-8 BOM) opens an XML tag.
+  let start = 0;
+  if (buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) {
+    start = 3;
+  }
+  const head = buffer.subarray(start, start + 256).toString("utf8").trimStart();
+  if (!head.startsWith("<")) {
+    return { ok: false, error: "File does not look like a MusicXML document" };
+  }
+  return { ok: true };
+}
+
 export function sha256Hex(buffer: ArrayBuffer | Uint8Array | Buffer): string {
   const bytes = Buffer.isBuffer(buffer)
     ? buffer

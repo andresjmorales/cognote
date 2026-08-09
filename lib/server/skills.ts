@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Default skill dimensions (ROADMAP §4), seeded lazily the first time a
+ * Default skill dimensions, seeded lazily the first time a
  * teacher's dimension list is read — so future sign-ups get them too,
  * which a migration-time seed can't do.
  */

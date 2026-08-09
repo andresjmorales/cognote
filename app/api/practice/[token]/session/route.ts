@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import {
+  rejectIfTokenLookupsBlocked,
+  recordTokenLookupFailure,
+} from "@/lib/server/token-guard";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  const blocked = rejectIfTokenLookupsBlocked(req);
+  if (blocked) return blocked;
+
   const body = await req.json();
   const mode = body.mode as "lesson" | "free_practice" | "flashcard";
 
@@ -22,6 +30,7 @@ export async function POST(
     .single();
 
   if (!sp || sp.unassigned_at) {
+    recordTokenLookupFailure(req);
     return NextResponse.json({ error: "Invalid token" }, { status: 404 });
   }
 

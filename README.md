@@ -1,23 +1,23 @@
 # CogNote
 
-**Open-source studio management for private music teachers — with a real practice and learning platform built in.**
+**Open-source studio management for private music teachers, with a practice and learning platform built in.**
 
-CogNote runs a private music studio end to end: students and families, recurring lesson scheduling, attendance and make-up credits, lesson notes emailed home, and skill/progress tracking — plus the thing pure admin tools don't have: **quizzes, flashcards, and spaced repetition** that students actually use between lessons. It's free to self-host (MIT), and built by a working piano studio for its own daily use.
+CogNote runs a private music studio end to end: students and families, recurring lesson scheduling, attendance and make-up credits, lesson notes emailed home, and skill tracking. On top of the back office it adds what pure admin tools lack: quizzes, flashcards, and spaced repetition that students use between lessons. It is free to self-host (MIT) and is built by a working piano studio for its own daily use.
 
 Two surfaces, one platform:
 
-- **For teachers** — a full studio back office: CRM, schedule, attendance, billing, policies, analytics, and assessments.
-- **For students and parents** — zero-friction links. Students open a practice URL and tap Start; parents get a single no-login portal with the schedule, practice links, notes, and invoices. No accounts, no passwords, nothing to forget.
+- **For teachers**: a full studio back office with CRM, schedule, attendance, billing, policies, analytics, and assessments.
+- **For students and parents**: simple links. Students open a practice URL and tap Start. Parents get a single no-login portal with the schedule, practice links, notes, and invoices. No accounts and no passwords.
 
 ---
 
 ## What Sets CogNote Apart
 
-1. **It teaches, not just administrates** — most studio software stops at scheduling and billing. CogNote ships a genuine learning layer: note identification and musical-symbol quizzes (optionally timed), free practice, and SM-2 spaced-repetition flashcards, with per-note accuracy analytics feeding back to the teacher.
-2. **One link per family** — the parent portal is a single unguessable, revocable URL. Schedule, practice links, lesson notes, invoices, calendar feed, studio info — no login, ever.
-3. **Make-up lessons that follow *your* policy** — cancellation windows, which cancellations bank a make-up credit, credit expiry: all per-studio settings, never hardcoded rules. Make-ups link back to the cancellation that earned them, so credits are derivable and nothing double-counts.
-4. **Your data is never hostage** — MIT-licensed and fully self-hostable. The entire stack runs locally in Docker with no cloud accounts. Every integration (email, payments) degrades gracefully when unconfigured.
-5. **Kid-friendly learning** — the practice side is built for young students: large buttons, friendly feedback, real staff notation sized for tablets, and emoji-rated flashcards.
+1. **A real learning layer.** Most studio software stops at scheduling and billing. CogNote includes note identification and musical-symbol quizzes (optionally timed), free practice, and SM-2 spaced-repetition flashcards, with per-note accuracy analytics feeding back to the teacher.
+2. **One link per family.** The parent portal is a single unguessable, revocable URL with the schedule, practice links, lesson notes, invoices, calendar feed, and studio info. No login required.
+3. **Make-up lessons that follow your policy.** Cancellation windows, which cancellations bank a make-up credit, and credit expiry are all per-studio settings, never hardcoded rules. Make-ups link back to the cancellation that earned them, so credits are derivable and nothing double-counts.
+4. **Your data stays yours.** MIT-licensed and fully self-hostable. The entire stack runs locally in Docker with no cloud accounts, and full data export is built in. Every integration (email, payments) degrades gracefully when unconfigured.
+5. **Kid-friendly practice.** The student side is built for young learners: large buttons, friendly feedback, real staff notation sized for tablets, and emoji-rated flashcards.
 
 ---
 

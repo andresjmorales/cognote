@@ -1,18 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { StaffRenderer } from "./StaffRenderer";
-import { QuestionTimer, TIMEOUT_ANSWER } from "./QuestionTimer";
-import { Button } from "@/components/ui/button";
+import { TIMEOUT_ANSWER } from "./QuestionTimer";
 import { Card } from "@/components/ui/card";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import {
+  QuizCompleteCard,
+  QuizEmptyCard,
+  QuizShell,
+  useQuizCore,
+  type AttemptResult,
+} from "./quiz-core";
 import {
   buildAnswerChoices,
   noteName,
   displayNoteName,
-  shuffleAvoidingFirst,
   KEY_SIGNATURES,
 } from "@/lib/music";
+
+export type { AttemptResult };
 
 export interface QuizConfig {
   notes: string[];
@@ -25,23 +31,12 @@ export interface QuizConfig {
   timeLimitSeconds?: number;
 }
 
-export interface AttemptResult {
-  noteDisplayed: string;
-  clef: "treble" | "bass";
-  correctAnswer: string;
-  studentAnswer: string;
-  isCorrect: boolean;
-  responseTimeMs: number;
-}
-
 interface QuizEngineProps {
   config: QuizConfig;
   onAttempt?: (attempt: AttemptResult) => void;
   onComplete?: (results: AttemptResult[]) => void;
   onQuit?: () => void;
 }
-
-type Phase = "playing" | "feedback" | "complete";
 
 export function QuizEngine({
   config,
@@ -52,29 +47,15 @@ export function QuizEngine({
   const { notes, clef, keySignature, questionsPerLesson, answerChoices, mode, timeLimitSeconds } =
     config;
   const isLesson = mode === "lesson";
-  const isTimed = isLesson && (timeLimitSeconds ?? 0) > 0;
 
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [results, setResults] = useState<AttemptResult[]>([]);
-  const [phase, setPhase] = useState<Phase>("playing");
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
-
-  const bagRef = useRef<string[]>([]);
-  const bagIndexRef = useRef(0);
-  const lastShownRef = useRef<string | null>(null);
-
-  const currentNote = useMemo(() => {
-    if (bagRef.current.length === 0 || bagIndexRef.current >= bagRef.current.length) {
-      bagRef.current = shuffleAvoidingFirst(notes, lastShownRef.current);
-      bagIndexRef.current = 0;
-    }
-    const note = bagRef.current[bagIndexRef.current];
-    bagIndexRef.current++;
-    lastShownRef.current = note;
-    return note;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionIndex, notes]);
+  const core = useQuizCore<string>({
+    items: notes,
+    questionsPerLesson,
+    isLesson,
+    onAttempt,
+    onComplete,
+  });
+  const { currentItem: currentNote, questionIndex, phase, selectedAnswer } = core;
 
   const currentClef = useMemo((): "treble" | "bass" => {
     if (clef === "both") return Math.random() > 0.5 ? "treble" : "bass";
@@ -83,179 +64,74 @@ export function QuizEngine({
   }, [questionIndex, clef]);
 
   const choices = useMemo(
-    () => buildAnswerChoices(currentNote, notes, answerChoices),
+    () => (currentNote ? buildAnswerChoices(currentNote, notes, answerChoices) : []),
     [currentNote, notes, answerChoices]
   );
 
-  const vexKeySignature = KEY_SIGNATURES[keySignature] ?? "C";
-  const correctAnswer = noteName(currentNote);
-  const correctCount = results.filter((r) => r.isCorrect).length;
-  const incorrectCount = results.filter((r) => !r.isCorrect).length;
-
-  useEffect(() => {
-    setQuestionStartTime(Date.now());
-  }, [questionIndex]);
+  const correctAnswer = currentNote ? noteName(currentNote) : "";
 
   const handleAnswer = useCallback(
     (answer: string) => {
-      if (phase !== "playing") return;
-
-      const isCorrect = answer === correctAnswer;
-      const attempt: AttemptResult = {
+      if (!currentNote) return;
+      core.submitAnswer({
         noteDisplayed: currentNote,
         clef: currentClef,
         correctAnswer,
         studentAnswer: answer,
-        isCorrect,
-        responseTimeMs: Date.now() - questionStartTime,
-      };
-
-      setSelectedAnswer(answer);
-      setResults((prev) => [...prev, attempt]);
-      setPhase("feedback");
-      onAttempt?.(attempt);
-
-      setTimeout(
-        () => {
-          const nextIndex = questionIndex + 1;
-          if (isLesson && nextIndex >= questionsPerLesson) {
-            const allResults = [...results, attempt];
-            setPhase("complete");
-            onComplete?.(allResults);
-          } else {
-            setQuestionIndex(nextIndex);
-            setSelectedAnswer(null);
-            setPhase("playing");
-          }
-        },
-        isCorrect ? 800 : 1500
-      );
+        isCorrect: answer === correctAnswer,
+        responseTimeMs: Date.now() - core.questionStartTime,
+      });
     },
-    [
-      phase,
-      correctAnswer,
-      currentNote,
-      currentClef,
-      questionStartTime,
-      questionIndex,
-      questionsPerLesson,
-      isLesson,
-      results,
-      onAttempt,
-      onComplete,
-    ]
+    [core, currentNote, currentClef, correctAnswer]
   );
 
-  if (phase === "complete") {
-    const total = results.length;
-    const correct = results.filter((r) => r.isCorrect).length;
-    const pct = Math.round((correct / total) * 100);
+  if (!currentNote) {
+    return <QuizEmptyCard onQuit={onQuit} />;
+  }
 
+  if (phase === "complete") {
     return (
-      <Card padding="lg" className="max-w-lg w-full mx-auto text-center font-[family-name:var(--font-nunito)]">
-        <div className="text-6xl mb-4">
-          {pct >= 90 ? "🎉" : pct >= 70 ? "⭐" : pct >= 50 ? "👍" : "💪"}
-        </div>
-        <h2 className="text-3xl font-bold mb-2">
-          {correct} out of {total}!
-        </h2>
-        <p className="text-lg text-muted mb-6">
-          {pct >= 90
-            ? "Amazing! You're a music reading star!"
-            : pct >= 70
-              ? "Great job! Keep practicing!"
-              : pct >= 50
-                ? "Good effort! You're getting better!"
-                : "Keep at it! Practice makes perfect!"}
-        </p>
-        <div className="flex gap-3 justify-center">
-          <Button
-            size="lg"
-            onClick={() => {
-              setQuestionIndex(0);
-              setResults([]);
-              setSelectedAnswer(null);
-              setPhase("playing");
-            }}
-          >
-            Redo Lesson
-          </Button>
-          {onQuit && (
-            <Button size="lg" variant="secondary" onClick={onQuit}>
-              Done
-            </Button>
-          )}
-        </div>
-      </Card>
+      <QuizCompleteCard
+        results={core.results}
+        praiseHigh="You're a music reading star!"
+        onRestart={core.restart}
+        onQuit={onQuit}
+      />
     );
   }
 
   return (
-    <div className="max-w-lg w-full mx-auto font-[family-name:var(--font-nunito)]">
-      {isLesson && (
-        <ProgressBar
-          current={questionIndex + 1}
-          total={questionsPerLesson}
-          className="mb-4"
-        />
-      )}
-
-      {isTimed && (
-        <QuestionTimer
-          key={questionIndex}
-          seconds={timeLimitSeconds!}
-          paused={phase !== "playing"}
-          onExpire={() => handleAnswer(TIMEOUT_ANSWER)}
-        />
-      )}
-
-      <div className="flex justify-between items-center text-sm mb-3">
-        <span className="text-success font-semibold">✓ {correctCount}</span>
-        <span className="text-error font-semibold">✗ {incorrectCount}</span>
-      </div>
-
-      <Card className="mb-6 flex items-center justify-center">
-        <StaffRenderer
-          note={currentNote}
-          clef={currentClef}
-          keySignature={vexKeySignature}
-        />
-      </Card>
-
-      {phase === "feedback" && selectedAnswer === TIMEOUT_ANSWER && (
-        <p className="text-center text-error font-semibold mb-3">
-          ⏱️ Time&apos;s up! The answer was {displayNoteName(correctAnswer)}.
-        </p>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        {choices.map((choice) => {
-          let variant: "secondary" | "success" | "error" = "secondary";
-          if (phase === "feedback") {
-            if (choice === correctAnswer) variant = "success";
-            else if (choice === selectedAnswer) variant = "error";
-          }
-
-          return (
-            <Button
-              key={choice}
-              variant={variant}
-              size="xl"
-              disabled={phase === "feedback"}
-              onClick={() => handleAnswer(choice)}
-              className="text-2xl font-bold"
-            >
-              {displayNoteName(choice)}
-            </Button>
-          );
-        })}
-      </div>
-
-      <div className="mt-4 text-center">
-        <Button variant="ghost" size="sm" onClick={onQuit}>
-          {isLesson ? "Quit Quiz" : "I\u0027m Done"}
-        </Button>
-      </div>
-    </div>
+    <QuizShell
+      isLesson={isLesson}
+      questionIndex={questionIndex}
+      questionsPerLesson={questionsPerLesson}
+      timeLimitSeconds={timeLimitSeconds}
+      phase={phase}
+      correctCount={core.correctCount}
+      incorrectCount={core.incorrectCount}
+      prompt={
+        <Card className="mb-6 flex items-center justify-center">
+          <StaffRenderer
+            note={currentNote}
+            clef={currentClef}
+            keySignature={KEY_SIGNATURES[keySignature] ?? "C"}
+          />
+        </Card>
+      }
+      beforeChoices={
+        phase === "feedback" && selectedAnswer === TIMEOUT_ANSWER ? (
+          <p className="text-center text-error font-semibold mb-3">
+            ⏱️ Time&apos;s up! The answer was {displayNoteName(correctAnswer)}.
+          </p>
+        ) : undefined
+      }
+      choices={choices}
+      correctAnswer={correctAnswer}
+      selectedAnswer={selectedAnswer}
+      renderChoice={(choice) => displayNoteName(choice)}
+      choiceClassName="text-2xl font-bold"
+      onAnswer={handleAnswer}
+      onQuit={onQuit}
+    />
   );
 }

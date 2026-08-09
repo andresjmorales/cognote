@@ -53,7 +53,7 @@ export default function HostingOptionsPage() {
           </h1>
           <p className="text-muted text-sm mb-6 leading-relaxed">
             You&apos;re running CogNote yourself, so there&apos;s nothing to
-            pay here — full product, no limits. Hosted CogNote (we run the
+            pay here: full product, no limits. Hosted CogNote (we run the
             servers for you) is a separate option if you&apos;d rather not
             manage infrastructure.
           </p>
@@ -84,7 +84,7 @@ export default function HostingOptionsPage() {
           <p className="text-muted max-w-2xl mx-auto text-sm leading-relaxed">
             CogNote is open source (MIT). Run it yourself, or use our hosted
             instance. Hosted starts with a {trialDays}-day full trial, then
-            stays free with soft caps — or go Pro for unlimited creates.
+            stays free with soft caps. Go Pro to remove the caps.
           </p>
         </div>
 
@@ -182,6 +182,15 @@ export default function HostingOptionsPage() {
           >
             support@cognote.studio
           </a>
+        </p>
+        <p className="text-center text-sm text-muted mt-3">
+          <Link href="/privacy" className="hover:text-foreground transition-colors">
+            Privacy Policy
+          </Link>
+          <span className="mx-2">·</span>
+          <Link href="/terms" className="hover:text-foreground transition-colors">
+            Terms of Service
+          </Link>
         </p>
       </main>
     </PageChrome>

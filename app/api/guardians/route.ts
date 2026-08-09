@@ -4,6 +4,7 @@ import {
   insertGuardian,
   retireEmptyGuardians,
 } from "@/lib/server/families";
+import { parseBody, guardianCreateSchema } from "@/lib/server/api-schemas";
 
 export async function GET() {
   const supabase = await createClient();
@@ -39,16 +40,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  if (!body.name?.trim()) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
-  }
+  const parsed = parseBody(guardianCreateSchema, await req.json().catch(() => null));
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
-  const emailRecipients = ["primary", "secondary", "both"].includes(
-    body.emailRecipients
-  )
-    ? body.emailRecipients
-    : "primary";
+  const emailRecipients = body.emailRecipients ?? "primary";
 
   const previousGuardianIds: string[] = [];
   if (Array.isArray(body.studentIds) && body.studentIds.length > 0) {
@@ -90,8 +86,8 @@ export async function POST(req: NextRequest) {
 
   if (Array.isArray(body.newStudents)) {
     const rows = body.newStudents
-      .filter((s: { name?: string }) => s?.name?.trim())
-      .map((s: { name: string; birthdate?: string }) => ({
+      .filter((s) => s.name.trim())
+      .map((s) => ({
         teacher_id: user.id,
         name: s.name.trim(),
         guardian_id: guardian.id,

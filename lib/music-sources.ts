@@ -197,12 +197,19 @@ export function cleanImslpFieldValue(raw: string): string | undefined {
   value = value.replace(/\[\[([^|\]]+)\|[^\]]+\]\]/g, "$1");
   value = value.replace(/\[\[([^\]]+)\]\]/g, "$1");
 
-  // Decode one entity level (`&amp;` last) so `&amp;lt;` stays `&lt;`, not `<`.
+  // Decode exactly one entity level in a single pass: a lookup-map replace
+  // cannot re-decode its own output, so `&amp;lt;` becomes `&lt;`, not `<`.
+  const entities: Record<string, string> = {
+    "&nbsp;": " ",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&amp;": "&",
+  };
+  value = value.replace(
+    /&(?:nbsp|lt|gt|amp);/gi,
+    (m) => entities[m.toLowerCase()] ?? m
+  );
   value = value
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&amp;/gi, "&")
     .replace(/\s*;\s*;+/g, ";")
     .replace(/\s+/g, " ")
     .replace(/\s*;\s*/g, "; ")

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import {
   ATTENDANCE_LABELS,
   BULK_ATTENDANCE_STATUSES,
@@ -21,6 +22,7 @@ export function BulkAttendancePanel({
   timezone: string;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [notifyFamily, setNotifyFamily] = useState(true);
@@ -53,30 +55,35 @@ export function BulkAttendancePanel({
     if (selected.size === 0) return;
     setBusy(true);
     setMessage(null);
-    const res = await fetch("/api/schedule/attendance/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status,
-        ids: [...selected],
-        notifyFamily: status === "teacher_cancel" ? notifyFamily : false,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setBusy(false);
-    if (!res.ok) {
-      setMessage(data.error ?? "Bulk update failed");
-      return;
+    try {
+      const res = await fetch("/api/schedule/attendance/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          ids: [...selected],
+          notifyFamily: status === "teacher_cancel" ? notifyFamily : false,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error ?? "Bulk update failed", "error");
+        return;
+      }
+      const emailBit =
+        status === "teacher_cancel" && notifyFamily
+          ? ` · emailed ${data.emailed ?? 0} famil${(data.emailed ?? 0) === 1 ? "y" : "ies"}`
+          : "";
+      setMessage(
+        `Marked ${data.succeeded} lesson${data.succeeded === 1 ? "" : "s"} as ${ATTENDANCE_LABELS[status].toLowerCase()}${emailBit}.`
+      );
+      setSelected(new Set());
+      router.refresh();
+    } catch {
+      showToast("Bulk update failed. Check your connection.", "error");
+    } finally {
+      setBusy(false);
     }
-    const emailBit =
-      status === "teacher_cancel" && notifyFamily
-        ? ` · emailed ${data.emailed ?? 0} famil${(data.emailed ?? 0) === 1 ? "y" : "ies"}`
-        : "";
-    setMessage(
-      `Marked ${data.succeeded} lesson${data.succeeded === 1 ? "" : "s"} as ${ATTENDANCE_LABELS[status].toLowerCase()}${emailBit}.`
-    );
-    setSelected(new Set());
-    router.refresh();
   }
 
   if (!open) {

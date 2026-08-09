@@ -1,11 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const DATA_EXPORT_VERSION = 1 as const;
+export const DATA_EXPORT_VERSION = 2 as const;
+/** v1 files (pre music/events/profile) import fine; missing tables are empty. */
+const SUPPORTED_IMPORT_VERSIONS: readonly number[] = [1, 2];
 
 export type StudioDataExport = {
-  version: typeof DATA_EXPORT_VERSION;
+  version: number;
   exportedAt: string;
   teacherId: string;
+  /** Non-entitlement profile subset (v2+). Never includes hosted/Stripe fields. */
+  teacher_profile?: { display_name?: string } | null;
   tables: {
     studio_policies: Record<string, unknown> | null;
     guardians: Record<string, unknown>[];
@@ -24,11 +28,40 @@ export type StudioDataExport = {
     invoices: Record<string, unknown>[];
     invoice_items: Record<string, unknown>[];
     payments: Record<string, unknown>[];
+    // v2 additions (absent in v1 files)
+    music_library_items?: Record<string, unknown>[];
+    sheet_music_assignments?: Record<string, unknown>[];
+    events?: Record<string, unknown>[];
+    event_students?: Record<string, unknown>[];
+    event_rsvps?: Record<string, unknown>[];
   };
 };
 
 function asRows(data: unknown): Record<string, unknown>[] {
   return (data as Record<string, unknown>[] | null) ?? [];
+}
+
+/**
+ * BYO payment/AI credentials never leave the account in an export file.
+ * (Old export files that still contain them import fine; the keys are just
+ * re-saved as configured.)
+ */
+const POLICY_SECRET_FIELDS = [
+  "stripe_secret_key",
+  "stripe_publishable_key",
+  "stripe_webhook_secret",
+  "ai_api_key",
+] as const;
+
+function stripPolicySecrets(
+  policy: Record<string, unknown> | null
+): Record<string, unknown> | null {
+  if (!policy) return policy;
+  const cleaned = { ...policy };
+  for (const field of POLICY_SECRET_FIELDS) {
+    cleaned[field] = null;
+  }
+  return cleaned;
 }
 
 /** Fetch every teacher-owned row for backup / migration. */
@@ -45,6 +78,9 @@ export async function buildStudioExport(
     lessonsRes,
     dimensionsRes,
     invoicesRes,
+    musicRes,
+    eventsRes,
+    profileRes,
   ] = await Promise.all([
     supabase.from("studio_policies").select("*").eq("teacher_id", teacherId).maybeSingle(),
     supabase.from("guardians").select("*").eq("teacher_id", teacherId),
@@ -54,6 +90,9 @@ export async function buildStudioExport(
     supabase.from("lessons").select("*").eq("teacher_id", teacherId),
     supabase.from("skill_dimensions").select("*").eq("teacher_id", teacherId),
     supabase.from("invoices").select("*").eq("teacher_id", teacherId),
+    supabase.from("music_library_items").select("*").eq("teacher_id", teacherId),
+    supabase.from("events").select("*").eq("teacher_id", teacherId),
+    supabase.from("teachers").select("display_name").eq("id", teacherId).maybeSingle(),
   ]);
 
   const students = asRows(studentsRes.data);
@@ -62,6 +101,8 @@ export async function buildStudioExport(
   const planIds = asRows(plansRes.data).map((p) => p.id as string);
   const dimensionIds = asRows(dimensionsRes.data).map((d) => d.id as string);
   const invoiceIds = asRows(invoicesRes.data).map((i) => i.id as string);
+  const musicItemIds = asRows(musicRes.data).map((m) => m.id as string);
+  const eventIds = asRows(eventsRes.data).map((e) => e.id as string);
 
   const [
     attendanceRes,
@@ -91,6 +132,21 @@ export async function buildStudioExport(
       : Promise.resolve({ data: [] }),
   ]);
 
+  const [musicAssignmentsRes, eventStudentsRes, eventRsvpsRes] = await Promise.all([
+    musicItemIds.length
+      ? supabase
+          .from("sheet_music_assignments")
+          .select("*")
+          .in("music_item_id", musicItemIds)
+      : Promise.resolve({ data: [] }),
+    eventIds.length
+      ? supabase.from("event_students").select("*").in("event_id", eventIds)
+      : Promise.resolve({ data: [] }),
+    eventIds.length
+      ? supabase.from("event_rsvps").select("*").in("event_id", eventIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
   const studentPlans = asRows(studentPlansRes.data);
   const studentPlanIds = studentPlans.map((sp) => sp.id as string);
 
@@ -117,8 +173,13 @@ export async function buildStudioExport(
     version: DATA_EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     teacherId,
+    teacher_profile: profileRes.data
+      ? { display_name: (profileRes.data as { display_name?: string }).display_name ?? "" }
+      : null,
     tables: {
-      studio_policies: (policyRes.data as Record<string, unknown> | null) ?? null,
+      studio_policies: stripPolicySecrets(
+        (policyRes.data as Record<string, unknown> | null) ?? null
+      ),
       guardians: asRows(guardiansRes.data),
       students,
       plans: asRows(plansRes.data),
@@ -135,6 +196,13 @@ export async function buildStudioExport(
       invoices: asRows(invoicesRes.data),
       invoice_items: asRows(itemsRes.data),
       payments: asRows(paymentsRes.data),
+      // v2: music metadata only; the underlying files stay in Storage and are
+      // not part of the export file.
+      music_library_items: asRows(musicRes.data),
+      sheet_music_assignments: asRows(musicAssignmentsRes.data),
+      events: asRows(eventsRes.data),
+      event_students: asRows(eventStudentsRes.data),
+      event_rsvps: asRows(eventRsvpsRes.data),
     },
   };
 }
@@ -172,10 +240,10 @@ export async function importStudioExport(
   teacherId: string,
   payload: StudioDataExport
 ): Promise<{ ok: true; counts: Record<string, number> } | { ok: false; error: string }> {
-  if (!payload || payload.version !== DATA_EXPORT_VERSION) {
+  if (!payload || !SUPPORTED_IMPORT_VERSIONS.includes(payload.version)) {
     return {
       ok: false,
-      error: `Unsupported export version (expected ${DATA_EXPORT_VERSION})`,
+      error: `Unsupported export version (expected one of ${SUPPORTED_IMPORT_VERSIONS.join(", ")})`,
     };
   }
   if (!payload.tables || typeof payload.tables !== "object") {
@@ -211,6 +279,15 @@ export async function importStudioExport(
     { name: "invoices", rows: withTeacherId(t.invoices ?? [], teacherId) },
     { name: "invoice_items", rows: t.invoice_items ?? [] },
     { name: "payments", rows: t.payments ?? [] },
+    // v2 tables; absent (empty) in v1 files
+    {
+      name: "music_library_items",
+      rows: withTeacherId(t.music_library_items ?? [], teacherId),
+    },
+    { name: "sheet_music_assignments", rows: t.sheet_music_assignments ?? [] },
+    { name: "events", rows: withTeacherId(t.events ?? [], teacherId) },
+    { name: "event_students", rows: t.event_students ?? [] },
+    { name: "event_rsvps", rows: t.event_rsvps ?? [] },
   ];
 
   for (const step of steps) {
@@ -219,13 +296,31 @@ export async function importStudioExport(
     counts[step.name] = step.rows.length;
   }
 
+  // Teacher profile subset (v2): only fill in a display name if the account
+  // doesn't have one yet. Never touches entitlement or Stripe columns.
+  const importedName = payload.teacher_profile?.display_name?.trim();
+  if (importedName) {
+    const { data: teacherRow } = await supabase
+      .from("teachers")
+      .select("display_name")
+      .eq("id", teacherId)
+      .maybeSingle();
+    if (teacherRow && !(teacherRow.display_name as string | null)?.trim()) {
+      await supabase
+        .from("teachers")
+        .update({ display_name: importedName })
+        .eq("id", teacherId);
+      counts.teacher_profile = 1;
+    }
+  }
+
   return { ok: true, counts };
 }
 
 export function parseExportPayload(raw: unknown): StudioDataExport | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as StudioDataExport;
-  if (obj.version !== DATA_EXPORT_VERSION) return null;
+  if (!SUPPORTED_IMPORT_VERSIONS.includes(obj.version)) return null;
   if (!obj.tables || typeof obj.tables !== "object") return null;
   return obj;
 }

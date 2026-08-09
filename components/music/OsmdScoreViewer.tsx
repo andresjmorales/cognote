@@ -45,6 +45,7 @@ export function OsmdScoreViewer({ fileUrl }: { fileUrl: string }) {
       }
     }
 
+    const container = containerRef.current;
     render();
     return () => {
       cancelled = true;
@@ -53,7 +54,7 @@ export function OsmdScoreViewer({ fileUrl }: { fileUrl: string }) {
       } catch {
         /* ignore */
       }
-      if (containerRef.current) containerRef.current.innerHTML = "";
+      if (container) container.innerHTML = "";
     };
   }, [fileUrl]);
 

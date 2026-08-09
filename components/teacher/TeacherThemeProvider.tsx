@@ -5,7 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
@@ -32,6 +32,28 @@ function readStoredTheme(): ThemeMode {
   return "light";
 }
 
+// localStorage is the source of truth; useSyncExternalStore keeps hydration
+// safe (server renders light) without a mount effect.
+const themeListeners = new Set<() => void>();
+
+function subscribeTheme(listener: () => void) {
+  themeListeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    themeListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function writeStoredTheme(mode: ThemeMode) {
+  try {
+    localStorage.setItem(STORAGE_KEY, mode);
+  } catch {
+    /* ignore */
+  }
+  for (const listener of themeListeners) listener();
+}
+
 /**
  * Teacher-Studio theme only. Scoped via data-teacher-theme so student
  * practice, /try, and portal stay light — staff/notation are not dark-themed.
@@ -41,38 +63,26 @@ function readStoredTheme(): ThemeMode {
  * <html> while mounted so rubber-band overscroll uses the dark background.
  */
 export function TeacherThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("light");
-  const [ready, setReady] = useState(false);
+  const theme = useSyncExternalStore(
+    subscribeTheme,
+    readStoredTheme,
+    () => "light" as ThemeMode
+  );
 
   useEffect(() => {
-    setThemeState(readStoredTheme());
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      /* ignore */
-    }
-  }, [theme, ready]);
-
-  useEffect(() => {
-    if (!ready) return;
     const root = document.documentElement;
     root.setAttribute("data-teacher-theme", theme);
     return () => {
       root.removeAttribute("data-teacher-theme");
     };
-  }, [theme, ready]);
+  }, [theme]);
 
   const setTheme = useCallback((mode: ThemeMode) => {
-    setThemeState(mode);
+    writeStoredTheme(mode);
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
+    writeStoredTheme(readStoredTheme() === "dark" ? "light" : "dark");
   }, []);
 
   return (

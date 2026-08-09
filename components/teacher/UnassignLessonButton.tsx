@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 export function UnassignLessonButton({
   studentPlanId,
@@ -14,6 +15,7 @@ export function UnassignLessonButton({
   sessionCount?: number;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -25,14 +27,14 @@ export function UnassignLessonButton({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        alert(err?.error ?? "Failed to unassign lesson");
+        showToast(err?.error ?? "Failed to unassign lesson", "error");
         setBusy(false);
         return;
       }
       setConfirmOpen(false);
       router.refresh();
     } catch {
-      alert("Failed to unassign lesson");
+      showToast("Failed to unassign lesson", "error");
     }
     setBusy(false);
   }
@@ -59,8 +61,10 @@ export function UnassignLessonButton({
           >
             <h3 className="font-semibold text-lg mb-1">Unassign lesson?</h3>
             <p className="text-muted text-sm mb-4">
-              Remove &quot;{lessonName}&quot; from active assignments. Practice
-              history is kept — it moves to Past Lessons.
+              Remove &quot;{lessonName}&quot; from active assignments.
+              {sessionCount > 0
+                ? ` Practice history (${sessionCount} session${sessionCount === 1 ? "" : "s"}) is kept and moves to Past Lessons.`
+                : " Practice history is kept and moves to Past Lessons."}
             </p>
             <div className="flex justify-end gap-2">
               <Button

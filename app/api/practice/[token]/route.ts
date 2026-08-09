@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/token";
+import {
+  rejectIfTokenLookupsBlocked,
+  recordTokenLookupFailure,
+} from "@/lib/server/token-guard";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
 
+  const blocked = rejectIfTokenLookupsBlocked(req);
+  if (blocked) return blocked;
+
   try {
-    let studentPlanId: string | null = null;
     const supabase = createServiceClient();
 
     // First try to look up by raw token (dev/seed tokens)
@@ -36,11 +42,13 @@ export async function GET(
 
     if (directMatch) {
       if (directMatch.unassigned_at) {
+        recordTokenLookupFailure(req);
         return NextResponse.json({ error: "Practice link not found" }, { status: 404 });
       }
       return NextResponse.json({
         studentPlanId: directMatch.id,
-        studentName: (directMatch.students as any)?.name ?? "Student",
+        studentName:
+          (directMatch.students as { name?: string } | null)?.name ?? "Student",
         plan: directMatch.plans,
       });
     }
@@ -69,11 +77,12 @@ export async function GET(
 
       if (sp) {
         if (sp.unassigned_at) {
+          recordTokenLookupFailure(req);
           return NextResponse.json({ error: "Practice link not found" }, { status: 404 });
         }
         return NextResponse.json({
           studentPlanId: sp.id,
-          studentName: (sp.students as any)?.name ?? "Student",
+          studentName: (sp.students as { name?: string } | null)?.name ?? "Student",
           plan: sp.plans,
         });
       }
@@ -81,6 +90,7 @@ export async function GET(
       // Token decryption failed — that's fine, we'll return 404
     }
 
+    recordTokenLookupFailure(req);
     return NextResponse.json({ error: "Practice link not found" }, { status: 404 });
   } catch (err) {
     console.error("Practice token resolution error:", err);

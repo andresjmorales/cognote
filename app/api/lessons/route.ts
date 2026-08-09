@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { parseBody, planCreateSchema } from "@/lib/server/api-schemas";
 
 export async function GET() {
   const supabase = await createClient();
@@ -43,7 +44,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(limitReachedResponse(planLimit), { status: 403 });
   }
 
-  const body = await req.json();
+  const parsed = parseBody(planCreateSchema, await req.json().catch(() => null));
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
+
   const { data, error } = await supabase
     .from("plans")
     .insert({

@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  FlashcardEngine,
-  type FlashcardItem,
-} from "@/components/music/FlashcardEngine";
+import { FlashcardEngine } from "@/components/music/FlashcardEngine";
 import {
   KeySignatureQuizEngine,
   type KeySignatureQuizConfig,
@@ -17,8 +14,8 @@ import {
   type SymbolItem,
   type SymbolQuizConfig,
 } from "@/components/music/SymbolQuizEngine";
-import { expandNotesWithAccidentals, shuffle } from "@/lib/music";
-import { defaultFlashcardState } from "@/lib/srs";
+import { expandNotesWithAccidentals } from "@/lib/music";
+import { buildFlashcardItems } from "@/lib/flashcards";
 
 type Mode = "welcome" | "lesson" | "free_practice" | "flashcard";
 
@@ -43,63 +40,6 @@ export type { PlanData };
 
 export function PlanPreviewPlayer({ plan }: { plan: PlanData }) {
   const [mode, setMode] = useState<Mode>("welcome");
-
-  function buildFlashcards() {
-    if (plan.plan_type === "key_signature_identification") {
-      const keySignatures = plan.key_signatures ?? [];
-      const clefs: ("treble" | "bass")[] =
-        plan.clef === "both" ? ["treble", "bass"] : [plan.clef];
-
-      const items: FlashcardItem[] = [];
-      for (const keyName of keySignatures) {
-        for (const clef of clefs) {
-          items.push({
-            itemType: "key_signature",
-            keyName,
-            clef,
-            state: defaultFlashcardState(),
-          });
-        }
-      }
-
-      return shuffle(items);
-    }
-
-    if (plan.plan_type === "symbol_concepts") {
-      return shuffle(
-        (plan.symbols ?? []).map((symbol) => ({
-          itemType: "symbol" as const,
-          symbolId: symbol.id,
-          symbol: symbol.symbol,
-          term: symbol.term,
-          definition: symbol.definition,
-          state: defaultFlashcardState(),
-        }))
-      );
-    }
-
-    const expandedNotes = expandNotesWithAccidentals(
-      plan.notes,
-      plan.include_sharps ?? false,
-      plan.include_flats ?? false,
-    );
-    const clefs: ("treble" | "bass")[] =
-      plan.clef === "both" ? ["treble", "bass"] : [plan.clef];
-
-    const items: FlashcardItem[] = [];
-    for (const note of expandedNotes) {
-      for (const clef of clefs) {
-        items.push({
-          itemType: "note",
-          note,
-          clef,
-          state: defaultFlashcardState(),
-        });
-      }
-    }
-
-    return shuffle(items);
-  }
 
   if (mode === "welcome") {
     return (
@@ -136,7 +76,7 @@ export function PlanPreviewPlayer({ plan }: { plan: PlanData }) {
   }
 
   if (mode === "flashcard") {
-    const cards = buildFlashcards();
+    const cards = buildFlashcardItems(plan);
 
     if (cards.length === 0) {
       return (

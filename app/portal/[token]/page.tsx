@@ -20,6 +20,8 @@ import { formatMoney } from "@/lib/billing";
 import { formatEventWhen } from "@/lib/events";
 import { PortalCancelButton } from "@/components/portal/PortalCancelButton";
 import { PortalEventRsvp } from "@/components/portal/PortalEventRsvp";
+import { PortalPolicyBanner } from "@/components/portal/PortalPolicyBanner";
+import { StudioPoliciesSection } from "@/components/portal/StudioPoliciesSection";
 import { loadStudentStreakSummary } from "@/lib/server/streaks";
 
 export const metadata: Metadata = { title: "Family Portal" };
@@ -32,6 +34,19 @@ interface PortalLesson {
   duration_minutes: number;
   makeup_for: string | null;
   attendance: { status: AttendanceStatus }[] | { status: AttendanceStatus } | null;
+}
+
+function lessonIsUpcoming(
+  lesson: PortalLesson,
+  status: AttendanceStatus | undefined,
+  cancelled: boolean
+) {
+  return (
+    !cancelled &&
+    status !== "attended" &&
+    status !== "no_show" &&
+    new Date(lesson.starts_at).getTime() > Date.now()
+  );
 }
 
 function PortalLessonCard({
@@ -47,11 +62,7 @@ function PortalLessonCard({
 }) {
   const status = oneToOne(lesson.attendance)?.status;
   const cancelled = status === "teacher_cancel" || status === "student_cancel";
-  const upcoming =
-    !cancelled &&
-    status !== "attended" &&
-    status !== "no_show" &&
-    new Date(lesson.starts_at).getTime() > Date.now();
+  const upcoming = lessonIsUpcoming(lesson, status, cancelled);
 
   return (
     <Card padding="sm">
@@ -318,13 +329,19 @@ export default async function PortalPage({
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-8">
+        {policy.policies_updated_at && (
+          <PortalPolicyBanner
+            token={token}
+            policiesUpdatedAt={policy.policies_updated_at}
+          />
+        )}
         <div>
           <h1 className="text-2xl font-bold">
             Welcome, {familyDisplayName(guardian)}
           </h1>
           <p className="text-muted text-sm mt-1">
-            Practice links, lesson schedule, and notes for your family — no login needed.
-            Keep this link private.
+            Practice links, lesson schedule, and notes for your family. No
+            login needed; keep this link private.
           </p>
         </div>
 
@@ -691,6 +708,9 @@ export default async function PortalPage({
             </div>
           )}
         </section>
+
+        {/* Studio policies (read-only summary) */}
+        <StudioPoliciesSection policy={policy} />
 
         {/* Studio info */}
         {(policy.studio_info || policy.studio_website || policy.studio_contact) && (

@@ -77,7 +77,8 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
   const [keySignature, setKeySignature] = useState(initialData?.key_signature ?? "C major");
   const [includeSharps, setIncludeSharps] = useState(initialData?.include_sharps ?? false);
   const [includeFlats, setIncludeFlats] = useState(initialData?.include_flats ?? false);
-  const [measuresShown, setMeasuresShown] = useState(initialData?.measures_shown ?? 1);
+  // Measures Shown UI is hidden (StaffRenderer draws a single measure).
+  const [measuresShown] = useState(initialData?.measures_shown ?? 1);
   const [questionsPerLesson, setQuestionsPerLesson] = useState(initialData?.questions_per_lesson ?? 10);
   const [answerChoices, setAnswerChoices] = useState(initialData?.answer_choices ?? 4);
   const [selectedNotes, setSelectedNotes] = useState<string[]>(initialData?.notes ?? ["C4", "D4", "E4", "F4", "G4"]);
@@ -167,103 +168,106 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      setError("Not authenticated");
-      setLoading(false);
-      return;
-    }
-
-    const symbolData = selectedSymbols
-      .map((id) => MUSICAL_SYMBOLS.find((s) => s.id === id))
-      .filter(Boolean);
-
-    const payload = {
-      teacher_id: user.id,
-      name: name.trim(),
-      is_template: isTemplate,
-      plan_type: planType,
-      clef,
-      key_signature: keySignature,
-      include_sharps: includeSharps,
-      include_flats: includeFlats,
-      include_chords: false,
-      measures_shown: measuresShown,
-      questions_per_lesson: questionsPerLesson,
-      answer_choices: answerChoices,
-      notes: planType === "note_identification" ? selectedNotes : [],
-      symbols: planType === "symbol_concepts" ? symbolData : [],
-      key_sig_scale_mode: planType === "key_signature_identification" ? keySigScaleMode : "major",
-      key_signatures: planType === "key_signature_identification" ? selectedKeySigs : [],
-      labels: normalizePlanLabels(labels),
-      teacher_notes: teacherNotes.trim(),
-      show_hints: planType === "symbol_concepts" ? showHints : true,
-      time_limit_seconds: timeLimitSeconds,
-    };
-
-    let resultId: string | null = null;
-    if (mode === "edit" && planId) {
-      const { teacher_id, ...updatePayload } = payload;
-      const result = await supabase
-        .from("plans")
-        .update(updatePayload)
-        .eq("id", planId)
-        .eq("teacher_id", user.id)
-        .select()
-        .single();
-      if (result.error) {
-        setError(result.error.message);
-        setLoading(false);
+      if (!user) {
+        setError("Not authenticated");
         return;
       }
-      resultId = result.data.id;
-    } else {
-      const res = await fetch("/api/lessons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: payload.name,
-          isTemplate: payload.is_template,
-          planType: payload.plan_type,
-          clef: payload.clef,
-          keySignature: payload.key_signature,
-          includeSharps: payload.include_sharps,
-          includeFlats: payload.include_flats,
-          includeChords: payload.include_chords,
-          measuresShown: payload.measures_shown,
-          questionsPerLesson: payload.questions_per_lesson,
-          answerChoices: payload.answer_choices,
-          notes: payload.notes,
-          symbols: payload.symbols,
-          keySigScaleMode: payload.key_sig_scale_mode,
-          keySignatures: payload.key_signatures,
-          labels: payload.labels,
-          teacherNotes: payload.teacher_notes,
-          showHints: payload.show_hints,
-          timeLimitSeconds: payload.time_limit_seconds,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error ?? "Failed to create lesson");
-        setLoading(false);
+
+      const symbolData = selectedSymbols
+        .map((id) => MUSICAL_SYMBOLS.find((s) => s.id === id))
+        .filter(Boolean);
+
+      const payload = {
+        teacher_id: user.id,
+        name: name.trim(),
+        is_template: isTemplate,
+        plan_type: planType,
+        clef,
+        key_signature: keySignature,
+        include_sharps: includeSharps,
+        include_flats: includeFlats,
+        include_chords: false,
+        measures_shown: measuresShown,
+        questions_per_lesson: questionsPerLesson,
+        answer_choices: answerChoices,
+        notes: planType === "note_identification" ? selectedNotes : [],
+        symbols: planType === "symbol_concepts" ? symbolData : [],
+        key_sig_scale_mode: planType === "key_signature_identification" ? keySigScaleMode : "major",
+        key_signatures: planType === "key_signature_identification" ? selectedKeySigs : [],
+        labels: normalizePlanLabels(labels),
+        teacher_notes: teacherNotes.trim(),
+        show_hints: planType === "symbol_concepts" ? showHints : true,
+        time_limit_seconds: timeLimitSeconds,
+      };
+
+      let resultId: string | null = null;
+      if (mode === "edit" && planId) {
+        const { teacher_id, ...updatePayload } = payload;
+        void teacher_id;
+        const result = await supabase
+          .from("plans")
+          .update(updatePayload)
+          .eq("id", planId)
+          .eq("teacher_id", user.id)
+          .select()
+          .single();
+        if (result.error) {
+          setError(result.error.message);
+          return;
+        }
+        resultId = result.data.id;
+      } else {
+        const res = await fetch("/api/lessons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: payload.name,
+            isTemplate: payload.is_template,
+            planType: payload.plan_type,
+            clef: payload.clef,
+            keySignature: payload.key_signature,
+            includeSharps: payload.include_sharps,
+            includeFlats: payload.include_flats,
+            includeChords: payload.include_chords,
+            measuresShown: payload.measures_shown,
+            questionsPerLesson: payload.questions_per_lesson,
+            answerChoices: payload.answer_choices,
+            notes: payload.notes,
+            symbols: payload.symbols,
+            keySigScaleMode: payload.key_sig_scale_mode,
+            keySignatures: payload.key_signatures,
+            labels: payload.labels,
+            teacherNotes: payload.teacher_notes,
+            showHints: payload.show_hints,
+            timeLimitSeconds: payload.time_limit_seconds,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error ?? "Failed to create lesson");
+          return;
+        }
+        resultId = data.id;
+      }
+
+      if (!resultId) {
+        setError("Something went wrong");
         return;
       }
-      resultId = data.id;
-    }
 
-    if (!resultId) {
-      setError("Something went wrong");
+      router.push("/lessons");
+      router.refresh();
+    } catch {
+      setError("Could not save the lesson. Check your connection and try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/lessons");
-    router.refresh();
   }
 
   const isNoteMode = planType === "note_identification";

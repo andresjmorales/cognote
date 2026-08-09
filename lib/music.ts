@@ -2,8 +2,7 @@
  * Music theory utilities for note naming, VexFlow key conversion, and quiz logic.
  */
 
-const NOTE_NAMES = ["C", "D", "E", "F", "G", "A", "B"] as const;
-export type NoteName = (typeof NOTE_NAMES)[number];
+export type NoteName = "C" | "D" | "E" | "F" | "G" | "A" | "B";
 
 /** All chromatic note names including enharmonics we care about */
 const ALL_NOTE_LABELS = [

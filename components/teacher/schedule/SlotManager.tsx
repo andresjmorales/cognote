@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { centsToDollarsInput, dollarsToCents } from "@/lib/billing";
 
 interface Slot {
@@ -41,6 +42,7 @@ export function SlotManager({
   durationOptions: number[];
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -142,13 +144,13 @@ export function SlotManager({
   }
 
   async function handleDelete(slot: Slot) {
-    if (
-      !window.confirm(
-        `Delete ${slot.studentName}'s ${DAY_NAMES[slot.day_of_week]} slot? Past lessons are kept; upcoming unmarked ones are removed.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Delete slot?",
+      message: `Delete ${slot.studentName}'s ${DAY_NAMES[slot.day_of_week]} slot? Past lessons are kept; upcoming unmarked ones are removed.`,
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     await fetch(`/api/schedule/slots/${slot.id}`, { method: "DELETE" });
     setBusy(false);

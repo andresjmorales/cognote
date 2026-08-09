@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { LICENSE_LABELS, type MusicLicenseCode } from "@/lib/sheet-music";
 
 const fieldClass =
@@ -40,6 +41,7 @@ function MetaRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function MusicMetadataPanel({ item }: { item: Item }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -79,9 +81,14 @@ export function MusicMetadataPanel({ item }: { item: Item }) {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this score from your library? Assignments will be removed.")) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Delete score?",
+      message:
+        "This score will be deleted from your library and any assignments will be removed.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     const res = await fetch(`/api/music/${item.id}`, { method: "DELETE" });
     if (res.ok) {

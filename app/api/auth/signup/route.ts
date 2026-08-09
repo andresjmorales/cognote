@@ -8,6 +8,7 @@ import {
   clientIpFromRequest,
   hitRateLimit,
 } from "@/lib/rateLimit";
+import { secureCompare } from "@/lib/server/secure-compare";
 
 /**
  * Sign-up. When `requiresBetaCode()` (NEXT_PUBLIC_BETA_ONLY or BETA_ACCESS_CODE),
@@ -58,7 +59,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (typeof accessCode !== "string" || accessCode.trim() !== requiredCode) {
+    if (
+      typeof accessCode !== "string" ||
+      !secureCompare(accessCode.trim(), requiredCode)
+    ) {
       if (guessKey) hitRateLimit(guessKey, BETA_GUESS_WINDOW_MS);
       return NextResponse.json(
         {

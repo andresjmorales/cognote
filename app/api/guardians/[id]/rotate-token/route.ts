@@ -5,7 +5,7 @@ import { generateShortToken } from "@/lib/token";
 /**
  * Rotate a family's portal token. The old link stops working immediately —
  * this is the revocation mechanism portal tokens have that practice tokens
- * don't (ROADMAP §7).
+ * don't.
  */
 export async function POST(
   _req: NextRequest,

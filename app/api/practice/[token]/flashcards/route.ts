@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import {
+  rejectIfTokenLookupsBlocked,
+  recordTokenLookupFailure,
+} from "@/lib/server/token-guard";
+import { parseBody, flashcardReviewSchema } from "@/lib/server/api-schemas";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  const blocked = rejectIfTokenLookupsBlocked(req);
+  if (blocked) return blocked;
+
   const supabase = createServiceClient();
 
   const { data: sp } = await supabase
@@ -15,6 +24,7 @@ export async function GET(
     .single();
 
   if (!sp || sp.unassigned_at) {
+    recordTokenLookupFailure(req);
     return NextResponse.json({ error: "Invalid token" }, { status: 404 });
   }
 
@@ -35,7 +45,12 @@ export async function PUT(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
-  const body = await req.json();
+
+  const blocked = rejectIfTokenLookupsBlocked(req);
+  if (blocked) return blocked;
+
+  const parsed = parseBody(flashcardReviewSchema, await req.json().catch(() => null));
+  if (!parsed.ok) return parsed.response;
   const {
     itemType = "note",
     itemId,
@@ -44,9 +59,9 @@ export async function PUT(
     intervalDays,
     repetitions,
     nextReview,
-    // Legacy fields for backward compatibility
+    // Legacy field for backward compatibility
     note,
-  } = body;
+  } = parsed.data;
 
   const supabase = createServiceClient();
 
@@ -57,6 +72,7 @@ export async function PUT(
     .single();
 
   if (!sp || sp.unassigned_at) {
+    recordTokenLookupFailure(req);
     return NextResponse.json({ error: "Invalid token" }, { status: 404 });
   }
 

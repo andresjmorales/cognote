@@ -6,6 +6,18 @@
 export const BETA_GUESS_LIMIT = 10;
 export const BETA_GUESS_WINDOW_MS = 15 * 60 * 1000;
 
+/**
+ * Public token-lookup routes (practice + portal): failed lookups count
+ * toward the window, successful traffic is unlimited. Generous enough for a
+ * family behind one NAT, far too slow for token brute-forcing.
+ */
+export const TOKEN_LOOKUP_FAIL_LIMIT = 30;
+export const TOKEN_LOOKUP_FAIL_WINDOW_MS = 15 * 60 * 1000;
+
+/** Public waitlist signups per IP (every attempt counts). */
+export const WAITLIST_LIMIT = 10;
+export const WAITLIST_WINDOW_MS = 60 * 60 * 1000;
+
 type Bucket = {
   count: number;
   windowStartMs: number;

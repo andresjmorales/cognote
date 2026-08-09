@@ -1,30 +1,49 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { AppLoadingScreen } from "@/components/brand/AppLoadingScreen";
 import { createClient } from "@/lib/supabase/client";
-import { QuizEngine, type AttemptResult, type QuizConfig } from "@/components/music/QuizEngine";
-import {
-  KeySignatureQuizEngine,
-  type KeySignatureQuizConfig,
-} from "@/components/music/KeySignatureQuizEngine";
-import {
-  SymbolQuizEngine,
-  type SymbolItem,
-  type SymbolQuizConfig,
-} from "@/components/music/SymbolQuizEngine";
-import {
-  FlashcardEngine,
-  type FlashcardItem,
-  type FlashcardReviewData,
-} from "@/components/music/FlashcardEngine";
+import type { AttemptResult, QuizConfig } from "@/components/music/QuizEngine";
+import type { KeySignatureQuizConfig } from "@/components/music/KeySignatureQuizEngine";
+import type { SymbolItem, SymbolQuizConfig } from "@/components/music/SymbolQuizEngine";
+import type { FlashcardReviewData } from "@/components/music/FlashcardEngine";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
 import { LOADING_COPY } from "@/lib/ui-constants";
-import { defaultFlashcardState, nextReviewDate } from "@/lib/srs";
-import { shuffle, expandNotesWithAccidentals } from "@/lib/music";
+import { nextReviewDate } from "@/lib/srs";
+import { expandNotesWithAccidentals } from "@/lib/music";
+import {
+  buildFlashcardItems,
+  type FlashcardItem,
+  type FlashcardProgressRow,
+} from "@/lib/flashcards";
+
+// Each plan type only ever uses one engine, so load engines on demand
+// instead of shipping all four in the initial practice bundle.
+const engineLoading = () => <AppLoadingScreen message={LOADING_COPY.default} />;
+const QuizEngine = dynamic(
+  () => import("@/components/music/QuizEngine").then((m) => m.QuizEngine),
+  { ssr: false, loading: engineLoading }
+);
+const KeySignatureQuizEngine = dynamic(
+  () =>
+    import("@/components/music/KeySignatureQuizEngine").then(
+      (m) => m.KeySignatureQuizEngine
+    ),
+  { ssr: false, loading: engineLoading }
+);
+const SymbolQuizEngine = dynamic(
+  () => import("@/components/music/SymbolQuizEngine").then((m) => m.SymbolQuizEngine),
+  { ssr: false, loading: engineLoading }
+);
+const FlashcardEngine = dynamic(
+  () => import("@/components/music/FlashcardEngine").then((m) => m.FlashcardEngine),
+  { ssr: false, loading: engineLoading }
+);
 
 type Mode = "welcome" | "lesson" | "free_practice" | "flashcard";
 
@@ -50,7 +69,6 @@ export default function PracticePage() {
   const searchParams = useSearchParams();
   const backHref = searchParams.get("back") ?? "/lessons";
   const [studentName, setStudentName] = useState("");
-  const [studentPlanId, setStudentPlanId] = useState("");
   const [plan, setPlan] = useState<PlanData | null>(null);
   const [mode, setMode] = useState<Mode>("welcome");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -61,6 +79,19 @@ export default function PracticePage() {
   const [flashcardsLoaded, setFlashcardsLoaded] = useState(false);
   const [startingSession, setStartingSession] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
+  const { showToast } = useToast();
+
+  // Warn once per visit when progress stops saving, instead of a toast on
+  // every failed attempt (or the old behavior: nothing at all).
+  const saveIssueNotifiedRef = useRef(false);
+  const notifySaveIssue = useCallback(() => {
+    if (saveIssueNotifiedRef.current) return;
+    saveIssueNotifiedRef.current = true;
+    showToast(
+      "Hmm, we couldn't save your progress. You can keep practicing, but your teacher might not see today's results.",
+      "info"
+    );
+  }, [showToast]);
 
   useEffect(() => {
     createClient().auth.getSession().then(({ data }) => {
@@ -78,7 +109,6 @@ export default function PracticePage() {
         }
         const data = await res.json();
         setStudentName(data.studentName);
-        setStudentPlanId(data.studentPlanId);
         setPlan(data.plan);
         document.title = `CogNote - Practice`;
       } catch {
@@ -102,91 +132,20 @@ export default function PracticePage() {
               setFlashcardsLoaded(true);
               return;
             }
-            const planType = data.plan?.plan_type;
-
-            let items: FlashcardItem[];
-            if (planType === "key_signature_identification") {
-              const keySignatures: string[] = data.plan?.key_signatures ?? plan?.key_signatures ?? [];
-              const clefs: ("treble" | "bass")[] =
-                plan?.clef === "both"
-                  ? ["treble", "bass"]
-                  : [plan?.clef ?? "treble"];
-
-              items = [];
-              for (const keyName of keySignatures) {
-                for (const clefVal of clefs) {
-                  const existing = data.progress?.find(
-                    (p: any) => p.item_type === "key_signature" && p.note === keyName && p.clef === clefVal
-                  );
-                  items.push({
-                    itemType: "key_signature" as const,
-                    keyName,
-                    clef: clefVal,
-                    state: existing
-                      ? {
-                          easeFactor: existing.ease_factor,
-                          intervalDays: existing.interval_days,
-                          repetitions: existing.repetitions,
-                        }
-                      : defaultFlashcardState(),
-                  });
-                }
-              }
-            } else if (planType === "symbol_concepts") {
-              const symbols: SymbolItem[] = data.plan?.symbols ?? plan?.symbols ?? [];
-              items = symbols.map((sym) => {
-                const existing = data.progress?.find(
-                  (p: any) => p.item_type === "symbol" && p.note === sym.id
-                );
-                return {
-                  itemType: "symbol" as const,
-                  symbolId: sym.id,
-                  symbol: sym.symbol,
-                  term: sym.term,
-                  definition: sym.definition,
-                  state: existing
-                    ? {
-                        easeFactor: existing.ease_factor,
-                        intervalDays: existing.interval_days,
-                        repetitions: existing.repetitions,
-                      }
-                    : defaultFlashcardState(),
-                };
-              });
-            } else {
-              const planNotes: string[] = data.plan?.notes ?? plan?.notes ?? [];
-              const expandedNotes = expandNotesWithAccidentals(
-                planNotes,
-                plan?.include_sharps ?? false,
-                plan?.include_flats ?? false,
-              );
-              const clefs: ("treble" | "bass")[] =
-                plan?.clef === "both"
-                  ? ["treble", "bass"]
-                  : [plan?.clef ?? "treble"];
-
-              items = [];
-              for (const noteVal of expandedNotes) {
-                for (const clefVal of clefs) {
-                  const existing = data.progress?.find(
-                    (p: any) => p.note === noteVal && p.clef === clefVal && (p.item_type === "note" || !p.item_type)
-                  );
-                  items.push({
-                    itemType: "note" as const,
-                    note: noteVal,
-                    clef: clefVal,
-                    state: existing
-                      ? {
-                          easeFactor: existing.ease_factor,
-                          intervalDays: existing.interval_days,
-                          repetitions: existing.repetitions,
-                        }
-                      : defaultFlashcardState(),
-                  });
-                }
-              }
-            }
-            setFlashcardItems(shuffle(items));
+            const items: FlashcardItem[] = buildFlashcardItems(
+              {
+                plan_type: data.plan?.plan_type ?? "note_identification",
+                clef: plan?.clef ?? "treble",
+                notes: data.plan?.notes ?? plan?.notes ?? [],
+                symbols: data.plan?.symbols ?? plan?.symbols ?? [],
+                key_signatures:
+                  data.plan?.key_signatures ?? plan?.key_signatures ?? [],
+                include_sharps: plan?.include_sharps ?? false,
+                include_flats: plan?.include_flats ?? false,
+              },
+              (data.progress ?? []) as FlashcardProgressRow[]
+            );
+            setFlashcardItems(items);
             setFlashcardsLoaded(true);
           })
           .catch(() => {
@@ -206,30 +165,35 @@ export default function PracticePage() {
         if (res.ok) {
           const data = await res.json();
           setSessionId(data.sessionId);
+        } else {
+          // Quiz still works locally; attempts won't be logged.
+          notifySaveIssue();
         }
       } catch {
-        // Session creation failed — quiz still works locally, attempts won't be logged
+        notifySaveIssue();
       }
       setStartingSession(false);
       setMode(m);
     },
-    [token, plan]
+    [token, plan, notifySaveIssue]
   );
 
   const handleAttempt = useCallback(
     async (attempt: AttemptResult) => {
       if (!sessionId) return;
       try {
-        await fetch(`/api/practice/${token}/session/${sessionId}/attempt`, {
+        const res = await fetch(`/api/practice/${token}/session/${sessionId}/attempt`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(attempt),
         });
+        if (!res.ok) notifySaveIssue();
       } catch {
-        // Silent failure — don't disrupt practice
+        // Don't disrupt practice; warn once that progress isn't saving.
+        notifySaveIssue();
       }
     },
-    [token, sessionId]
+    [token, sessionId, notifySaveIssue]
   );
 
   const handleComplete = useCallback(
@@ -239,20 +203,21 @@ export default function PracticePage() {
 
       if (!sessionId) return;
       try {
-        await fetch(`/api/practice/${token}/session/${sessionId}/complete`, {
+        const res = await fetch(`/api/practice/${token}/session/${sessionId}/complete`, {
           method: "PUT",
         });
+        if (!res.ok) notifySaveIssue();
       } catch {
-        // Silent
+        notifySaveIssue();
       }
     },
-    [token, sessionId]
+    [token, sessionId, notifySaveIssue]
   );
 
   const handleFlashcardReview = useCallback(
     async (data: FlashcardReviewData) => {
       try {
-        await fetch(`/api/practice/${token}/flashcards`, {
+        const res = await fetch(`/api/practice/${token}/flashcards`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -265,11 +230,12 @@ export default function PracticePage() {
             nextReview: nextReviewDate(data.newState.intervalDays).toISOString(),
           }),
         });
+        if (!res.ok) notifySaveIssue();
       } catch {
-        // Silent
+        notifySaveIssue();
       }
     },
-    [token]
+    [token, notifySaveIssue]
   );
 
   const teacherHomeButton = isTeacher && (

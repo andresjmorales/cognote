@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
 import { LICENSE_LABELS } from "@/lib/sheet-music";
 import {
   ALL_SOURCES,
@@ -36,13 +37,13 @@ const DEFAULT_SOURCES = new Set<MusicSourceId>(ALL_SOURCES);
 
 export function FindScoresPanel() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [results, setResults] = useState<SheetMusicSearchResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [sources, setSources] = useState<Set<MusicSourceId>>(DEFAULT_SOURCES);
   const [importableOnly, setImportableOnly] = useState(false);
   const [instrument, setInstrument] = useState("");
@@ -93,7 +94,6 @@ export function FindScoresPanel() {
 
   async function handleImport(result: SheetMusicSearchResult) {
     setImportingId(result.id);
-    setToast(null);
     try {
       const res = await fetch("/api/music/import", {
         method: "POST",
@@ -102,20 +102,18 @@ export function FindScoresPanel() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 409 && data.existingId) {
-        setToast(`Already in library: ${data.existingTitle}`);
+        showToast(`Already in library: ${data.existingTitle}`, "info");
         router.push(`/music/${data.existingId}`);
         return;
       }
       if (!res.ok) {
-        setToast(data.error ?? "Import failed");
-        setTimeout(() => setToast(null), 4000);
+        showToast(data.error ?? "Import failed", "error");
         return;
       }
       router.push(`/music/${data.item.id}`);
       router.refresh();
     } catch {
-      setToast("Import failed");
-      setTimeout(() => setToast(null), 4000);
+      showToast("Import failed", "error");
     } finally {
       setImportingId(null);
     }
@@ -291,12 +289,6 @@ export function FindScoresPanel() {
         families can view it in CogNote without a MuseScore.com download. Exporting
         an engraved PDF from MXL is a future enhancement.
       </p>
-
-      {toast && (
-        <div className="fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50">
-          {toast}
-        </div>
-      )}
     </Card>
   );
 }

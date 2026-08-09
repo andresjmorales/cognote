@@ -6,6 +6,7 @@ import {
   sha256Hex,
   storageObjectPath,
   validateMusicUpload,
+  validateMusicContent,
   type MusicLicenseCode,
 } from "@/lib/sheet-music";
 
@@ -112,6 +113,12 @@ export async function POST(req: NextRequest) {
   const license_code = LICENSE_CODES.has(licenseRaw) ? licenseRaw : "teacher_owned";
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  const content = validateMusicContent(validation.format, buffer);
+  if (!content.ok) {
+    return NextResponse.json({ error: content.error }, { status: 400 });
+  }
+
   const hash = sha256Hex(buffer);
 
   const service = createServiceClient();

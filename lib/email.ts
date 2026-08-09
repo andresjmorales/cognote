@@ -1,6 +1,5 @@
 /**
- * Email provider interface (EMAIL_SETUP.md Part 4b, mirrors the payments
- * provider pattern from ROADMAP §2/§5).
+ * Email provider interface (mirrors the payments provider pattern).
  *
  * Provider is selected by EMAIL_PROVIDER:
  *   - "resend" — production, via the Resend HTTP API
@@ -64,9 +63,8 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Append the family-portal footer to both bodies (EMAIL_SETUP/ROADMAP: every
- * parent/student email links back to the family's personal portal).
- * Exported for tests. */
+/** Append the family-portal footer to both bodies: every parent/student
+ * email links back to the family's personal portal. Exported for tests. */
 export function withPortalFooter(args: SendEmailArgs): SendEmailArgs {
   if (!args.portalUrl) return args;
 

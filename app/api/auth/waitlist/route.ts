@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import {
+  checkRateLimit,
+  hitRateLimit,
+  clientIpFromRequest,
+  WAITLIST_LIMIT,
+  WAITLIST_WINDOW_MS,
+} from "@/lib/rateLimit";
 
 /** Linear-time email shape check (avoids ReDoS-prone regex on public input). */
 function isPlausibleEmail(value: string): boolean {
@@ -21,6 +28,16 @@ function isPlausibleEmail(value: string): boolean {
 
 /** Public waitlist sign-up for people without a beta access code. */
 export async function POST(req: NextRequest) {
+  const rateKey = `waitlist:${clientIpFromRequest(req)}`;
+  const rate = checkRateLimit(rateKey, WAITLIST_LIMIT, WAITLIST_WINDOW_MS);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: "Too many signups from this address. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } }
+    );
+  }
+  hitRateLimit(rateKey, WAITLIST_WINDOW_MS);
+
   const { email } = await req.json();
 
   if (typeof email !== "string" || !isPlausibleEmail(email)) {

@@ -14,6 +14,34 @@ import {
 
 export const metadata = { title: "Students" };
 
+interface StudentSessionRow {
+  id: string;
+  total_correct: number;
+  total_questions: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+interface StudentListRow {
+  id: string;
+  name: string;
+  birthdate: string | null;
+  parent_contact: string | null;
+  archived_at: string | null;
+  created_at: string;
+  guardians:
+    | { name: string; family_name: string | null }[]
+    | { name: string; family_name: string | null }
+    | null;
+  student_plans:
+    | {
+        id: string;
+        plans: { name: string } | null;
+        practice_sessions: StudentSessionRow[] | null;
+      }[]
+    | null;
+}
+
 export default async function StudentsPage({
   searchParams,
 }: {
@@ -51,7 +79,7 @@ export default async function StudentsPage({
     studentsQuery = studentsQuery.is("archived_at", null);
   }
 
-  const [{ data: students }, { data: guardians }] = await Promise.all([
+  const [{ data: studentsData }, { data: guardians }] = await Promise.all([
     studentsQuery,
     supabase
       .from("guardians")
@@ -59,6 +87,8 @@ export default async function StudentsPage({
       .eq("teacher_id", user.id)
       .order("name"),
   ]);
+
+  const students = (studentsData ?? []) as unknown as StudentListRow[];
 
   const guardianOptions = (guardians ?? []).map((g) => ({
     id: g.id,
@@ -116,7 +146,7 @@ export default async function StudentsPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          {!students?.length ? (
+          {!students.length ? (
             <Card className="text-center text-muted py-12">
               <div className="text-4xl mb-3">👋</div>
               <p className="text-lg">
@@ -128,23 +158,23 @@ export default async function StudentsPage({
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
-              {students.map((student: any) => {
+              {students.map((student) => {
                 const allSessions = (student.student_plans ?? []).flatMap(
-                  (sp: any) => sp.practice_sessions ?? []
+                  (sp) => sp.practice_sessions ?? []
                 );
                 const totalSessions = allSessions.length;
                 const lastSession = allSessions
                   .sort(
-                    (a: any, b: any) =>
+                    (a, b) =>
                       new Date(b.started_at).getTime() -
                       new Date(a.started_at).getTime()
                   )[0];
                 const overallCorrect = allSessions.reduce(
-                  (sum: number, s: any) => sum + (s.total_correct ?? 0),
+                  (sum, s) => sum + (s.total_correct ?? 0),
                   0
                 );
                 const overallTotal = allSessions.reduce(
-                  (sum: number, s: any) => sum + (s.total_questions ?? 0),
+                  (sum, s) => sum + (s.total_questions ?? 0),
                   0
                 );
                 const accuracy =

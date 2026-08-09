@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 export function DeletePlanButton({
   planId,
@@ -12,6 +13,7 @@ export function DeletePlanButton({
   planName: string;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -21,14 +23,14 @@ export function DeletePlanButton({
       const res = await fetch(`/api/lessons/${planId}`, { method: "DELETE" });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        alert(err?.error ?? "Failed to delete lesson");
+        showToast(err?.error ?? "Failed to delete lesson", "error");
         setDeleting(false);
         return;
       }
       router.push("/lessons");
       router.refresh();
     } catch {
-      alert("Failed to delete lesson");
+      showToast("Failed to delete lesson", "error");
       setDeleting(false);
     }
   }

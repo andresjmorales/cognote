@@ -84,7 +84,7 @@ export async function POST(
           ? session.amount_total
           : invoice.subtotal_cents;
 
-      await supabase.from("payments").insert({
+      const { error: paymentError } = await supabase.from("payments").insert({
         invoice_id: invoiceId,
         amount_cents: amount,
         method: "stripe",
@@ -93,6 +93,11 @@ export async function POST(
           : session.id,
         note: "Paid online",
       });
+      // 23505 = duplicate webhook delivery already recorded this payment.
+      if (paymentError && paymentError.code !== "23505") {
+        console.error("Stripe webhook: payment insert failed", paymentError);
+        return NextResponse.json({ error: "Payment record failed" }, { status: 500 });
+      }
 
       await supabase
         .from("invoices")

@@ -1,11 +1,22 @@
-/** Decode a single level of common HTML entities (`&amp;` last). */
+const ENTITY_MAP: Record<string, string> = {
+  "&nbsp;": " ",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&amp;": "&",
+};
+
+/**
+ * Decode exactly one level of common HTML entities. A single-pass regex with
+ * a lookup map cannot re-decode its own output (unlike chained replaces),
+ * so "&amp;lt;" decodes to "&lt;" and stops there.
+ */
 function decodeBasicHtmlEntities(text: string): string {
-  return text
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&amp;/gi, "&");
+  return text.replace(
+    /&(?:nbsp|lt|gt|quot|amp|#39);/gi,
+    (match) => ENTITY_MAP[match.toLowerCase()] ?? match
+  );
 }
 
 /** Best-effort HTML → plain text for AI prompts and previews. */
@@ -30,7 +41,8 @@ export function escapeHtml(text: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function applyInlineMarkdown(text: string): string {

@@ -8,21 +8,48 @@ import { isActiveStudentPlan } from "@/lib/student-plans";
 
 export const metadata = { title: "Lessons" };
 
-function PlanCard({ plan, students }: { plan: any; students: { id: string; name: string }[] }) {
+interface PlanListRow {
+  id: string;
+  name: string;
+  is_template: boolean;
+  clef: string;
+  key_signature: string;
+  notes: string[] | null;
+  questions_per_lesson: number;
+  plan_type: string;
+  symbols: unknown[] | null;
+  key_signatures: string[] | null;
+  labels: string[] | null;
+  student_plans:
+    | {
+        id: string;
+        unassigned_at: string | null;
+        students: { id: string; name: string } | null;
+      }[]
+    | null;
+}
+
+function PlanCard({
+  plan,
+  students,
+}: {
+  plan: PlanListRow;
+  students: { id: string; name: string }[];
+}) {
   const isSymbolPlan = plan.plan_type === "symbol_concepts";
   const isKeySigPlan = plan.plan_type === "key_signature_identification";
-  const noteCount = (plan.notes as string[])?.length ?? 0;
-  const symbolCount = (plan.symbols as any[])?.length ?? 0;
-  const keySigCount = (plan.key_signatures as string[])?.length ?? 0;
-  const labels = (plan.labels as string[] | null) ?? [];
+  const noteCount = plan.notes?.length ?? 0;
+  const symbolCount = plan.symbols?.length ?? 0;
+  const keySigCount = plan.key_signatures?.length ?? 0;
+  const labels = plan.labels ?? [];
   const activeAssignments = (plan.student_plans ?? []).filter(isActiveStudentPlan);
   const assignedStudentIds = new Set(
     activeAssignments
-      .map((sp: any) => sp.students?.id)
-      .filter((studentId: unknown): studentId is string => typeof studentId === "string")
+      .map((sp) => sp.students?.id)
+      .filter((studentId): studentId is string => typeof studentId === "string")
   );
   const assignedStudents = activeAssignments
-    .map((sp: any) => sp.students?.name)
+    .map((sp) => sp.students?.name)
     .filter(Boolean);
 
   return (
@@ -30,7 +57,10 @@ function PlanCard({ plan, students }: { plan: any; students: { id: string; name:
       <div className="flex justify-between items-start">
         <Link href={`/lessons/${plan.id}`} className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold hover:text-primary transition-colors">
+            <span
+              className="font-semibold hover:text-primary transition-colors max-w-full truncate"
+              title={plan.name}
+            >
               {plan.name}
             </span>
             {labels.map((label) => (
@@ -97,8 +127,9 @@ export default async function PlansPage() {
       .order("name"),
   ]);
 
-  const templates = (plans ?? []).filter((p: any) => p.is_template);
-  const studentSpecific = (plans ?? []).filter((p: any) => !p.is_template);
+  const planRows = (plans ?? []) as unknown as PlanListRow[];
+  const templates = planRows.filter((p) => p.is_template);
+  const studentSpecific = planRows.filter((p) => !p.is_template);
 
   return (
     <div>
@@ -128,7 +159,7 @@ export default async function PlansPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {templates.map((plan: any) => (
+            {templates.map((plan) => (
               <PlanCard key={plan.id} plan={plan} students={students ?? []} />
             ))}
           </div>
@@ -144,7 +175,7 @@ export default async function PlansPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {studentSpecific.map((plan: any) => (
+            {studentSpecific.map((plan) => (
               <PlanCard key={plan.id} plan={plan} students={students ?? []} />
             ))}
           </div>

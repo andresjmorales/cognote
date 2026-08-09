@@ -27,6 +27,41 @@ function isZipMxl(buffer: Buffer): boolean {
 }
 
 /**
+ * Download with every redirect hop re-validated against the host allowlist,
+ * so an allow-listed origin can never bounce the request to an internal or
+ * attacker-controlled URL.
+ */
+async function fetchFromAllowedHosts(startUrl: string): Promise<Response | null> {
+  const MAX_REDIRECTS = 4;
+  let current = startUrl;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    let parsed: URL;
+    try {
+      parsed = new URL(current);
+    } catch {
+      return null;
+    }
+    if (parsed.protocol !== "https:" || !ALLOWED_HOSTS.has(parsed.hostname)) {
+      return null;
+    }
+    const res = await fetch(current, {
+      headers: {
+        "User-Agent": "CogNote/1.0 (https://cognote.studio; teacher library import)",
+      },
+      redirect: "manual",
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location) return null;
+      current = new URL(location, current).toString();
+      continue;
+    }
+    return res;
+  }
+  return null;
+}
+
+/**
  * Import an allow-listed discovery result into the teacher's private library.
  * Currently: Mutopia PD/CC BY PDFs, OpenScore Lieder MXL (CC0 from GitHub).
  */
@@ -101,14 +136,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const download = await fetch(result.file_url, {
-    headers: {
-      "User-Agent": "CogNote/1.0 (https://cognote.studio; teacher library import)",
-    },
-    redirect: "follow",
-  });
-  if (!download.ok) {
-    console.error("score download failed:", download.status, result.file_url);
+  const download = await fetchFromAllowedHosts(result.file_url);
+  if (!download || !download.ok) {
+    console.error("score download failed:", download?.status, result.file_url);
     return NextResponse.json(
       { error: "Could not download score file" },
       { status: 502 }

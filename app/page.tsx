@@ -186,7 +186,7 @@ export default function LandingPage() {
             </h2>
             <p className="text-muted text-sm max-w-2xl mx-auto mb-5">
               CogNote is MIT-licensed and free to self-host. Your studio&apos;s
-              data stays yours — export anytime, or run the same software on
+              data stays yours: export anytime, or run the same software on
               your own stack. Built by a working piano studio for its own daily
               use.
               {showHostingOptions && (
@@ -215,7 +215,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border py-4 shrink-0">
-        <div className="flex items-center justify-center gap-2 text-sm text-muted">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted px-4">
           <p>CogNote · Open-source studio management for music teachers</p>
           <a
             href={GITHUB_REPO_URL}
@@ -226,6 +226,22 @@ export default function LandingPage() {
           >
             <GitHubIcon className="h-4 w-4" />
           </a>
+          {showHostingOptions && (
+            <span className="flex items-center gap-4">
+              <Link
+                href="/privacy"
+                className="hover:text-foreground transition-colors"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                className="hover:text-foreground transition-colors"
+              >
+                Terms
+              </Link>
+            </span>
+          )}
         </div>
       </footer>
     </div>
