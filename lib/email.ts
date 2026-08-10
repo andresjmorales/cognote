@@ -68,7 +68,7 @@ function escapeHtml(s: string): string {
 export function withPortalFooter(args: SendEmailArgs): SendEmailArgs {
   if (!args.portalUrl) return args;
 
-  const text = `${args.text}\n\n—\nYour family portal — schedule, practice links, and lesson notes:\n${args.portalUrl}`;
+  const text = `${args.text}\n\nYour family portal: schedule, practice links, and lesson notes:\n${args.portalUrl}`;
 
   // Emails so far are plain text; if an HTML body ever exists, append to it,
   // otherwise generate one from the text so the footer link is clickable.
@@ -78,7 +78,7 @@ export function withPortalFooter(args: SendEmailArgs): SendEmailArgs {
   const html = `${baseHtml}
 <hr style="margin:24px 0 12px;border:none;border-top:1px solid #ddd;">
 <p style="font-family:sans-serif;font-size:13px;color:#555;">
-  <a href="${escapeHtml(args.portalUrl)}">Your family portal</a> — schedule, practice links, and lesson notes.
+  <a href="${escapeHtml(args.portalUrl)}">Your family portal</a>: schedule, practice links, and lesson notes.
 </p>`;
 
   return { ...args, text, html };

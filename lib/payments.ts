@@ -34,12 +34,12 @@ export function createStripeClient(secretKey: string): Stripe {
   });
 }
 
-export async function createCheckoutSession(
-  args: CheckoutSessionArgs
-): Promise<CheckoutSessionResult> {
-  const stripe = createStripeClient(args.secretKey);
+/** Pure params builder — tested so null/blank prefill omits customer_email. */
+export function buildCheckoutSessionParams(
+  args: Omit<CheckoutSessionArgs, "secretKey">
+): Stripe.Checkout.SessionCreateParams {
   const studio = args.studioName.trim() || "Studio";
-  const session = await stripe.checkout.sessions.create({
+  return {
     mode: "payment",
     success_url: args.successUrl,
     cancel_url: args.cancelUrl,
@@ -51,7 +51,7 @@ export async function createCheckoutSession(
           currency: args.currency.toLowerCase(),
           unit_amount: args.amountCents,
           product_data: {
-            name: `Invoice — ${args.periodLabel}`,
+            name: `Invoice - ${args.periodLabel}`,
             description: `${studio} · ${args.familyName}`,
           },
         },
@@ -61,7 +61,16 @@ export async function createCheckoutSession(
       invoice_id: args.invoiceId,
       teacher_id: args.teacherId,
     },
-  });
+  };
+}
+
+export async function createCheckoutSession(
+  args: CheckoutSessionArgs
+): Promise<CheckoutSessionResult> {
+  const stripe = createStripeClient(args.secretKey);
+  const session = await stripe.checkout.sessions.create(
+    buildCheckoutSessionParams(args)
+  );
 
   if (!session.url) {
     throw new Error("Stripe Checkout Session created without a URL");

@@ -80,7 +80,7 @@ export function InvoiceList({ invoices }: { invoices: InvoiceListRow[] }) {
                 ? ` (${skipped} sent/paid selected will be skipped.)`
                 : ""
             }`
-          : `Void ${n} unpaid invoice${n === 1 ? "" : "s"}? That cancels the charge — the family should not pay it, and those lessons can be billed again later.${
+          : `Void ${n} unpaid invoice${n === 1 ? "" : "s"}? That cancels the charge, so the family should not pay it, and those lessons can be billed again later.${
               skipped > 0
                 ? ` (${skipped} paid/already-void selected will be skipped.)`
                 : ""

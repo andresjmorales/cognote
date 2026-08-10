@@ -19,6 +19,8 @@ export interface SendInvoiceResult {
   emailed?: boolean;
   emailError?: string;
   checkoutUrl?: string | null;
+  /** Set when Stripe Checkout was attempted but failed; send still succeeds. */
+  checkoutError?: string;
 }
 
 /**
@@ -87,24 +89,37 @@ export async function sendInvoice(
   if (!family) return { ok: false, error: "Family not found" };
 
   const familyName = familyDisplayName(family);
-  const pdfBytes = await buildInvoicePdf({
-    studioName: policy.studio_name,
-    familyName,
-    periodStart: invoice.period_start,
-    periodEnd: invoice.period_end,
-    currency: invoice.currency,
-    items: items.map((i) => ({
-      description: i.description,
-      quantity: i.quantity,
-      unitCents: i.unit_cents,
-      amountCents: i.amount_cents,
-    })),
-    subtotalCents: invoice.subtotal_cents,
-    paymentInstructions: policy.payment_instructions,
-    notes: invoice.notes,
-  });
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = await buildInvoicePdf({
+      studioName: policy.studio_name,
+      familyName,
+      periodStart: invoice.period_start,
+      periodEnd: invoice.period_end,
+      currency: invoice.currency,
+      items: items.map((i) => ({
+        description: i.description,
+        quantity: i.quantity,
+        unitCents: i.unit_cents,
+        amountCents: i.amount_cents,
+      })),
+      subtotalCents: invoice.subtotal_cents,
+      paymentInstructions: policy.payment_instructions,
+      notes: invoice.notes,
+    });
+  } catch (err) {
+    console.error(
+      "Invoice PDF build failed:",
+      err instanceof Error ? err.message : err
+    );
+    return {
+      ok: false,
+      error: "Could not build the invoice PDF. Try removing emoji from names or notes.",
+    };
+  }
 
   let checkoutUrl: string | null = invoice.stripe_checkout_url;
+  let checkoutError: string | undefined;
 
   if (
     policy.payment_provider === "stripe" &&
@@ -124,8 +139,8 @@ export async function sendInvoice(
         periodLabel: `${invoice.period_start} – ${invoice.period_end}`,
         successUrl: `${origin}/portal/${family.portal_token}?paid=1`,
         cancelUrl: `${origin}/portal/${family.portal_token}`,
-      customerEmail: stripeCheckoutPrefillEmail(family),
-    });
+        customerEmail: stripeCheckoutPrefillEmail(family),
+      });
       checkoutUrl = session.url;
       await supabase
         .from("invoices")
@@ -140,6 +155,8 @@ export async function sendInvoice(
         "Stripe checkout on send failed:",
         err instanceof Error ? err.message : err
       );
+      checkoutError =
+        "Pay link could not be created. Use Create pay link to try again";
     }
   }
 
@@ -160,7 +177,8 @@ export async function sendInvoice(
   let emailError: string | undefined;
 
   if (recipients.length === 0) {
-    emailError = "No family email on file — invoice marked sent for the portal";
+    emailError =
+      "No family email on file; invoice marked sent for the portal";
   } else {
     const periodLabel = `${invoice.period_start} to ${invoice.period_end}`;
     const studio = policy.studio_name || "your studio";
@@ -191,7 +209,7 @@ ${payHtml}
 
     const result = await sendEmail({
       to: recipients,
-      subject: `Invoice for ${periodLabel} — ${studio}`,
+      subject: `Invoice for ${periodLabel} - ${studio}`,
       text,
       html,
       fromName: policy.studio_name
@@ -213,7 +231,7 @@ ${payHtml}
     emailError = result.error;
   }
 
-  return { ok: true, emailed, emailError, checkoutUrl };
+  return { ok: true, emailed, emailError, checkoutUrl, checkoutError };
 }
 
 function escapeHtml(s: string): string {

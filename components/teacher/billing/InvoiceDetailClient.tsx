@@ -69,7 +69,10 @@ export function InvoiceDetailClient({
   const [items, setItems] = useState(initialItems);
   const [notes, setNotes] = useState(initialNotes);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [flash, setFlash] = useState<{
+    text: string;
+    tone: "ok" | "error" | "warn";
+  } | null>(null);
   const isDraft = status === "draft";
 
   // Re-sync local edits when the server payload changes (router.refresh after
@@ -96,7 +99,7 @@ export function InvoiceDetailClient({
 
   async function saveDraft() {
     setBusy(true);
-    setMessage(null);
+    setFlash(null);
     const res = await fetch(`/api/billing/invoices/${invoiceId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -104,11 +107,11 @@ export function InvoiceDetailClient({
     });
     setBusy(false);
     if (res.ok) {
-      setMessage("Saved");
+      setFlash({ text: "Saved", tone: "ok" });
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
-      setMessage(data.error ?? "Save failed");
+      setFlash({ text: data.error ?? "Save failed", tone: "error" });
     }
   }
 
@@ -121,21 +124,23 @@ export function InvoiceDetailClient({
     });
     if (!ok) return;
     setBusy(true);
-    setMessage(null);
+    setFlash(null);
     const res = await fetch(`/api/billing/invoices/${invoiceId}/regenerate`, {
       method: "POST",
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
-      setMessage(data.error ?? "Regenerate failed");
+      setFlash({ text: data.error ?? "Regenerate failed", tone: "error" });
       return;
     }
-    setMessage(
-      data.itemCount === 0
-        ? "Regenerated — no billable lessons in this period"
-        : `Regenerated ${data.itemCount} line${data.itemCount === 1 ? "" : "s"}`
-    );
+    setFlash({
+      text:
+        data.itemCount === 0
+          ? "Regenerated; no billable lessons in this period"
+          : `Regenerated ${data.itemCount} line${data.itemCount === 1 ? "" : "s"}`,
+      tone: data.itemCount === 0 ? "warn" : "ok",
+    });
     router.refresh();
   }
 
@@ -148,7 +153,7 @@ export function InvoiceDetailClient({
     });
     if (!ok) return;
     setBusy(true);
-    setMessage(null);
+    setFlash(null);
     if (isDraft) {
       await fetch(`/api/billing/invoices/${invoiceId}`, {
         method: "PUT",
@@ -162,16 +167,21 @@ export function InvoiceDetailClient({
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
-      setMessage(data.error ?? "Send failed");
+      setFlash({ text: data.error ?? "Send failed", tone: "error" });
       return;
     }
-    setMessage(
-      data.emailed
-        ? "Sent and emailed"
-        : data.emailError
-          ? `Sent (${data.emailError})`
-          : "Sent"
-    );
+    const base = data.emailed
+      ? "Sent and emailed"
+      : data.emailError
+        ? `Sent (${data.emailError})`
+        : "Sent";
+    const text = data.checkoutError
+      ? `${base}. ${data.checkoutError}`
+      : base;
+    setFlash({
+      text,
+      tone: data.emailError || data.checkoutError ? "warn" : "ok",
+    });
     router.refresh();
   }
 
@@ -186,7 +196,7 @@ export function InvoiceDetailClient({
     if (res.ok) router.refresh();
     else {
       const data = await res.json().catch(() => ({}));
-      setMessage(data.error ?? "Failed");
+      setFlash({ text: data.error ?? "Failed", tone: "error" });
     }
   }
 
@@ -207,25 +217,25 @@ export function InvoiceDetailClient({
     if (res.ok) router.refresh();
     else {
       const data = await res.json().catch(() => ({}));
-      setMessage(data.error ?? "Failed");
+      setFlash({ text: data.error ?? "Failed", tone: "error" });
     }
   }
 
   async function createCheckout() {
     setBusy(true);
-    setMessage(null);
+    setFlash(null);
     const res = await fetch(`/api/billing/invoices/${invoiceId}/checkout`, {
       method: "POST",
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
-      setMessage(data.error ?? "Checkout failed");
+      setFlash({ text: data.error ?? "Checkout failed", tone: "error" });
       return;
     }
     if (data.url) {
       await navigator.clipboard.writeText(data.url).catch(() => {});
-      setMessage("Pay link copied to clipboard");
+      setFlash({ text: "Pay link copied to clipboard", tone: "ok" });
       router.refresh();
     }
   }
@@ -299,7 +309,20 @@ export function InvoiceDetailClient({
         </div>
       </div>
 
-      {message && <p className="text-sm text-muted">{message}</p>}
+      {flash && (
+        <p
+          className={`text-sm font-medium ${
+            flash.tone === "error"
+              ? "text-error"
+              : flash.tone === "warn"
+                ? "text-warning"
+                : "text-muted"
+          }`}
+          role={flash.tone === "error" ? "alert" : undefined}
+        >
+          {flash.text}
+        </p>
+      )}
 
       {checkoutUrl && status === "sent" && (
         <Card padding="sm">
@@ -410,7 +433,7 @@ export function InvoiceDetailClient({
           />
         ) : (
           <p className="text-sm whitespace-pre-wrap text-muted">
-            {notes || "—"}
+            {notes || "-"}
           </p>
         )}
       </Card>
