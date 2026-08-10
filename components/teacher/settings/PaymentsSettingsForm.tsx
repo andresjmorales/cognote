@@ -105,13 +105,7 @@ export function PaymentsSettingsForm({
   }
 
   const saveRow = (
-    <div
-      className={
-        embedded
-          ? "sticky bottom-0 z-10 -mx-5 px-5 flex items-center gap-3 border-t border-border bg-surface py-3 mt-2"
-          : "flex items-center gap-3"
-      }
-    >
+    <div className="flex items-center gap-3">
       <Button type="submit" size="sm" disabled={busy}>
         {busy ? "Saving..." : "Save payment settings"}
       </Button>
@@ -119,8 +113,8 @@ export function PaymentsSettingsForm({
     </div>
   );
 
-  const form = (
-    <form onSubmit={handleSave} className="flex flex-col gap-4">
+  const fields = (
+    <>
       <fieldset>
         <legend className="text-xs font-semibold text-muted mb-1">
           Payment provider
@@ -260,17 +254,32 @@ export function PaymentsSettingsForm({
           </div>
         </div>
       )}
-
-      {saveRow}
-    </form>
+    </>
   );
 
-  if (embedded) return form;
+  if (embedded) {
+    return (
+      <form
+        onSubmit={handleSave}
+        className="flex flex-col flex-1 min-h-0"
+      >
+        <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-4">
+          {fields}
+        </div>
+        <div className="shrink-0 border-t border-border bg-surface px-5 py-3">
+          {saveRow}
+        </div>
+      </form>
+    );
+  }
 
   return (
     <Card padding="sm">
       <h2 className="font-semibold mb-3">Payments</h2>
-      {form}
+      <form onSubmit={handleSave} className="flex flex-col gap-4">
+        {fields}
+        {saveRow}
+      </form>
     </Card>
   );
 }

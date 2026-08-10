@@ -40,7 +40,7 @@ export function PaymentSettingsButton({
             padding="none"
             className="w-full max-w-lg max-h-[84vh] flex flex-col shadow-lg overflow-hidden"
           >
-            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border bg-surface">
+            <div className="shrink-0 flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border bg-surface">
               <div>
                 <h2
                   id="payment-settings-title"
@@ -69,15 +69,13 @@ export function PaymentSettingsButton({
                 ✕
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 px-5 py-4">
-              <PaymentsSettingsForm
-                policy={policy}
-                teacherId={teacherId}
-                stripeStatus={stripeStatus}
-                embedded
-                onSaved={() => setOpen(false)}
-              />
-            </div>
+            <PaymentsSettingsForm
+              policy={policy}
+              teacherId={teacherId}
+              stripeStatus={stripeStatus}
+              embedded
+              onSaved={() => setOpen(false)}
+            />
           </Card>
         </div>
       )}
