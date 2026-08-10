@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -16,12 +16,11 @@ export async function POST(req: NextRequest) {
   const serviceClient = createServiceClient();
   const tz = typeof timezone === "string" ? timezone : null;
 
-  // Check if a teacher row already exists for this auth user
   const { data: existing } = await serviceClient
     .from("teachers")
     .select("id")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
@@ -30,33 +29,32 @@ export async function POST(req: NextRequest) {
   }
 
   // During private beta, teacher rows are only created via /api/auth/signup
-  // (which checks the access code) — this route must not be a backdoor.
+  // (access code) or repaired on email confirm. This route must not be a
+  // backdoor around the beta gate.
   const { requiresBetaCode } = await import("@/lib/entitlements");
   if (requiresBetaCode()) {
     return NextResponse.json(
-      { error: "CogNote Studio is in private beta — sign up with an access code." },
+      {
+        error:
+          "CogNote Studio is in private beta. Sign up with an access code.",
+      },
       { status: 403 }
     );
   }
 
-  // Create a new teacher row tied to the authenticated user's ID
-  const { hostedSignupFields } = await import("@/lib/entitlements");
-  const hosted = hostedSignupFields();
-  const { error } = await serviceClient.from("teachers").insert({
-    id: user.id,
+  const ensured = await ensureTeacherForAuthUser(serviceClient, {
+    userId: user.id,
     email: user.email!,
-    display_name: displayName || user.email?.split("@")[0] || "Teacher",
-    hosted_plan: hosted.hosted_plan,
-    trial_ends_at: hosted.trial_ends_at,
+    displayName:
+      typeof displayName === "string"
+        ? displayName
+        : user.email?.split("@")[0] || "Teacher",
+    timezone: tz,
   });
 
-  if (error) {
-    console.error("Failed to create teacher row:", error);
-    return NextResponse.json({ error: "Failed to set up account" }, { status: 500 });
+  if (!ensured.ok) {
+    return NextResponse.json({ error: ensured.error }, { status: 500 });
   }
-
-  const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
-  await ensureStudioPolicyRow(serviceClient, user.id, tz);
 
   return NextResponse.json({ ok: true });
 }

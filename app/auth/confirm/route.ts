@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 /**
@@ -36,7 +37,10 @@ export async function GET(req: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     ok = !error;
   } else if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+    const { error } = await supabase.auth.verifyOtp({
+      type,
+      token_hash: tokenHash,
+    });
     ok = !error;
   }
 
@@ -44,16 +48,28 @@ export async function GET(req: NextRequest) {
     redirectTo.pathname = "/login";
     redirectTo.searchParams.set(
       "message",
-      "That link is invalid or has expired — request a new one. (Password reset links must be opened in the same browser you requested them from.)"
+      "That link is invalid or has expired. Request a new one. (Password reset links must be opened in the same browser you requested them from.)"
     );
     return NextResponse.redirect(redirectTo);
   }
 
-  // Keep teachers.email in sync after a confirmed email change.
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (user?.email) {
+    // Safety net: signup with email-confirm used to return before creating
+    // the teachers row. Ensure it exists (hosted trial) via service role.
+    const serviceClient = createServiceClient();
+    const displayName =
+      typeof user.user_metadata?.display_name === "string"
+        ? user.user_metadata.display_name
+        : null;
+    await ensureTeacherForAuthUser(serviceClient, {
+      userId: user.id,
+      email: user.email,
+      displayName,
+    });
+
     await supabase
       .from("teachers")
       .update({ email: user.email })
