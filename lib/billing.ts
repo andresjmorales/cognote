@@ -246,11 +246,45 @@ export function defaultInvoicePeriod(
   return { start, end };
 }
 
-/** Mask a secret for display: sk_test_…abcd */
+/** Mask a secret for display: sk_live_…abcd */
 export function maskSecret(value: string | null | undefined): string | null {
   if (!value) return null;
   if (value.length <= 8) return "••••••••";
   return `${value.slice(0, 7)}…${value.slice(-4)}`;
+}
+
+/**
+ * Reject Stripe test/sandbox keys so teachers don't accidentally collect
+ * real payments against a test account. Empty/null is allowed (not configured).
+ * Returns an error message, or null when ok.
+ */
+export function validateLiveStripeKeys(opts: {
+  secretKey?: string | null;
+  publishableKey?: string | null;
+}): string | null {
+  const secret = opts.secretKey?.trim() || null;
+  const publishable = opts.publishableKey?.trim() || null;
+
+  if (secret) {
+    if (secret.startsWith("sk_test_")) {
+      return "Test/sandbox Stripe secret keys are not accepted. Paste a live Standard secret key (sk_live_…).";
+    }
+    if (secret.startsWith("rk_")) {
+      return "Restricted keys (rk_…) are not used for studio tuition. Paste your Standard secret key (sk_live_…) from Developers → API keys.";
+    }
+    if (!secret.startsWith("sk_live_")) {
+      return "Secret key must be a live Standard key starting with sk_live_.";
+    }
+  }
+  if (publishable) {
+    if (publishable.startsWith("pk_test_")) {
+      return "Test/sandbox Stripe publishable keys are not accepted. Paste a live publishable key (pk_live_…).";
+    }
+    if (!publishable.startsWith("pk_live_")) {
+      return "Publishable key must be a live Standard key starting with pk_live_.";
+    }
+  }
+  return null;
 }
 
 export interface StripeKeyStatus {

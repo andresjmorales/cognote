@@ -8,6 +8,7 @@ import {
   familyEmailRecipients,
   familyDisplayName,
   familyGreetingNames,
+  stripeCheckoutPrefillEmail,
   type FamilyContact,
 } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
@@ -123,8 +124,8 @@ export async function sendInvoice(
         periodLabel: `${invoice.period_start} – ${invoice.period_end}`,
         successUrl: `${origin}/portal/${family.portal_token}?paid=1`,
         cancelUrl: `${origin}/portal/${family.portal_token}`,
-        customerEmail: family.email,
-      });
+      customerEmail: stripeCheckoutPrefillEmail(family),
+    });
       checkoutUrl = session.url;
       await supabase
         .from("invoices")

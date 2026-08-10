@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
-import { maskSecret } from "@/lib/billing";
+import { maskSecret, validateLiveStripeKeys } from "@/lib/billing";
 import type { InvoiceCadence, PaymentProvider, RateBasis } from "@/lib/schedule";
 import type { AiProviderId } from "@/lib/ai/provider";
 
@@ -244,17 +244,48 @@ export async function PUT(req: NextRequest) {
 
   // Stripe keys: only overwrite when a new value is pasted, or explicitly
   // cleared. Secrets are encrypted at rest (decrypted in getPolicy).
+  // Reject test/sandbox keys so teachers don't collect live payments on a
+  // test account. Check the effective keys after this save (new paste or
+  // already-stored) whenever Stripe is (or will be) the provider.
   const { encryptSecret } = await import("@/lib/token");
+  const currentPolicy = await getPolicy(supabase, user.id);
+
+  const nextSecretRaw = body.clearStripeSecretKey
+    ? null
+    : typeof body.stripeSecretKey === "string" && body.stripeSecretKey.trim()
+      ? body.stripeSecretKey.trim()
+      : undefined;
+  const nextPublishableRaw = body.clearStripePublishableKey
+    ? null
+    : typeof body.stripePublishableKey === "string" &&
+        body.stripePublishableKey.trim()
+      ? body.stripePublishableKey.trim()
+      : undefined;
+
+  const effectiveProvider = paymentProvider ?? currentPolicy.payment_provider;
+  if (effectiveProvider === "stripe") {
+    const keyError = validateLiveStripeKeys({
+      secretKey:
+        nextSecretRaw === undefined
+          ? currentPolicy.stripe_secret_key
+          : nextSecretRaw,
+      publishableKey:
+        nextPublishableRaw === undefined
+          ? currentPolicy.stripe_publishable_key
+          : nextPublishableRaw,
+    });
+    if (keyError) {
+      return NextResponse.json({ error: keyError }, { status: 400 });
+    }
+  }
+
   if (body.clearStripeSecretKey) upsert.stripe_secret_key = null;
-  else if (typeof body.stripeSecretKey === "string" && body.stripeSecretKey.trim()) {
-    upsert.stripe_secret_key = encryptSecret(body.stripeSecretKey.trim());
+  else if (nextSecretRaw) {
+    upsert.stripe_secret_key = encryptSecret(nextSecretRaw);
   }
   if (body.clearStripePublishableKey) upsert.stripe_publishable_key = null;
-  else if (
-    typeof body.stripePublishableKey === "string" &&
-    body.stripePublishableKey.trim()
-  ) {
-    upsert.stripe_publishable_key = body.stripePublishableKey.trim();
+  else if (nextPublishableRaw) {
+    upsert.stripe_publishable_key = nextPublishableRaw;
   }
   if (body.clearStripeWebhookSecret) upsert.stripe_webhook_secret = null;
   else if (
@@ -289,7 +320,6 @@ export async function PUT(req: NextRequest) {
     "bill_makeup",
     "invoice_cadence",
   ] as const;
-  const currentPolicy = await getPolicy(supabase, user.id);
   const familyRelevantChanged = FAMILY_RELEVANT_FIELDS.some(
     (field) =>
       field in upsert &&

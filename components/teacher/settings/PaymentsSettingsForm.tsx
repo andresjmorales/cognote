@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { StudioPolicy, PaymentProvider } from "@/lib/schedule";
-import type { StripeKeyStatus } from "@/lib/billing";
+import {
+  validateLiveStripeKeys,
+  type StripeKeyStatus,
+} from "@/lib/billing";
 
 const inputClass =
   "px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm";
@@ -17,12 +21,15 @@ export function PaymentsSettingsForm({
   teacherId,
   stripeStatus,
   embedded = false,
+  onSaved,
 }: {
   policy: StudioPolicy;
   teacherId: string;
   stripeStatus: StripeKeyStatus;
   /** When true, skip outer Card/h2 (used inside Billing payment settings modal). */
   embedded?: boolean;
+  /** Called after a successful save (e.g. close the Billing modal). */
+  onSaved?: () => void;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -47,6 +54,20 @@ export function PaymentsSettingsForm({
     e.preventDefault();
     setBusy(true);
     setMessage(null);
+
+    if (provider === "stripe") {
+      const keyError = validateLiveStripeKeys({
+        secretKey: secretKey.trim() || null,
+        publishableKey: publishableKey.trim() || null,
+      });
+      if (keyError) {
+        setBusy(false);
+        setMessage(keyError);
+        setTimeout(() => setMessage(null), 4000);
+        return;
+      }
+    }
+
     const res = await fetch("/api/settings/policy", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -75,15 +96,25 @@ export function PaymentsSettingsForm({
       setClearPublishable(false);
       setClearWebhook(false);
       router.refresh();
+      onSaved?.();
     } else {
       const data = await res.json().catch(() => ({}));
       setMessage(data.error ?? "Failed to save");
+      setTimeout(() => setMessage(null), 2500);
     }
-    setTimeout(() => setMessage(null), 2500);
   }
 
-  const form = (
-    <form onSubmit={handleSave} className="flex flex-col gap-4">
+  const saveRow = (
+    <div className="flex items-center gap-3">
+      <Button type="submit" size="sm" disabled={busy}>
+        {busy ? "Saving..." : "Save payment settings"}
+      </Button>
+      {message && <span className="text-xs text-muted">{message}</span>}
+    </div>
+  );
+
+  const fields = (
+    <>
       <fieldset>
         <legend className="text-xs font-semibold text-muted mb-1">
           Payment provider
@@ -110,39 +141,70 @@ export function PaymentsSettingsForm({
         </div>
       </fieldset>
 
-      <label className="text-sm">
-        <span className="block text-xs font-semibold text-muted mb-1">
-          Payment instructions
-        </span>
-        <textarea
-          value={instructions}
-          onChange={(e) => setInstructions(e.target.value)}
-          placeholder="e.g. Zelle to you@email.com · Venmo @yourstudio · cash at lesson"
-          rows={3}
-          maxLength={2000}
-          className={`${inputClass} w-full resize-y`}
-        />
-        <span className="block text-xs text-muted mt-1">
-          Shown on invoices and the family portal when using manual payments.
-        </span>
-      </label>
+      {provider === "manual" && (
+        <label className="text-sm">
+          <span className="block text-xs font-semibold text-muted mb-1">
+            Payment instructions
+          </span>
+          <textarea
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder="e.g. Zelle to you@email.com · Venmo @yourstudio · cash at lesson"
+            rows={3}
+            maxLength={2000}
+            className={`${inputClass} w-full resize-y`}
+          />
+          <span className="block text-xs text-muted mt-1">
+            Shown on invoices and the family portal when using manual payments.
+          </span>
+        </label>
+      )}
 
       {provider === "stripe" && (
         <div className="space-y-3 border-t border-border pt-3">
-          <p className="text-xs text-muted">
-            Paste keys from your Stripe Dashboard (Developers → API keys).
-            Register the webhook URL below for{" "}
-            <code className="text-[11px]">checkout.session.completed</code>,
-            then paste the signing secret. Keys stay in your database and are
-            never returned to the browser in full.
-          </p>
+          <details className="rounded-lg border border-border bg-surface-dim/40 px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-semibold text-foreground select-none">
+              How to set up Stripe
+            </summary>
+            <ol className="mt-2 list-decimal pl-5 space-y-2 text-xs text-muted leading-relaxed">
+              <li>
+                In Stripe, open <strong className="font-semibold text-foreground">Developers → API keys</strong>{" "}
+                (live mode). Under <strong className="font-semibold text-foreground">Standard keys</strong>,
+                copy the <strong className="font-semibold text-foreground">Secret key</strong>{" "}
+                (<code className="text-[11px]">sk_live_…</code>) and{" "}
+                <strong className="font-semibold text-foreground">Publishable key</strong>{" "}
+                (<code className="text-[11px]">pk_live_…</code>). Do not use Restricted keys (
+                <code className="text-[11px]">rk_…</code>) or test keys (
+                <code className="text-[11px]">sk_test_…</code>).
+              </li>
+              <li>
+                Open <strong className="font-semibold text-foreground">Workbench → Webhooks</strong>{" "}
+                (or Developers → Webhooks), add an endpoint with the URL below, and
+                subscribe only to{" "}
+                <code className="text-[11px]">checkout.session.completed</code>.
+                Paste the signing secret (<code className="text-[11px]">whsec_…</code>) here.
+              </li>
+              <li>
+                If the webhook is missing or wrong, families can still pay (Stripe
+                collects the money), but CogNote will not auto-mark the invoice paid.
+                You can mark it paid manually on the invoice.
+              </li>
+            </ol>
+            <p className="mt-2 text-xs text-muted">
+              More detail:{" "}
+              <Link href="/help#billing-payments" className="text-primary hover:underline">
+                Help → Billing &amp; Payments
+              </Link>
+              .
+            </p>
+          </details>
 
           <KeyField
-            label="Secret key"
+            label="Standard secret key"
             placeholder={
               stripeStatus.secretConfigured
                 ? stripeStatus.secretMasked ?? "••••••••"
-                : "sk_test_…"
+                : "sk_live_…"
             }
             value={secretKey}
             onChange={setSecretKey}
@@ -155,7 +217,7 @@ export function PaymentsSettingsForm({
             placeholder={
               stripeStatus.publishableConfigured
                 ? stripeStatus.publishableMasked ?? "••••••••"
-                : "pk_test_…"
+                : "pk_live_…"
             }
             value={publishableKey}
             onChange={setPublishableKey}
@@ -179,36 +241,45 @@ export function PaymentsSettingsForm({
 
           <div className="text-sm">
             <span className="block text-xs font-semibold text-muted mb-1">
-              Webhook endpoint
+              Webhook endpoint URL
             </span>
             <code className="block text-xs bg-surface-dim px-2 py-2 rounded break-all">
               {webhookUrl}
             </code>
             <span className="block text-xs text-muted mt-1">
-              In Stripe → Developers → Webhooks, add this URL and listen for{" "}
-              <code className="text-[11px]">checkout.session.completed</code>.
-              Your teacher id is{" "}
-              <code className="text-[11px]">{teacherId}</code>.
+              Listen for{" "}
+              <code className="text-[11px]">checkout.session.completed</code> only.
+              Keys stay in your database and are never returned to the browser in full.
             </span>
           </div>
         </div>
       )}
-
-      <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "Saving..." : "Save payment settings"}
-        </Button>
-        {message && <span className="text-xs text-muted">{message}</span>}
-      </div>
-    </form>
+    </>
   );
 
-  if (embedded) return form;
+  if (embedded) {
+    return (
+      <form
+        onSubmit={handleSave}
+        className="flex flex-col flex-1 min-h-0"
+      >
+        <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-4">
+          {fields}
+        </div>
+        <div className="shrink-0 border-t border-border bg-surface px-5 py-3">
+          {saveRow}
+        </div>
+      </form>
+    );
+  }
 
   return (
     <Card padding="sm">
       <h2 className="font-semibold mb-3">Payments</h2>
-      {form}
+      <form onSubmit={handleSave} className="flex flex-col gap-4">
+        {fields}
+        {saveRow}
+      </form>
     </Card>
   );
 }
