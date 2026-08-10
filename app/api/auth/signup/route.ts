@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { requiresBetaCode } from "@/lib/entitlements";
+import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
 import {
   BETA_GUESS_LIMIT,
   BETA_GUESS_WINDOW_MS,
@@ -14,6 +15,10 @@ import { secureCompare } from "@/lib/server/secure-compare";
  * Sign-up. When `requiresBetaCode()` (NEXT_PUBLIC_BETA_ONLY or BETA_ACCESS_CODE),
  * new accounts need the server-only access code. Self-hosters who leave both
  * unset get open sign-ups. Failed beta guesses are rate-limited per IP.
+ *
+ * The teachers row (with hosted trial fields) is created even when email
+ * confirmation is still pending, so confirm-then-land-on-dashboard is not
+ * stuck on a free/missing entitlement.
  */
 export async function POST(req: NextRequest) {
   const { email, password, displayName, accessCode, timezone } =
@@ -67,7 +72,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Invalid access code. CogNote Studio is in private beta — join the waitlist and we'll be in touch.",
+            "Invalid access code. CogNote Studio is in private beta - join the waitlist and we'll be in touch.",
         },
         { status: 403 }
       );
@@ -75,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { error: signUpError } = await supabase.auth.signUp({
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { display_name: displayName } },
@@ -84,50 +89,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: signUpError.message }, { status: 400 });
   }
 
+  const userId = signUpData.user?.id;
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Sign up did not return a user" },
+      { status: 500 }
+    );
+  }
+
+  // Create the teacher row before attempting sign-in. Production often
+  // requires email confirmation, so sign-in fails and we used to return
+  // early without a teachers row (missing trial → free limit banner).
+  const serviceClient = createServiceClient();
+  const ensured = await ensureTeacherForAuthUser(serviceClient, {
+    userId,
+    email,
+    displayName:
+      typeof displayName === "string" ? displayName : email.split("@")[0],
+    timezone: typeof timezone === "string" ? timezone : null,
+  });
+  if (!ensured.ok) {
+    return NextResponse.json({ error: ensured.error }, { status: 500 });
+  }
+
   // In local dev Supabase auto-confirms; sign in to establish the session.
-  const { data: signIn, error: signInError } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
   if (signInError) {
-    // Most likely "email not confirmed" — account exists, session pending.
     return NextResponse.json({ ok: true, needsConfirmation: true });
   }
-
-  const serviceClient = createServiceClient();
-  const userId = signIn.user.id;
-  const { data: existing } = await serviceClient
-    .from("teachers")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!existing) {
-    const { hostedSignupFields } = await import("@/lib/entitlements");
-    const hosted = hostedSignupFields();
-    const { error: teacherError } = await serviceClient.from("teachers").insert({
-      id: userId,
-      email,
-      display_name: displayName || email.split("@")[0],
-      hosted_plan: hosted.hosted_plan,
-      trial_ends_at: hosted.trial_ends_at,
-    });
-    if (teacherError) {
-      console.error("Failed to create teacher row:", teacherError);
-      return NextResponse.json(
-        { error: "Failed to set up account" },
-        { status: 500 }
-      );
-    }
-  }
-
-  const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
-  await ensureStudioPolicyRow(
-    serviceClient,
-    userId,
-    typeof timezone === "string" ? timezone : null
-  );
 
   return NextResponse.json({ ok: true });
 }

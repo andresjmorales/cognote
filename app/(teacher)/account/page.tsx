@@ -10,8 +10,10 @@ import { getPolicy } from "@/lib/server/scheduling";
 import { maskSecret } from "@/lib/billing";
 import {
   getDeploymentMode,
+  hostedLimitMessage,
   resolveEffectivePlan,
   type HostedPlan,
+  type LimitResource,
 } from "@/lib/entitlements";
 import {
   countActiveStudents,
@@ -73,10 +75,34 @@ export default async function AccountPage({
       countSheetItems(supabase, user.id),
     ]);
 
+    // Only warn when a free-tier cap is actually hit (not merely "on free").
     if (entitlement.softLimitsApply) {
-      limitBanner = (
-        <HostedLimitBanner monthlyPriceCents={entitlement.monthlyPriceCents} />
-      );
+      const hit: LimitResource | null =
+        students >= entitlement.limits.maxStudents
+          ? "students"
+          : plans >= entitlement.limits.maxPlans
+            ? "plans"
+            : sheetMusic >= entitlement.limits.maxSheetItems
+              ? "sheet_music"
+              : null;
+      if (hit) {
+        const limit =
+          hit === "students"
+            ? entitlement.limits.maxStudents
+            : hit === "plans"
+              ? entitlement.limits.maxPlans
+              : entitlement.limits.maxSheetItems;
+        limitBanner = (
+          <HostedLimitBanner
+            monthlyPriceCents={entitlement.monthlyPriceCents}
+            message={hostedLimitMessage(
+              hit,
+              limit,
+              entitlement.monthlyPriceCents
+            )}
+          />
+        );
+      }
     }
 
     hostingSection = (
