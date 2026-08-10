@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { familyEmailRecipients, familyGreetingNames } from "@/lib/guardians";
+import {
+  familyEmailRecipients,
+  familyGreetingNames,
+  stripeCheckoutPrefillEmail,
+} from "@/lib/guardians";
 
 const base = {
   name: "Jordan",
@@ -57,6 +61,31 @@ describe("familyEmailRecipients", () => {
     expect(
       familyEmailRecipients({ ...base, email_recipients: undefined })
     ).toEqual(["jordan@example.com"]);
+  });
+});
+
+describe("stripeCheckoutPrefillEmail", () => {
+  it("prefills the single recipient", () => {
+    expect(stripeCheckoutPrefillEmail(base)).toBe("jordan@example.com");
+    expect(
+      stripeCheckoutPrefillEmail({ ...base, email_recipients: "secondary" })
+    ).toBe("sam@example.com");
+  });
+
+  it("leaves Checkout blank when both guardians receive email", () => {
+    expect(
+      stripeCheckoutPrefillEmail({ ...base, email_recipients: "both" })
+    ).toBeNull();
+  });
+
+  it("returns null when no emails exist", () => {
+    expect(
+      stripeCheckoutPrefillEmail({
+        ...base,
+        email: null,
+        secondary_email: null,
+      })
+    ).toBeNull();
   });
 });
 

@@ -11,6 +11,7 @@ import {
   centsToDollarsInput,
   defaultInvoicePeriod,
   maskSecret,
+  validateLiveStripeKeys,
   type BillableLessonInput,
 } from "@/lib/billing";
 import { DEFAULT_POLICY, type StudioPolicy } from "@/lib/schedule";
@@ -281,14 +282,61 @@ describe("defaultInvoicePeriod", () => {
 });
 
 describe("maskSecret", () => {
+  // Build fake keys at runtime so GitHub push protection does not treat
+  // literal sk_live_… strings in source as secrets.
+  const fakeLiveSecret = ["sk", "live", "abcdefghijklmnopqrstuvwxyz"].join("_");
+
   it("masks long secrets", () => {
-    expect(maskSecret("sk_test_abcdefghijklmnopqrstuvwxyz")).toBe(
-      "sk_test…wxyz"
-    );
+    expect(maskSecret(fakeLiveSecret)).toBe("sk_live…wxyz");
   });
 
   it("handles empty", () => {
     expect(maskSecret(null)).toBeNull();
     expect(maskSecret("short")).toBe("••••••••");
+  });
+});
+
+describe("validateLiveStripeKeys", () => {
+  const liveSecret = ["sk", "live", "abc"].join("_");
+  const livePublishable = ["pk", "live", "xyz"].join("_");
+  const testSecret = ["sk", "test", "abc"].join("_");
+  const testPublishable = ["pk", "test", "xyz"].join("_");
+  const restrictedSecret = ["rk", "live", "abc"].join("_");
+
+  it("accepts live keys and empty values", () => {
+    expect(
+      validateLiveStripeKeys({
+        secretKey: liveSecret,
+        publishableKey: livePublishable,
+      })
+    ).toBeNull();
+    expect(validateLiveStripeKeys({})).toBeNull();
+    expect(
+      validateLiveStripeKeys({ secretKey: null, publishableKey: "" })
+    ).toBeNull();
+  });
+
+  it("rejects test keys", () => {
+    expect(validateLiveStripeKeys({ secretKey: testSecret })).toMatch(
+      /Test\/sandbox/
+    );
+    expect(
+      validateLiveStripeKeys({ publishableKey: testPublishable })
+    ).toMatch(/Test\/sandbox/);
+  });
+
+  it("rejects restricted keys", () => {
+    expect(validateLiveStripeKeys({ secretKey: restrictedSecret })).toMatch(
+      /Restricted/
+    );
+  });
+
+  it("rejects keys that are not live-prefixed", () => {
+    expect(validateLiveStripeKeys({ secretKey: "not_a_key" })).toMatch(
+      /sk_live_/
+    );
+    expect(validateLiveStripeKeys({ publishableKey: "pk_abc" })).toMatch(
+      /pk_live_/
+    );
   });
 });

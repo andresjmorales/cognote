@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
 import { createCheckoutSession } from "@/lib/payments";
 import { requestOrigin } from "@/lib/server/http";
-import { familyDisplayName } from "@/lib/guardians";
+import { familyDisplayName, stripeCheckoutPrefillEmail } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
 
 export async function POST(
@@ -33,7 +33,9 @@ export async function POST(
     .select(
       `
       *,
-      guardians ( id, name, family_name, email, secondary_email, email_recipients )
+      guardians (
+        id, name, family_name, email, secondary_email, email_recipients
+      )
     `
     )
     .eq("id", id)
@@ -65,8 +67,20 @@ export async function POST(
 
   const family = oneToOne(
     invoice.guardians as
-      | { name: string; family_name: string | null; email: string | null }
-      | { name: string; family_name: string | null; email: string | null }[]
+      | {
+          name: string;
+          family_name: string | null;
+          email: string | null;
+          secondary_email: string | null;
+          email_recipients: "primary" | "secondary" | "both" | null;
+        }
+      | {
+          name: string;
+          family_name: string | null;
+          email: string | null;
+          secondary_email: string | null;
+          email_recipients: "primary" | "secondary" | "both" | null;
+        }[]
       | null
   );
   if (!family) {
@@ -88,7 +102,7 @@ export async function POST(
       periodLabel,
       successUrl: `${origin}/billing/${id}?paid=1`,
       cancelUrl: `${origin}/billing/${id}`,
-      customerEmail: family.email,
+      customerEmail: stripeCheckoutPrefillEmail(family),
     });
 
     await supabase

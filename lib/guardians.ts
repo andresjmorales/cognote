@@ -47,6 +47,19 @@ export function familyEmailRecipients(family: FamilyContact): string[] {
 }
 
 /**
+ * Email to prefill on Stripe Checkout. Only when there is exactly one
+ * clear recipient. Checkout locks the email field when customer_email is
+ * set, so with "both" (or two emails on file for the preferred setting) we
+ * leave it blank so either parent can pay with their own Stripe Link / cards.
+ */
+export function stripeCheckoutPrefillEmail(
+  family: FamilyContact
+): string | null {
+  const recipients = familyEmailRecipients(family);
+  return recipients.length === 1 ? recipients[0] : null;
+}
+
+/**
  * Greeting name(s) matching the recipients: "Jordan" or "Jordan and Sam".
  * Falls back to the primary guardian's name.
  */

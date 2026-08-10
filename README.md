@@ -203,16 +203,19 @@ Use **cloud** Supabase keys on Vercel, not Docker local keys.
 
 Manual mark-paid works with zero config (Billing → Payment settings → payment instructions).
 
-**Teacher BYO Stripe** (lesson invoices — not CogNote subscriptions):
+**Teacher BYO Stripe** (lesson invoices, not CogNote Hosted Pro subscriptions):
 
-1. Stripe account (test mode first)
-2. Billing → Payment settings → paste Secret + Publishable keys
-3. Webhook to `https://<host>/api/webhooks/stripe/<your-teacher-id>`, event `checkout.session.completed`
-4. Paste signing secret; test with `4242…`
+1. Stripe account in **live** mode
+2. Developers → API keys → **Standard keys**: Secret (`sk_live_…`) + Publishable (`pk_live_…`). Do not use Restricted (`rk_…`) or test keys.
+3. Billing → Payment settings → paste those keys
+4. Workbench → Webhooks (or Developers → Webhooks): endpoint `https://<host>/api/webhooks/stripe/<your-teacher-id>`, event `checkout.session.completed` only
+5. Paste the signing secret (`whsec_…`)
 
-Local: `stripe listen --forward-to localhost:3000/api/webhooks/stripe/<teacherId>`.
+If the webhook is missing, families can still pay; mark the invoice paid manually.
 
-Platform Hosted Pro billing: [ARCHITECTURE.md](ARCHITECTURE.md#deployment-modes).
+Local webhook forwarding: `stripe listen --forward-to localhost:3000/api/webhooks/stripe/<teacherId>`.
+
+Platform Hosted Pro billing (restricted platform keys, separate from teacher tuition): [ARCHITECTURE.md](ARCHITECTURE.md#deployment-modes).
 
 ### Hosted vs self-host
 

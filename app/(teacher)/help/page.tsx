@@ -134,7 +134,7 @@ export default function HelpPage() {
         </div>
       </Card>
 
-      <Card padding="lg" className="space-y-4">
+      <Card padding="lg" className="space-y-4" id="billing-payments">
         <h2 className="text-xl font-semibold">Billing &amp; Payments</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
@@ -147,14 +147,23 @@ export default function HelpPage() {
           </p>
           <p className="text-muted">
             Payments default to manual (mark paid yourself). To accept cards,
-            open Billing → Payment settings, switch to Stripe, and paste your
-            own keys. CogNote never holds platform payment keys for lesson
-            tuition.
+            open Billing → Payment settings, switch to Stripe, and paste your{" "}
+            <strong className="font-semibold text-foreground">Standard</strong>{" "}
+            live keys from Stripe → Developers → API keys (
+            <code className="text-xs">sk_live_…</code> and{" "}
+            <code className="text-xs">pk_live_…</code>
+            ; not Restricted <code className="text-xs">rk_…</code> keys, and not
+            test keys). Then add a webhook in Stripe Workbench → Webhooks for{" "}
+            <code className="text-xs">checkout.session.completed</code> using the
+            URL shown in Payment settings. CogNote never holds platform payment
+            keys for lesson tuition.
           </p>
           <p className="text-muted">
             When a family pays online, the Stripe webhook marks the invoice
             paid and can email you a short receipt (family, amount, period).
-            Turn that on or off under Account settings → Notifications.
+            Turn that on or off under Account settings → Notifications. If the
+            webhook is missing or misconfigured, the payment still succeeds in
+            Stripe; mark the invoice paid manually on the Billing tab.
           </p>
         </div>
       </Card>
