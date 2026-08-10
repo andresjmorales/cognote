@@ -58,7 +58,10 @@ export async function POST(req: NextRequest) {
       results.push({
         id,
         ok: result.ok,
-        error: result.error ?? result.emailError,
+        error:
+          result.error ??
+          result.emailError ??
+          result.checkoutError,
       });
       continue;
     }

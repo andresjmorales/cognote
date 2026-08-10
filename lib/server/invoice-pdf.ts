@@ -20,6 +20,46 @@ export interface InvoicePdfInput {
   notes?: string;
 }
 
+/**
+ * Helvetica (StandardFonts) only supports WinAnsi. Map common punctuation
+ * and drop the rest (emoji, etc.) so student names like "Andrés❤️" don't
+ * crash invoice send.
+ */
+export function toPdfSafeText(text: string): string {
+  const replacements: Record<string, string> = {
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201C": '"',
+    "\u201D": '"',
+    "\u2013": "-",
+    "\u2014": "-",
+    "\u2026": "...",
+    "\u00A0": " ",
+    "\u2022": "*",
+  };
+  let out = "";
+  for (const char of text) {
+    if (replacements[char] !== undefined) {
+      out += replacements[char];
+      continue;
+    }
+    if (char === "\n" || char === "\r") {
+      out += char;
+      continue;
+    }
+    if (char === "\t") {
+      out += " ";
+      continue;
+    }
+    const code = char.codePointAt(0)!;
+    // Keep printable ASCII + Latin-1 (covers é, ñ, etc. via WinAnsi).
+    if (code >= 0x20 && code <= 0xff) {
+      out += char;
+    }
+  }
+  return out.replace(/ {2,}/g, " ");
+}
+
 function formatPeriod(start: string, end: string): string {
   const fmt = (d: string) => {
     const [y, m, day] = d.split("-").map(Number);
@@ -29,7 +69,7 @@ function formatPeriod(start: string, end: string): string {
       year: "numeric",
     });
   };
-  return `${fmt(start)} – ${fmt(end)}`;
+  return toPdfSafeText(`${fmt(start)} – ${fmt(end)}`);
 }
 
 /** Generate a simple invoice PDF buffer. */
@@ -46,9 +86,14 @@ export async function buildInvoicePdf(
 
   const draw = (
     text: string,
-    opts: { size?: number; font?: typeof font; x?: number; color?: ReturnType<typeof rgb> } = {}
+    opts: {
+      size?: number;
+      font?: typeof font;
+      x?: number;
+      color?: ReturnType<typeof rgb>;
+    } = {}
   ) => {
-    page.drawText(text, {
+    page.drawText(toPdfSafeText(text), {
       x: opts.x ?? margin,
       y,
       size: opts.size ?? 11,
@@ -85,10 +130,9 @@ export async function buildInvoicePdf(
       // Keep it simple: one page is enough for typical studio invoices
       break;
     }
+    const rawDesc = toPdfSafeText(item.description);
     const desc =
-      item.description.length > 70
-        ? `${item.description.slice(0, 67)}…`
-        : item.description;
+      rawDesc.length > 70 ? `${rawDesc.slice(0, 67)}...` : rawDesc;
     draw(desc, { size: 10 });
     draw(formatMoney(item.amountCents, input.currency), {
       size: 10,
@@ -138,7 +182,7 @@ export async function buildInvoicePdf(
 }
 
 function wrapText(text: string, maxChars: number): string[] {
-  const words = text.replace(/\r\n/g, "\n").split(/\s+/);
+  const words = toPdfSafeText(text).replace(/\r\n/g, "\n").split(/\s+/);
   const lines: string[] = [];
   let current = "";
   for (const word of words) {

@@ -168,7 +168,7 @@ export function deriveInvoiceItems(
       lessonId: lesson.lessonId,
       studentId: lesson.studentId,
       guardianId: lesson.guardianId,
-      description: `${label}${makeup} — ${lesson.studentName}, ${when} (${lesson.durationMinutes} min${rateNote})`,
+      description: `${label}${makeup} - ${lesson.studentName}, ${when} (${lesson.durationMinutes} min${rateNote})`,
       quantity: 1,
       unitCents: amountCents,
       amountCents,

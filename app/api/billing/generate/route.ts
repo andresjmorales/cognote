@@ -34,13 +34,13 @@ export async function POST(req: NextRequest) {
   const periodEnd = String(body.periodEnd ?? "");
   if (!DATE_RE.test(periodStart) || !DATE_RE.test(periodEnd)) {
     return NextResponse.json(
-      { error: "periodStart and periodEnd (YYYY-MM-DD) are required" },
+      { error: "Choose a start and end date" },
       { status: 400 }
     );
   }
   if (periodEnd < periodStart) {
     return NextResponse.json(
-      { error: "periodEnd must be on or after periodStart" },
+      { error: "End date must be on or after the start date" },
       { status: 400 }
     );
   }

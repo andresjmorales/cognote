@@ -41,6 +41,10 @@ export function GenerateInvoicesModal({
   } | null>(null);
 
   async function runPreview() {
+    if (periodEnd < periodStart) {
+      setError("End date must be on or after the start date");
+      return;
+    }
     setBusy(true);
     setError(null);
     setPreview(null);
