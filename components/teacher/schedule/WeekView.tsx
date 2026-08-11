@@ -22,6 +22,7 @@ export interface WeekLesson {
   studentName: string;
   isAdHoc: boolean;
   isMakeup: boolean;
+  isHomeVisit: boolean;
   lessonDate: string;
   startsAt: string;
   durationMinutes: number;
@@ -293,6 +294,7 @@ export function WeekView({
                       <div className="text-xs text-muted">
                         {formatLessonTime(lesson.startsAt, timezone)} ·{" "}
                         {lesson.durationMinutes}m
+                        {lesson.isHomeVisit ? " · home" : ""}
                       </div>
                       {status && (
                         <div
@@ -322,6 +324,7 @@ export function WeekView({
 
       {openLesson && (
         <LessonModal
+          key={openLesson.id}
           lesson={openLesson}
           currentStatus={effectiveStatus(openLesson)}
           timezone={timezone}
@@ -332,6 +335,10 @@ export function WeekView({
           onDelete={() => deleteAdHoc(openLesson)}
           onSaved={() => {
             setOpenLesson(null);
+            router.refresh();
+          }}
+          onLessonPatched={(patch) => {
+            setOpenLesson((prev) => (prev ? { ...prev, ...patch } : prev));
             router.refresh();
           }}
           notify={notify}
@@ -393,6 +400,7 @@ function LessonModal({
   onMark,
   onDelete,
   onSaved,
+  onLessonPatched,
   notify,
 }: {
   lesson: WeekLesson;
@@ -412,11 +420,14 @@ function LessonModal({
   ) => void;
   onDelete: () => void;
   onSaved: () => void;
+  onLessonPatched: (patch: Partial<WeekLesson>) => void;
   notify: (message: string, variant?: "success" | "error" | "info") => void;
 }) {
   const [familyBody, setFamilyBody] = useState(lesson.note?.body ?? "");
   const [privateBody, setPrivateBody] = useState(lesson.note?.privateBody ?? "");
   const [savingNote, setSavingNote] = useState(false);
+  const [isHomeVisit, setIsHomeVisit] = useState(lesson.isHomeVisit);
+  const [savingHomeVisit, setSavingHomeVisit] = useState(false);
   const [cancelPrompt, setCancelPrompt] = useState<"student" | "teacher" | null>(
     null
   );
@@ -463,6 +474,31 @@ function LessonModal({
       notify("Failed to save note. Check your connection.", "error");
     } finally {
       setSavingNote(false);
+    }
+  }
+
+  async function toggleHomeVisit(next: boolean) {
+    const previous = isHomeVisit;
+    setIsHomeVisit(next);
+    setSavingHomeVisit(true);
+    try {
+      const res = await fetch(`/api/schedule/lessons/${lesson.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isHomeVisit: next }),
+      });
+      if (res.ok) {
+        onLessonPatched({ isHomeVisit: next });
+      } else {
+        setIsHomeVisit(previous);
+        const data = await res.json().catch(() => ({}));
+        notify(data.error ?? "Failed to update home visit", "error");
+      }
+    } catch {
+      setIsHomeVisit(previous);
+      notify("Failed to update home visit. Check your connection.", "error");
+    } finally {
+      setSavingHomeVisit(false);
     }
   }
 
@@ -542,11 +578,21 @@ function LessonModal({
             </button>
           </div>
         </div>
-        <p className="text-sm text-muted mb-4">
+        <p className="text-sm text-muted mb-3">
           {formatLessonDate(lesson.startsAt, timezone, "long")} at{" "}
           {formatLessonTime(lesson.startsAt, timezone)} · {lesson.durationMinutes} min
           {lesson.isMakeup && " · make-up lesson"}
         </p>
+
+        <label className="flex items-center gap-2 text-sm cursor-pointer mb-4">
+          <input
+            type="checkbox"
+            checked={isHomeVisit}
+            disabled={busy || savingHomeVisit}
+            onChange={(e) => toggleHomeVisit(e.target.checked)}
+          />
+          Home visit (travel fee if configured)
+        </label>
 
         <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
           Attendance

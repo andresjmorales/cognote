@@ -216,8 +216,10 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
             />
           </div>
           <span className="block text-xs text-muted mt-1">
-            Flat add-on when a slot or one-off lesson is marked as a home visit.
-            Override per student on their page. Leave blank for none.
+            Flat add-on only for lessons marked as a home visit (not applied
+            retroactively). Slot changes affect upcoming lessons; override any
+            single occurrence from the schedule. Per-student override on their
+            page. Leave blank for none.
           </span>
         </label>
 

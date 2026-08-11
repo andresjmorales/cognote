@@ -34,8 +34,8 @@ interface LessonRow {
       }[]
     | null;
   lesson_slots:
-    | { rate_cents: number | null; is_home_visit: boolean | null }
-    | { rate_cents: number | null; is_home_visit: boolean | null }[]
+    | { rate_cents: number | null }
+    | { rate_cents: number | null }[]
     | null;
   attendance:
     | { status: AttendanceStatus; notice_at: string | null }[]
@@ -104,7 +104,7 @@ export async function derivePeriodItems(
       `
       id, student_id, lesson_date, starts_at, duration_minutes, makeup_for, slot_id, is_home_visit,
       students ( id, name, guardian_id, default_rate_cents, travel_fee_cents ),
-      lesson_slots ( rate_cents, is_home_visit ),
+      lesson_slots ( rate_cents ),
       attendance!lesson_id ( status, notice_at )
     `
     )
@@ -132,9 +132,10 @@ export async function derivePeriodItems(
       continue;
     }
     const slot = oneToOne(raw.lesson_slots);
-    const isHomeVisit = Boolean(
-      raw.is_home_visit || slot?.is_home_visit
-    );
+    // Snapshot on the lesson only — never inherit the live slot flag, so
+    // toggling a weekly slot's home-visit setting does not rewrite past
+    // occurrences when regenerating invoices.
+    const isHomeVisit = Boolean(raw.is_home_visit);
 
     inputs.push({
       lessonId: raw.id,

@@ -48,7 +48,7 @@ export default async function SchedulePage({
       supabase
         .from("lessons")
         .select(
-          `id, student_id, slot_id, lesson_date, starts_at, duration_minutes, makeup_for,
+          `id, student_id, slot_id, lesson_date, starts_at, duration_minutes, makeup_for, is_home_visit,
            students ( name ),
            attendance!lesson_id ( id, status, notice_at ),
            lesson_notes ( body, private_body, shared_with_parent, emailed_at )`
@@ -106,6 +106,7 @@ export default async function SchedulePage({
       studentName: (oneToOne(l.students as { name: string }[] | null))?.name ?? "Student",
       isAdHoc: !l.slot_id,
       isMakeup: !!l.makeup_for,
+      isHomeVisit: Boolean(l.is_home_visit),
       lessonDate: l.lesson_date,
       startsAt: l.starts_at,
       durationMinutes: l.duration_minutes,
