@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEFAULT_POLICY,
   computeOccurrences,
+  normalizeDurationRates,
   type StudioPolicy,
   type SlotRow,
 } from "@/lib/schedule";
@@ -23,6 +24,9 @@ export async function getPolicy(
     .maybeSingle();
   if (!data) return DEFAULT_POLICY;
   const policy = { ...DEFAULT_POLICY, ...data };
+  policy.duration_rate_cents = normalizeDurationRates(
+    (data as { duration_rate_cents?: unknown }).duration_rate_cents
+  );
   // BYO secrets are encrypted at rest; every server-side consumer reads
   // policies through here, so this is the single decryption point.
   const { decryptSecret } = await import("@/lib/token");

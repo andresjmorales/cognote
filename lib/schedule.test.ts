@@ -149,7 +149,18 @@ describe("computeOccurrences", () => {
       student_id: "s-1",
       slot_id: "slot-1",
       duration_minutes: 30,
+      is_home_visit: false,
     });
+  });
+
+  it("copies home-visit flag from the slot", () => {
+    const [occ] = computeOccurrences(
+      { ...baseSlot, is_home_visit: true },
+      "2026-07-07",
+      "2026-07-07",
+      CHICAGO
+    );
+    expect(occ.is_home_visit).toBe(true);
   });
 });
 

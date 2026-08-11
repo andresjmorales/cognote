@@ -33,6 +33,13 @@ export interface StudioPolicy {
   bill_late_student_cancel: boolean;
   bill_makeup: boolean;
   default_rate_cents: number | null;
+  /**
+   * Optional flat charge by lesson length (minutes → cents).
+   * Used when no slot rate is set; amounts are not pro-rated by the hour.
+   */
+  duration_rate_cents: Record<number, number>;
+  /** Studio default flat travel fee for home visits (cents). */
+  travel_fee_cents: number | null;
   rate_basis: RateBasis;
   currency: string;
   invoice_cadence: InvoiceCadence;
@@ -78,6 +85,8 @@ export const DEFAULT_POLICY: StudioPolicy = {
   bill_late_student_cancel: true,
   bill_makeup: false,
   default_rate_cents: null,
+  duration_rate_cents: {},
+  travel_fee_cents: null,
   rate_basis: "per_hour",
   currency: "USD",
   invoice_cadence: "monthly",
@@ -181,6 +190,7 @@ export interface SlotRow {
   end_date: string | null;
   active: boolean;
   rate_cents?: number | null;
+  is_home_visit?: boolean;
 }
 
 export interface OccurrenceInsert {
@@ -190,6 +200,7 @@ export interface OccurrenceInsert {
   lesson_date: string;
   starts_at: string;
   duration_minutes: number;
+  is_home_visit: boolean;
 }
 
 /**
@@ -223,9 +234,44 @@ export function computeOccurrences(
       lesson_date: date,
       starts_at: zonedTimeToUtc(date, slot.start_time, timeZone).toISOString(),
       duration_minutes: slot.duration_minutes,
+      is_home_visit: Boolean(slot.is_home_visit),
     });
   }
   return occurrences;
+}
+
+/** Normalize jsonb duration→cents maps from the DB into Record<number, number>. */
+export function normalizeDurationRates(raw: unknown): Record<number, number> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<number, number> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const minutes = Number(key);
+    const cents = Number(value);
+    if (
+      !Number.isInteger(minutes) ||
+      minutes < 5 ||
+      minutes > 240 ||
+      !Number.isFinite(cents) ||
+      cents < 0
+    ) {
+      continue;
+    }
+    out[minutes] = Math.round(cents);
+  }
+  return out;
+}
+
+/** Serialize duration rates for jsonb storage (string keys). */
+export function serializeDurationRates(
+  rates: Record<number, number>
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [minutes, cents] of Object.entries(rates)) {
+    const m = Number(minutes);
+    if (!Number.isInteger(m) || m < 5 || cents < 0) continue;
+    out[String(m)] = Math.round(cents);
+  }
+  return out;
 }
 
 /**

@@ -21,6 +21,9 @@ export function StudentInfoCard({
   initialPracticeStartDate,
   createdAt,
   initialDefaultRateCents,
+  studioDefaultRateCents = null,
+  initialTravelFeeCents = null,
+  studioTravelFeeCents = null,
 }: {
   studentId: string;
   initialLevel: string | null;
@@ -28,6 +31,9 @@ export function StudentInfoCard({
   initialPracticeStartDate: string | null;
   createdAt: string;
   initialDefaultRateCents: number | null;
+  studioDefaultRateCents?: number | null;
+  initialTravelFeeCents?: number | null;
+  studioTravelFeeCents?: number | null;
 }) {
   return (
     <Card padding="sm" className="mb-6">
@@ -64,6 +70,12 @@ export function StudentInfoCard({
         <RateField
           studentId={studentId}
           initialCents={initialDefaultRateCents}
+          studioDefaultCents={studioDefaultRateCents}
+        />
+        <TravelFeeField
+          studentId={studentId}
+          initialCents={initialTravelFeeCents}
+          studioDefaultCents={studioTravelFeeCents}
         />
       </div>
     </Card>
@@ -232,15 +244,25 @@ function PracticeSinceField({
 function RateField({
   studentId,
   initialCents,
+  studioDefaultCents,
 }: {
   studentId: string;
   initialCents: number | null;
+  studioDefaultCents: number | null;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(centsToDollarsInput(initialCents));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const studioPlaceholder =
+    studioDefaultCents != null
+      ? centsToDollarsInput(studioDefaultCents)
+      : "60.00";
+  const emptyLabel =
+    studioDefaultCents != null
+      ? `${formatMoney(studioDefaultCents)}/hr (studio)`
+      : "Use studio default";
 
   async function save() {
     const cents =
@@ -264,7 +286,7 @@ function RateField({
   return (
     <div>
       <div className="text-xs text-muted font-medium mb-0.5">
-        Default lesson rate
+        Default lesson rate / hour
       </div>
       {editing ? (
         <span className="inline-flex items-center gap-1.5">
@@ -279,7 +301,7 @@ function RateField({
               if (e.key === "Enter") save();
               if (e.key === "Escape") setEditing(false);
             }}
-            placeholder="45.00"
+            placeholder={studioPlaceholder}
             className="px-2 py-0.5 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm w-24"
           />
           <button
@@ -301,9 +323,100 @@ function RateField({
           title="Edit default lesson rate"
         >
           {initialCents != null ? (
+            <span className="font-medium">{formatMoney(initialCents)}/hr</span>
+          ) : (
+            <span className="text-muted">{emptyLabel}</span>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function TravelFeeField({
+  studentId,
+  initialCents,
+  studioDefaultCents,
+}: {
+  studentId: string;
+  initialCents: number | null;
+  studioDefaultCents: number | null;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(centsToDollarsInput(initialCents));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const studioPlaceholder =
+    studioDefaultCents != null
+      ? centsToDollarsInput(studioDefaultCents)
+      : "5.00";
+  const emptyLabel =
+    studioDefaultCents != null
+      ? `${formatMoney(studioDefaultCents)} (studio)`
+      : "Use studio default";
+
+  async function save() {
+    const cents = value.trim() === "" ? null : dollarsToCents(value);
+    if (value.trim() !== "" && cents === null) {
+      setError("Invalid amount");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    await fetch(`/api/students/${studentId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ travelFeeCents: cents }),
+    });
+    setSaving(false);
+    setEditing(false);
+    router.refresh();
+  }
+
+  return (
+    <div>
+      <div className="text-xs text-muted font-medium mb-0.5">
+        Travel fee (home visits)
+      </div>
+      {editing ? (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="text-sm text-muted">$</span>
+          <input
+            autoFocus
+            type="text"
+            inputMode="decimal"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") setEditing(false);
+            }}
+            placeholder={studioPlaceholder}
+            className="px-2 py-0.5 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm w-24"
+          />
+          <button
+            onClick={save}
+            disabled={saving}
+            className="text-xs text-primary hover:text-primary-dark font-semibold cursor-pointer"
+          >
+            {saving ? "..." : "Save"}
+          </button>
+          {error && <span className="text-xs text-error">{error}</span>}
+        </span>
+      ) : (
+        <button
+          onClick={() => {
+            setValue(centsToDollarsInput(initialCents));
+            setEditing(true);
+          }}
+          className="text-sm hover:text-primary transition-colors cursor-pointer"
+          title="Edit travel fee override"
+        >
+          {initialCents != null ? (
             <span className="font-medium">{formatMoney(initialCents)}</span>
           ) : (
-            <span className="text-muted">Set rate</span>
+            <span className="text-muted">{emptyLabel}</span>
           )}
         </button>
       )}

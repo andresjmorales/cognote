@@ -67,6 +67,12 @@ export async function PUT(
             ? null
             : Math.max(0, Math.round(Number(body.defaultRateCents))),
       }),
+      ...(body.travelFeeCents !== undefined && {
+        travel_fee_cents:
+          body.travelFeeCents === null || body.travelFeeCents === ""
+            ? null
+            : Math.max(0, Math.round(Number(body.travelFeeCents))),
+      }),
       ...(body.archived !== undefined && {
         archived_at: body.archived ? new Date().toISOString() : null,
       }),

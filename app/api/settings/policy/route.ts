@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
 import { maskSecret, validateLiveStripeKeys } from "@/lib/billing";
-import type { InvoiceCadence, PaymentProvider, RateBasis } from "@/lib/schedule";
+import {
+  normalizeDurationRates,
+  serializeDurationRates,
+  type InvoiceCadence,
+  type PaymentProvider,
+  type RateBasis,
+} from "@/lib/schedule";
 import type { AiProviderId } from "@/lib/ai/provider";
 
 /** Client-safe policy: secrets are masked, never returned in full. */
@@ -206,6 +212,17 @@ export async function PUT(req: NextRequest) {
         body.defaultRateCents === null || body.defaultRateCents === ""
           ? null
           : Math.max(0, Math.round(Number(body.defaultRateCents))),
+    }),
+    ...(body.durationRateCents !== undefined && {
+      duration_rate_cents: serializeDurationRates(
+        normalizeDurationRates(body.durationRateCents)
+      ),
+    }),
+    ...(body.travelFeeCents !== undefined && {
+      travel_fee_cents:
+        body.travelFeeCents === null || body.travelFeeCents === ""
+          ? null
+          : Math.max(0, Math.round(Number(body.travelFeeCents))),
     }),
     ...(rateBasis !== undefined && { rate_basis: rateBasis }),
     ...(body.currency !== undefined && {

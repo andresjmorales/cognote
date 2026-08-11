@@ -66,6 +66,9 @@ export async function PUT(
         ? null
         : Math.max(0, Math.round(Number(body.rateCents)));
   }
+  if (body.isHomeVisit !== undefined) {
+    update.is_home_visit = Boolean(body.isHomeVisit);
+  }
 
   const { data: slot, error } = await supabase
     .from("lesson_slots")

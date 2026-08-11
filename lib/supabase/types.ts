@@ -88,6 +88,7 @@ export interface Database {
           birthdate: string | null;
           practice_start_date: string | null;
           default_rate_cents: number | null;
+          travel_fee_cents: number | null;
           archived_at: string | null;
           created_at: string;
         };
@@ -102,6 +103,7 @@ export interface Database {
           birthdate?: string | null;
           practice_start_date?: string | null;
           default_rate_cents?: number | null;
+          travel_fee_cents?: number | null;
           archived_at?: string | null;
           created_at?: string;
         };
@@ -114,6 +116,7 @@ export interface Database {
           birthdate?: string | null;
           practice_start_date?: string | null;
           default_rate_cents?: number | null;
+          travel_fee_cents?: number | null;
           archived_at?: string | null;
         };
       };
@@ -180,6 +183,8 @@ export interface Database {
           bill_late_student_cancel: boolean;
           bill_makeup: boolean;
           default_rate_cents: number | null;
+          duration_rate_cents: Json;
+          travel_fee_cents: number | null;
           rate_basis: RateBasis;
           currency: string;
           invoice_cadence: InvoiceCadence;
@@ -220,6 +225,8 @@ export interface Database {
           bill_late_student_cancel?: boolean;
           bill_makeup?: boolean;
           default_rate_cents?: number | null;
+          duration_rate_cents?: Json;
+          travel_fee_cents?: number | null;
           rate_basis?: RateBasis;
           currency?: string;
           invoice_cadence?: InvoiceCadence;
@@ -258,6 +265,8 @@ export interface Database {
           bill_late_student_cancel?: boolean;
           bill_makeup?: boolean;
           default_rate_cents?: number | null;
+          duration_rate_cents?: Json;
+          travel_fee_cents?: number | null;
           rate_basis?: RateBasis;
           currency?: string;
           invoice_cadence?: InvoiceCadence;
@@ -289,6 +298,7 @@ export interface Database {
           end_date: string | null;
           active: boolean;
           rate_cents: number | null;
+          is_home_visit: boolean;
           created_at: string;
         };
         Insert: {
@@ -302,6 +312,7 @@ export interface Database {
           end_date?: string | null;
           active?: boolean;
           rate_cents?: number | null;
+          is_home_visit?: boolean;
         };
         Update: {
           day_of_week?: number;
@@ -311,6 +322,7 @@ export interface Database {
           end_date?: string | null;
           active?: boolean;
           rate_cents?: number | null;
+          is_home_visit?: boolean;
         };
       };
       invoices: {
@@ -428,6 +440,7 @@ export interface Database {
           starts_at: string;
           duration_minutes: number;
           makeup_for: string | null;
+          is_home_visit: boolean;
           created_at: string;
         };
         Insert: {
@@ -439,12 +452,14 @@ export interface Database {
           starts_at: string;
           duration_minutes: number;
           makeup_for?: string | null;
+          is_home_visit?: boolean;
         };
         Update: {
           lesson_date?: string;
           starts_at?: string;
           duration_minutes?: number;
           makeup_for?: string | null;
+          is_home_visit?: boolean;
         };
       };
       attendance: {

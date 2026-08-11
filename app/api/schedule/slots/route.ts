@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
         body.rateCents === null || body.rateCents === undefined || body.rateCents === ""
           ? null
           : Math.max(0, Math.round(Number(body.rateCents))),
+      is_home_visit: Boolean(body.isHomeVisit),
     })
     .select()
     .single();

@@ -30,6 +30,7 @@ export function MakeupPanel({
   const [scheduling, setScheduling] = useState<MakeupCredit | null>(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("16:00");
+  const [isHomeVisit, setIsHomeVisit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,11 +70,13 @@ export function MakeupPanel({
         time,
         durationMinutes: scheduling.durationMinutes,
         makeupFor: scheduling.attendanceId,
+        isHomeVisit,
       }),
     });
     setBusy(false);
     if (res.ok) {
       setScheduling(null);
+      setIsHomeVisit(false);
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -113,7 +116,10 @@ export function MakeupPanel({
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => setScheduling(credit)}
+                      onClick={() => {
+                        setIsHomeVisit(false);
+                        setScheduling(credit);
+                      }}
                     >
                       Schedule
                     </Button>
@@ -149,13 +155,24 @@ export function MakeupPanel({
                 className={inputClass}
                 required
               />
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isHomeVisit}
+                  onChange={(e) => setIsHomeVisit(e.target.checked)}
+                />
+                Home visit (adds travel fee if configured)
+              </label>
               {error && <p className="text-error text-xs">{error}</p>}
               <div className="flex gap-2 justify-end">
                 <Button
                   type="button"
                   size="sm"
                   variant="secondary"
-                  onClick={() => setScheduling(null)}
+                  onClick={() => {
+                    setScheduling(null);
+                    setIsHomeVisit(false);
+                  }}
                 >
                   Cancel
                 </Button>
