@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveLessonRate,
+  resolveLessonCharge,
+  resolveTravelFeeCents,
   isBillable,
   deriveInvoiceItems,
   lessonAmountCents,
@@ -138,6 +140,64 @@ describe("lessonAmountCents", () => {
   });
 });
 
+describe("resolveLessonCharge", () => {
+  it("uses duration flat rates when no slot rate is set", () => {
+    const charge = resolveLessonCharge(
+      {
+        slotRateCents: null,
+        studentDefaultRateCents: null,
+        studioDefaultRateCents: 6000,
+        durationRateCents: 4000,
+      },
+      30,
+      "per_hour"
+    );
+    expect(charge).toMatchObject({
+      amountCents: 4000,
+      missingRate: false,
+      usedDurationFlat: true,
+    });
+  });
+
+  it("prefers slot rate over duration flat", () => {
+    const charge = resolveLessonCharge(
+      {
+        slotRateCents: 8000,
+        studentDefaultRateCents: null,
+        studioDefaultRateCents: 6000,
+        durationRateCents: 4000,
+      },
+      30,
+      "per_hour"
+    );
+    expect(charge.amountCents).toBe(4000); // $80/hr × 30 min
+    expect(charge.usedDurationFlat).toBe(false);
+  });
+});
+
+describe("resolveTravelFeeCents", () => {
+  it("prefers student override over studio default", () => {
+    expect(
+      resolveTravelFeeCents({
+        studentTravelFeeCents: 700,
+        studioTravelFeeCents: 500,
+      })
+    ).toBe(700);
+    expect(
+      resolveTravelFeeCents({
+        studentTravelFeeCents: null,
+        studioTravelFeeCents: 500,
+      })
+    ).toBe(500);
+    expect(
+      resolveTravelFeeCents({
+        studentTravelFeeCents: 0,
+        studioTravelFeeCents: 500,
+      })
+    ).toBe(0);
+  });
+});
+
 describe("deriveInvoiceItems", () => {
   it("creates one line per billable lesson with a rate", () => {
     const policy: StudioPolicy = {
@@ -172,6 +232,80 @@ describe("deriveInvoiceItems", () => {
     expect(items[0].amountCents).toBe(2000);
     expect(items[1].amountCents).toBe(3000);
     expect(items[0].description).toContain("/hr");
+  });
+
+  it("uses duration flat map instead of hourly default", () => {
+    const policy: StudioPolicy = {
+      ...DEFAULT_POLICY,
+      rate_basis: "per_hour",
+      default_rate_cents: 6000,
+      duration_rate_cents: { 30: 4000, 45: 6000 },
+    };
+    const items = deriveInvoiceItems(
+      [
+        baseLesson,
+        { ...baseLesson, lessonId: "l2", durationMinutes: 45 },
+      ],
+      policy
+    );
+    expect(items[0].amountCents).toBe(4000);
+    expect(items[1].amountCents).toBe(6000);
+    expect(items[0].description).not.toContain("/hr");
+  });
+
+  it("adds a travel fee line for home visits", () => {
+    const policy: StudioPolicy = {
+      ...DEFAULT_POLICY,
+      rate_basis: "per_hour",
+      travel_fee_cents: 500,
+    };
+    const items = deriveInvoiceItems(
+      [
+        {
+          ...baseLesson,
+          isHomeVisit: true,
+          travel: {
+            studentTravelFeeCents: null,
+            studioTravelFeeCents: 500,
+          },
+        },
+      ],
+      policy
+    );
+    expect(items).toHaveLength(2);
+    expect(items[0].amountCents).toBe(2000);
+    expect(items[1]).toMatchObject({
+      description: expect.stringContaining("Travel fee"),
+      amountCents: 500,
+      missingRate: false,
+    });
+  });
+
+  it("skips travel fee when not a home visit or fee is zero", () => {
+    const items = deriveInvoiceItems(
+      [
+        {
+          ...baseLesson,
+          isHomeVisit: false,
+          travel: {
+            studentTravelFeeCents: null,
+            studioTravelFeeCents: 500,
+          },
+        },
+        {
+          ...baseLesson,
+          lessonId: "l2",
+          isHomeVisit: true,
+          travel: {
+            studentTravelFeeCents: 0,
+            studioTravelFeeCents: 500,
+          },
+        },
+      ],
+      { ...DEFAULT_POLICY, rate_basis: "per_hour" }
+    );
+    expect(items).toHaveLength(2);
+    expect(items.every((i) => !i.description.includes("Travel fee"))).toBe(true);
   });
 
   it("flags missing rates but still emits a $0 line", () => {

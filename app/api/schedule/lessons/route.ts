@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
       starts_at: startsAt.toISOString(),
       duration_minutes: durationMinutes,
       makeup_for: body.makeupFor || null,
+      is_home_visit: Boolean(body.isHomeVisit),
     })
     .select()
     .single();

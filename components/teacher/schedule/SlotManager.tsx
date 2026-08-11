@@ -17,6 +17,7 @@ interface Slot {
   end_date: string | null;
   active: boolean;
   rate_cents: number | null;
+  is_home_visit?: boolean;
 }
 
 const DAY_NAMES = [
@@ -53,6 +54,7 @@ export function SlotManager({
   const [startTime, setStartTime] = useState("16:00");
   const [duration, setDuration] = useState(durationOptions[0] ?? 30);
   const [rateDollars, setRateDollars] = useState("");
+  const [isHomeVisit, setIsHomeVisit] = useState(false);
 
   function startEdit(slot: Slot) {
     setAdding(false);
@@ -61,6 +63,7 @@ export function SlotManager({
     setStartTime(slot.start_time.slice(0, 5));
     setDuration(slot.duration_minutes);
     setRateDollars(centsToDollarsInput(slot.rate_cents));
+    setIsHomeVisit(Boolean(slot.is_home_visit));
     setError(null);
   }
 
@@ -73,6 +76,10 @@ export function SlotManager({
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    if (!studentId) {
+      setError("Add a student before creating a slot");
+      return;
+    }
     const rateCents = parseRate();
     if (rateCents === undefined) {
       setError("Enter a valid rate (e.g. 45.00) or leave blank");
@@ -89,12 +96,14 @@ export function SlotManager({
         startTime,
         durationMinutes: duration,
         rateCents,
+        isHomeVisit,
       }),
     });
     setBusy(false);
     if (res.ok) {
       setAdding(false);
       setRateDollars("");
+      setIsHomeVisit(false);
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -120,6 +129,7 @@ export function SlotManager({
         startTime,
         durationMinutes: duration,
         rateCents,
+        isHomeVisit,
       }),
     });
     setBusy(false);
@@ -194,7 +204,7 @@ export function SlotManager({
   const rateField = (
     <label className="text-sm">
       <span className="block text-xs font-semibold text-muted mb-1">
-        Lesson rate (optional)
+        Lesson rate / hour (optional)
       </span>
       <div className="flex items-center gap-2">
         <span className="text-muted text-sm">$</span>
@@ -210,6 +220,17 @@ export function SlotManager({
     </label>
   );
 
+  const homeVisitField = (
+    <label className="flex items-center gap-2 text-sm cursor-pointer">
+      <input
+        type="checkbox"
+        checked={isHomeVisit}
+        onChange={(e) => setIsHomeVisit(e.target.checked)}
+      />
+      Home visit (adds travel fee if configured)
+    </label>
+  );
+
   return (
     <Card padding="sm">
       <div className="flex items-center justify-between mb-3">
@@ -218,9 +239,20 @@ export function SlotManager({
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => {
+            onClick={async () => {
+              if (students.length === 0) {
+                const go = await confirm({
+                  title: "No students yet",
+                  message: "Add a student before creating a weekly slot.",
+                  confirmLabel: "Go to Students",
+                  cancelLabel: "Not now",
+                });
+                if (go) router.push("/students");
+                return;
+              }
               setAdding(true);
               setRateDollars("");
+              setIsHomeVisit(false);
               setError(null);
             }}
           >
@@ -240,14 +272,19 @@ export function SlotManager({
             className={inputClass}
             required
           >
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
+            {students.length === 0 ? (
+              <option value="">No students</option>
+            ) : (
+              students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))
+            )}
           </select>
           {dayTimeDurationFields}
           {rateField}
+          {homeVisitField}
           {error && <p className="text-error text-xs">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={busy || !studentId}>
@@ -284,6 +321,7 @@ export function SlotManager({
                 </div>
                 {dayTimeDurationFields}
                 {rateField}
+                {homeVisitField}
                 <p className="text-xs text-muted">
                   Applies to upcoming lessons only. Past lessons and marked
                   attendance stay where they are.
@@ -316,7 +354,8 @@ export function SlotManager({
                     · {DAY_NAMES[slot.day_of_week]}s{" "}
                     {formatTime(slot.start_time)} · {slot.duration_minutes} min
                     {slot.rate_cents != null &&
-                      ` · $${(slot.rate_cents / 100).toFixed(2)}`}
+                      ` · $${(slot.rate_cents / 100).toFixed(2)}/hr`}
+                    {slot.is_home_visit ? " · home visit" : ""}
                     {!slot.active && " · paused"}
                   </span>
                 </div>

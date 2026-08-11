@@ -138,8 +138,9 @@ export default function HelpPage() {
         <h2 className="text-xl font-semibold">Billing &amp; Payments</h2>
         <div className="space-y-3 text-sm leading-relaxed">
           <p className="text-muted">
-            Set your default rate (per lesson or per hour) and billability rules
-            in Studio → Rates. Payment instructions and Stripe live under
+            Set your default hourly rate and billability rules in Studio → Rates.
+            Optional flat rates by lesson length (e.g. 30 min = $40) and a home-visit
+            travel fee live there too. Payment instructions and Stripe live under
             Billing → Payment settings. Optional per-student and per-slot rates
             override the studio default. On the Billing tab, generate draft
             invoices for a date range from marked attendance, edit line items,

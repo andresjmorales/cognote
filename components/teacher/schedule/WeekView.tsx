@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   addDays,
   formatLessonTime,
@@ -76,6 +77,7 @@ export function WeekView({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [openLesson, setOpenLesson] = useState<WeekLesson | null>(null);
   const [showAdHoc, setShowAdHoc] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -210,7 +212,24 @@ export function WeekView({
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setShowAdHoc(true)}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={async () => {
+              if (students.length === 0) {
+                const go = await confirm({
+                  title: "No students yet",
+                  message:
+                    "Add a student before scheduling a one-off lesson.",
+                  confirmLabel: "Go to Students",
+                  cancelLabel: "Not now",
+                });
+                if (go) router.push("/students");
+                return;
+              }
+              setShowAdHoc(true);
+            }}
+          >
             Add One-off Lesson
           </Button>
           <Link href={`/events/new?date=${today}`}>
@@ -758,15 +777,23 @@ function AdHocModal({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("16:00");
   const [duration, setDuration] = useState(durationOptions[0] ?? 30);
+  const [isHomeVisit, setIsHomeVisit] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!studentId) return;
     setBusy(true);
     try {
       const res = await fetch("/api/schedule/lessons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, date, time, durationMinutes: duration }),
+        body: JSON.stringify({
+          studentId,
+          date,
+          time,
+          durationMinutes: duration,
+          isHomeVisit,
+        }),
       });
       if (res.ok) {
         onSaved();
@@ -792,11 +819,15 @@ function AdHocModal({
             className={inputClass}
             required
           >
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
+            {students.length === 0 ? (
+              <option value="">No students</option>
+            ) : (
+              students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))
+            )}
           </select>
           <input
             type="date"
@@ -825,6 +856,14 @@ function AdHocModal({
               ))}
             </select>
           </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isHomeVisit}
+              onChange={(e) => setIsHomeVisit(e.target.checked)}
+            />
+            Home visit (adds travel fee if configured)
+          </label>
           <div className="flex gap-2 justify-end">
             <Button type="button" size="sm" variant="secondary" onClick={onClose}>
               Cancel

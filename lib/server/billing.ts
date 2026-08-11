@@ -16,23 +16,26 @@ interface LessonRow {
   duration_minutes: number;
   makeup_for: string | null;
   slot_id: string | null;
+  is_home_visit: boolean | null;
   students:
     | {
         id: string;
         name: string;
         guardian_id: string | null;
         default_rate_cents: number | null;
+        travel_fee_cents: number | null;
       }
     | {
         id: string;
         name: string;
         guardian_id: string | null;
         default_rate_cents: number | null;
+        travel_fee_cents: number | null;
       }[]
     | null;
   lesson_slots:
-    | { rate_cents: number | null }
-    | { rate_cents: number | null }[]
+    | { rate_cents: number | null; is_home_visit: boolean | null }
+    | { rate_cents: number | null; is_home_visit: boolean | null }[]
     | null;
   attendance:
     | { status: AttendanceStatus; notice_at: string | null }[]
@@ -99,9 +102,9 @@ export async function derivePeriodItems(
     .from("lessons")
     .select(
       `
-      id, student_id, lesson_date, starts_at, duration_minutes, makeup_for, slot_id,
-      students ( id, name, guardian_id, default_rate_cents ),
-      lesson_slots ( rate_cents ),
+      id, student_id, lesson_date, starts_at, duration_minutes, makeup_for, slot_id, is_home_visit,
+      students ( id, name, guardian_id, default_rate_cents, travel_fee_cents ),
+      lesson_slots ( rate_cents, is_home_visit ),
       attendance!lesson_id ( status, notice_at )
     `
     )
@@ -129,6 +132,9 @@ export async function derivePeriodItems(
       continue;
     }
     const slot = oneToOne(raw.lesson_slots);
+    const isHomeVisit = Boolean(
+      raw.is_home_visit || slot?.is_home_visit
+    );
 
     inputs.push({
       lessonId: raw.id,
@@ -141,10 +147,17 @@ export async function derivePeriodItems(
       makeupFor: raw.makeup_for,
       attendanceStatus: attendance.status,
       noticeAt: attendance.notice_at,
+      isHomeVisit,
       rate: {
         slotRateCents: slot?.rate_cents ?? null,
         studentDefaultRateCents: student.default_rate_cents,
         studioDefaultRateCents: policy.default_rate_cents,
+        durationRateCents:
+          policy.duration_rate_cents[raw.duration_minutes] ?? null,
+      },
+      travel: {
+        studentTravelFeeCents: student.travel_fee_cents,
+        studioTravelFeeCents: policy.travel_fee_cents,
       },
     });
   }

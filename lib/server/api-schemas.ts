@@ -57,6 +57,9 @@ export const studentUpdateSchema = z.object({
   defaultRateCents: z
     .union([z.number().min(0).max(10_000_000), z.string().max(20), z.null()])
     .optional(),
+  travelFeeCents: z
+    .union([z.number().min(0).max(10_000_000), z.string().max(20), z.null()])
+    .optional(),
   archived: z.boolean().optional(),
 });
 

@@ -14,6 +14,13 @@ export interface RateSources {
   slotRateCents: number | null;
   studentDefaultRateCents: number | null;
   studioDefaultRateCents: number | null;
+  /** Flat studio rate for this lesson's duration, if configured. */
+  durationRateCents?: number | null;
+}
+
+export interface TravelFeeSources {
+  studentTravelFeeCents: number | null;
+  studioTravelFeeCents: number | null;
 }
 
 export interface BillableLessonInput {
@@ -28,6 +35,8 @@ export interface BillableLessonInput {
   attendanceStatus: AttendanceStatus;
   noticeAt: string | null;
   rate: RateSources;
+  isHomeVisit?: boolean;
+  travel?: TravelFeeSources;
 }
 
 export interface InvoiceItemDraft {
@@ -60,6 +69,87 @@ export function resolveLessonRate(sources: RateSources): number | null {
     return sources.studioDefaultRateCents;
   }
   return null;
+}
+
+/**
+ * Student override → studio default. Returns null when nothing is set.
+ * Zero is a valid “no fee” override.
+ */
+export function resolveTravelFeeCents(
+  sources: TravelFeeSources
+): number | null {
+  if (
+    sources.studentTravelFeeCents != null &&
+    sources.studentTravelFeeCents >= 0
+  ) {
+    return sources.studentTravelFeeCents;
+  }
+  if (
+    sources.studioTravelFeeCents != null &&
+    sources.studioTravelFeeCents >= 0
+  ) {
+    return sources.studioTravelFeeCents;
+  }
+  return null;
+}
+
+export type ResolvedLessonCharge = {
+  amountCents: number;
+  missingRate: boolean;
+  /** True when the charge came from a duration flat map (not hourly). */
+  usedDurationFlat: boolean;
+  /** Configured rate used for the /hr note when applicable. */
+  unitRateCents: number | null;
+};
+
+/**
+ * Slot (rate basis) → duration flat map → student/studio (rate basis).
+ * Duration map amounts are always flat for that length.
+ */
+export function resolveLessonCharge(
+  sources: RateSources,
+  durationMinutes: number,
+  rateBasis: StudioPolicy["rate_basis"]
+): ResolvedLessonCharge {
+  if (sources.slotRateCents != null && sources.slotRateCents >= 0) {
+    return {
+      amountCents: lessonAmountCents(
+        sources.slotRateCents,
+        durationMinutes,
+        rateBasis
+      ),
+      missingRate: false,
+      usedDurationFlat: false,
+      unitRateCents: sources.slotRateCents,
+    };
+  }
+  if (sources.durationRateCents != null && sources.durationRateCents >= 0) {
+    return {
+      amountCents: sources.durationRateCents,
+      missingRate: false,
+      usedDurationFlat: true,
+      unitRateCents: sources.durationRateCents,
+    };
+  }
+  const rate = resolveLessonRate({
+    slotRateCents: null,
+    studentDefaultRateCents: sources.studentDefaultRateCents,
+    studioDefaultRateCents: sources.studioDefaultRateCents,
+  });
+  if (rate === null) {
+    return {
+      amountCents: 0,
+      missingRate: true,
+      usedDurationFlat: false,
+      unitRateCents: null,
+    };
+  }
+  return {
+    amountCents: lessonAmountCents(rate, durationMinutes, rateBasis),
+    missingRate: false,
+    usedDurationFlat: false,
+    unitRateCents: rate,
+  };
 }
 
 /**
@@ -139,6 +229,7 @@ export function lessonAmountCents(
  * Derive draft invoice line items for a set of marked lessons.
  * Lessons without a guardian are skipped (nothing to invoice).
  * Billable lessons with no rate still produce a $0 line with missingRate.
+ * Home visits may add a separate travel-fee line when a fee is configured.
  */
 export function deriveInvoiceItems(
   lessons: BillableLessonInput[],
@@ -150,18 +241,24 @@ export function deriveInvoiceItems(
     if (!lesson.guardianId) continue;
     if (!isBillable(lesson, policy)) continue;
 
-    const rate = resolveLessonRate(lesson.rate);
-    const missingRate = rate === null;
-    const unitCents = rate ?? 0;
-    const amountCents = missingRate
-      ? 0
-      : lessonAmountCents(unitCents, lesson.durationMinutes, policy.rate_basis);
+    const durationFlat =
+      lesson.rate.durationRateCents ??
+      policy.duration_rate_cents[lesson.durationMinutes] ??
+      null;
+    const charge = resolveLessonCharge(
+      { ...lesson.rate, durationRateCents: durationFlat },
+      lesson.durationMinutes,
+      policy.rate_basis
+    );
     const when = formatShortDate(lesson.lessonDate);
     const label = statusLabel(lesson.attendanceStatus);
     const makeup = lesson.makeupFor ? " (make-up)" : "";
     const rateNote =
-      !missingRate && policy.rate_basis === "per_hour"
-        ? ` @ ${formatMoney(unitCents, policy.currency)}/hr`
+      !charge.missingRate &&
+      !charge.usedDurationFlat &&
+      policy.rate_basis === "per_hour" &&
+      charge.unitRateCents != null
+        ? ` @ ${formatMoney(charge.unitRateCents, policy.currency)}/hr`
         : "";
 
     items.push({
@@ -170,10 +267,26 @@ export function deriveInvoiceItems(
       guardianId: lesson.guardianId,
       description: `${label}${makeup} - ${lesson.studentName}, ${when} (${lesson.durationMinutes} min${rateNote})`,
       quantity: 1,
-      unitCents: amountCents,
-      amountCents,
-      missingRate,
+      unitCents: charge.amountCents,
+      amountCents: charge.amountCents,
+      missingRate: charge.missingRate,
     });
+
+    if (lesson.isHomeVisit && lesson.travel) {
+      const travelFee = resolveTravelFeeCents(lesson.travel);
+      if (travelFee != null && travelFee > 0) {
+        items.push({
+          lessonId: lesson.lessonId,
+          studentId: lesson.studentId,
+          guardianId: lesson.guardianId,
+          description: `Travel fee - ${lesson.studentName}, ${when}`,
+          quantity: 1,
+          unitCents: travelFee,
+          amountCents: travelFee,
+          missingRate: false,
+        });
+      }
+    }
   }
 
   return items;

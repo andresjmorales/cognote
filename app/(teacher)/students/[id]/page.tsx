@@ -348,6 +348,9 @@ export default async function StudentDetailPage({
         initialPracticeStartDate={student.practice_start_date ?? null}
         createdAt={student.created_at}
         initialDefaultRateCents={student.default_rate_cents ?? null}
+        studioDefaultRateCents={policy.default_rate_cents ?? null}
+        initialTravelFeeCents={student.travel_fee_cents ?? null}
+        studioTravelFeeCents={policy.travel_fee_cents ?? null}
       />
 
       {/* Private meta-notes about the student */}
