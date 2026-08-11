@@ -70,6 +70,23 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handleMusicUpload(req);
+  } catch (err) {
+    // Uncaught errors (e.g. formData parse / platform body limits) otherwise
+    // become HTML 500 pages; the client then only shows a generic "Upload failed".
+    console.error("sheet music POST:", err);
+    return NextResponse.json(
+      {
+        error:
+          "Upload failed unexpectedly. Please try again. If it keeps failing, try a smaller file or a different network.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleMusicUpload(req: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -91,7 +108,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(limitReachedResponse(sheetLimit), { status: 403 });
   }
 
-  const form = await req.formData();
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch (err) {
+    console.error("sheet music formData:", err);
+    return NextResponse.json(
+      {
+        error:
+          "Could not read the upload. The file may be too large for this connection, or the request was interrupted. Try again.",
+      },
+      { status: 400 }
+    );
+  }
+
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file required" }, { status: 400 });

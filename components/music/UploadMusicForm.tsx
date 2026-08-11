@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LICENSE_LABELS, type MusicLicenseCode } from "@/lib/sheet-music";
+import {
+  isRetryableUploadStatus,
+  messageFromUploadResponse,
+} from "@/lib/upload-errors";
 
 const LICENSE_OPTIONS = Object.entries(LICENSE_LABELS) as [
   MusicLicenseCode,
@@ -14,12 +18,23 @@ const LICENSE_OPTIONS = Object.entries(LICENSE_LABELS) as [
 const fieldClass =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
 
+const MAX_ATTEMPTS = 2;
+
 export function UploadMusicForm() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [existingId, setExistingId] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  function resetLocal() {
+    setError(null);
+    setExistingId(null);
+    setFileName(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,24 +43,51 @@ export function UploadMusicForm() {
     setExistingId(null);
 
     const form = e.currentTarget;
-    const data = new FormData(form);
 
-    try {
-      const res = await fetch("/api/music", { method: "POST", body: data });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(json.error ?? "Upload failed");
-        if (json.existingId) setExistingId(json.existingId);
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      // Rebuild each attempt so a partially-consumed body cannot poison retries.
+      const data = new FormData(form);
+      try {
+        const res = await fetch("/api/music", { method: "POST", body: data });
+        if (!res.ok) {
+          const { message, existingId: id } = await messageFromUploadResponse(res);
+          if (id) setExistingId(id);
+          if (
+            attempt < MAX_ATTEMPTS &&
+            !id &&
+            isRetryableUploadStatus(res.status)
+          ) {
+            continue;
+          }
+          setError(message);
+          setBusy(false);
+          return;
+        }
+        const json = (await res.json().catch(() => ({}))) as {
+          item?: { id: string };
+        };
+        if (!json.item?.id) {
+          setError("Upload succeeded but the response was incomplete. Refresh the library.");
+          setBusy(false);
+          return;
+        }
+        form.reset();
+        resetLocal();
+        setOpen(false);
+        router.push(`/music/${json.item.id}`);
+        router.refresh();
+        setBusy(false);
+        return;
+      } catch {
+        if (attempt < MAX_ATTEMPTS) continue;
+        setError(
+          "Network error while uploading. Check your connection and try again."
+        );
         setBusy(false);
         return;
       }
-      form.reset();
-      setOpen(false);
-      router.push(`/music/${json.item.id}`);
-      router.refresh();
-    } catch {
-      setError("Upload failed");
     }
+
     setBusy(false);
   }
 
@@ -67,23 +109,53 @@ export function UploadMusicForm() {
         <button
           type="button"
           className="text-sm text-muted hover:text-foreground cursor-pointer"
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            setOpen(false);
+            resetLocal();
+          }}
         >
           Cancel
         </button>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-muted mb-1">
+        <label
+          htmlFor="music-upload-file"
+          className="block text-xs font-medium text-muted mb-1"
+        >
           File (PDF, MusicXML, or MXL)
         </label>
+        {/*
+          Hide the native file control: Safari iOS often shows a solid black
+          square as the PDF thumbnail next to the filename, which looks like a
+          broken icon/emoji. Custom chrome keeps the label readable.
+        */}
         <input
+          ref={fileInputRef}
+          id="music-upload-file"
           name="file"
           type="file"
           required
           accept=".pdf,.musicxml,.xml,.mxl,application/pdf,application/xml,text/xml"
-          className={fieldClass}
+          className="sr-only"
+          onChange={(e) => {
+            setFileName(e.target.files?.[0]?.name ?? null);
+            setError(null);
+            setExistingId(null);
+          }}
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={fieldClass + " w-auto cursor-pointer"}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Choose File
+          </button>
+          <span className="text-sm text-muted truncate min-w-0">
+            {fileName ?? "No file chosen"}
+          </span>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -144,7 +216,7 @@ export function UploadMusicForm() {
       </p>
 
       {error && (
-        <p className="text-sm text-error">
+        <p className="text-sm text-error" role="alert">
           {error}
           {existingId && (
             <>
