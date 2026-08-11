@@ -103,8 +103,9 @@ export type ResolvedLessonCharge = {
 };
 
 /**
- * Slot (rate basis) → duration flat map → student/studio (rate basis).
- * Duration map amounts are always flat for that length.
+ * Slot → student → duration flat map → studio.
+ * Slot/student/studio amounts use rate_basis; duration map amounts are always
+ * flat for that length (studio packaging when no more-specific rate is set).
  */
 export function resolveLessonCharge(
   sources: RateSources,
@@ -123,6 +124,21 @@ export function resolveLessonCharge(
       unitRateCents: sources.slotRateCents,
     };
   }
+  if (
+    sources.studentDefaultRateCents != null &&
+    sources.studentDefaultRateCents >= 0
+  ) {
+    return {
+      amountCents: lessonAmountCents(
+        sources.studentDefaultRateCents,
+        durationMinutes,
+        rateBasis
+      ),
+      missingRate: false,
+      usedDurationFlat: false,
+      unitRateCents: sources.studentDefaultRateCents,
+    };
+  }
   if (sources.durationRateCents != null && sources.durationRateCents >= 0) {
     return {
       amountCents: sources.durationRateCents,
@@ -131,24 +147,26 @@ export function resolveLessonCharge(
       unitRateCents: sources.durationRateCents,
     };
   }
-  const rate = resolveLessonRate({
-    slotRateCents: null,
-    studentDefaultRateCents: sources.studentDefaultRateCents,
-    studioDefaultRateCents: sources.studioDefaultRateCents,
-  });
-  if (rate === null) {
+  if (
+    sources.studioDefaultRateCents != null &&
+    sources.studioDefaultRateCents >= 0
+  ) {
     return {
-      amountCents: 0,
-      missingRate: true,
+      amountCents: lessonAmountCents(
+        sources.studioDefaultRateCents,
+        durationMinutes,
+        rateBasis
+      ),
+      missingRate: false,
       usedDurationFlat: false,
-      unitRateCents: null,
+      unitRateCents: sources.studioDefaultRateCents,
     };
   }
   return {
-    amountCents: lessonAmountCents(rate, durationMinutes, rateBasis),
-    missingRate: false,
+    amountCents: 0,
+    missingRate: true,
     usedDurationFlat: false,
-    unitRateCents: rate,
+    unitRateCents: null,
   };
 }
 

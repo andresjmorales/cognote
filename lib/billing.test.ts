@@ -141,7 +141,7 @@ describe("lessonAmountCents", () => {
 });
 
 describe("resolveLessonCharge", () => {
-  it("uses duration flat rates when no slot rate is set", () => {
+  it("uses duration flat rates when no slot or student rate is set", () => {
     const charge = resolveLessonCharge(
       {
         slotRateCents: null,
@@ -159,11 +159,11 @@ describe("resolveLessonCharge", () => {
     });
   });
 
-  it("prefers slot rate over duration flat", () => {
+  it("prefers slot rate over student and duration flat", () => {
     const charge = resolveLessonCharge(
       {
         slotRateCents: 8000,
-        studentDefaultRateCents: null,
+        studentDefaultRateCents: 7000,
         studioDefaultRateCents: 6000,
         durationRateCents: 4000,
       },
@@ -171,6 +171,21 @@ describe("resolveLessonCharge", () => {
       "per_hour"
     );
     expect(charge.amountCents).toBe(4000); // $80/hr × 30 min
+    expect(charge.usedDurationFlat).toBe(false);
+  });
+
+  it("prefers student rate over duration flat", () => {
+    const charge = resolveLessonCharge(
+      {
+        slotRateCents: null,
+        studentDefaultRateCents: 7000,
+        studioDefaultRateCents: 6000,
+        durationRateCents: 4000,
+      },
+      30,
+      "per_hour"
+    );
+    expect(charge.amountCents).toBe(3500); // $70/hr × 30 min
     expect(charge.usedDurationFlat).toBe(false);
   });
 });
@@ -275,10 +290,52 @@ describe("deriveInvoiceItems", () => {
     expect(items).toHaveLength(2);
     expect(items[0].amountCents).toBe(2000);
     expect(items[1]).toMatchObject({
+      lessonId: "lesson-1",
+      guardianId: "g-1",
       description: expect.stringContaining("Travel fee"),
       amountCents: 500,
       missingRate: false,
     });
+    // Same lesson_id on both lines is intentional; invoice insert allows it
+    // and double-billing exclusion keys off the lesson once.
+    expect(items[0].lessonId).toBe(items[1].lessonId);
+    expect(sumAmountCents(items)).toBe(2500);
+  });
+
+  it("rolls travel fees into family subtotals with multiple lessons", () => {
+    const policy: StudioPolicy = {
+      ...DEFAULT_POLICY,
+      rate_basis: "per_hour",
+      duration_rate_cents: { 30: 4000 },
+      travel_fee_cents: 500,
+    };
+    const items = deriveInvoiceItems(
+      [
+        {
+          ...baseLesson,
+          isHomeVisit: true,
+          travel: {
+            studentTravelFeeCents: 700,
+            studioTravelFeeCents: 500,
+          },
+        },
+        {
+          ...baseLesson,
+          lessonId: "l2",
+          studentName: "Nico",
+          isHomeVisit: false,
+          travel: {
+            studentTravelFeeCents: null,
+            studioTravelFeeCents: 500,
+          },
+        },
+      ],
+      policy
+    );
+    // Gloria: $40 flat + $7 travel; Nico: $40 flat, no travel
+    expect(items).toHaveLength(3);
+    const groups = groupItemsByGuardian(items);
+    expect(sumAmountCents(groups.get("g-1")!)).toBe(8700);
   });
 
   it("skips travel fee when not a home visit or fee is zero", () => {

@@ -169,9 +169,9 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           </legend>
           <p className="text-xs text-muted">
             When a length has its own amount, that lesson is charged flat instead
-            of the hourly default — useful if 20 min is $30, 30 min is $40, and
-            45 min is $60. Per-slot rates still win when set. Edit which lengths
-            appear under Studio → time blocks.
+            of the studio hourly default — useful if 20 min is $30, 30 min is $40,
+            and 45 min is $60. Per-slot and per-student rates still win when set.
+            Edit which lengths appear under Studio → time blocks.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {durationOptions.map((minutes) => (
