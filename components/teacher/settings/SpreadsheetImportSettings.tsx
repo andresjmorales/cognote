@@ -229,7 +229,7 @@ export function SpreadsheetImportSettings({
       {filename && (
         <div className="space-y-4 border-t border-border pt-4">
           <p className="text-sm">
-            <span className="font-medium">{filename}</span>
+            <span className="font-medium break-all">{filename}</span>
             <span className="text-muted">
               {" "}
               · {rows.length} row{rows.length === 1 ? "" : "s"} ·{" "}
