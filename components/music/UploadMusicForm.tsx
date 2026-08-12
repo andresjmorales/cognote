@@ -102,7 +102,7 @@ export function UploadMusicForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="border border-border rounded-xl bg-surface p-4 space-y-3"
+      className="border border-border rounded-xl bg-surface p-4 space-y-3 w-full min-w-0 max-w-[calc(100vw-2rem)] overflow-x-hidden"
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold">Upload score</h2>
@@ -144,7 +144,7 @@ export function UploadMusicForm() {
             setExistingId(null);
           }}
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 max-w-full">
           <button
             type="button"
             className={fieldClass + " w-auto cursor-pointer"}
@@ -152,9 +152,12 @@ export function UploadMusicForm() {
           >
             Choose File
           </button>
-          <span className="text-sm text-muted truncate min-w-0">
+          <p
+            className="mt-1.5 min-w-0 text-sm text-muted truncate"
+            title={fileName ?? undefined}
+          >
             {fileName ?? "No file chosen"}
-          </span>
+          </p>
         </div>
       </div>
 

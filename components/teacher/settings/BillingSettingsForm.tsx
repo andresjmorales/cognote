@@ -67,7 +67,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
     const travelFeeCents =
       travelFee.trim() === "" ? null : dollarsToCents(travelFee);
     if (travelFee.trim() !== "" && travelFeeCents === null) {
-      setMessage("Enter a valid travel fee (e.g. 5.00)");
+      setMessage("Enter a valid travel fee (e.g. 10.00)");
       setTimeout(() => setMessage(null), 2500);
       return;
     }
@@ -169,9 +169,8 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           </legend>
           <p className="text-xs text-muted">
             When a length has its own amount, that lesson is charged flat instead
-            of the studio hourly default — useful if 20 min is $30, 30 min is $40,
-            and 45 min is $60. Per-slot and per-student rates still win when set.
-            Edit which lengths appear under Studio → time blocks.
+            of the studio hourly default. Edit which lengths appear under Studio →
+            time blocks.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {durationOptions.map((minutes) => (
@@ -211,7 +210,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
               inputMode="decimal"
               value={travelFee}
               onChange={(e) => setTravelFee(e.target.value)}
-              placeholder="5.00"
+              placeholder="0.00"
               className={`${inputClass} w-full`}
             />
           </div>
@@ -219,7 +218,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
             Flat add-on only for lessons marked as a home visit (not applied
             retroactively). Slot changes affect upcoming lessons; override any
             single occurrence from the schedule. Per-student override on their
-            page. Leave blank for none.
+            page. Leave blank or 0 for none.
           </span>
         </label>
 

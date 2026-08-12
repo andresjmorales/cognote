@@ -12,7 +12,7 @@ import {
 } from "@/lib/students-practice";
 
 /**
- * Editable student details: level, birthday, practicing since, and optional rate.
+ * Editable student details: level, birthday, practicing since, and optional rates.
  */
 export function StudentInfoCard({
   studentId,
@@ -21,9 +21,7 @@ export function StudentInfoCard({
   initialPracticeStartDate,
   createdAt,
   initialDefaultRateCents,
-  studioDefaultRateCents = null,
   initialTravelFeeCents = null,
-  studioTravelFeeCents = null,
 }: {
   studentId: string;
   initialLevel: string | null;
@@ -31,9 +29,7 @@ export function StudentInfoCard({
   initialPracticeStartDate: string | null;
   createdAt: string;
   initialDefaultRateCents: number | null;
-  studioDefaultRateCents?: number | null;
   initialTravelFeeCents?: number | null;
-  studioTravelFeeCents?: number | null;
 }) {
   return (
     <Card padding="sm" className="mb-6">
@@ -67,15 +63,20 @@ export function StudentInfoCard({
           initialValue={initialPracticeStartDate}
           createdAt={createdAt}
         />
-        <RateField
+        <MoneyOverrideField
           studentId={studentId}
+          label="Lesson rate / hour"
+          field="defaultRateCents"
           initialCents={initialDefaultRateCents}
-          studioDefaultCents={studioDefaultRateCents}
+          displaySuffix="/hr"
+          editTitle="Edit lesson rate"
         />
-        <TravelFeeField
+        <MoneyOverrideField
           studentId={studentId}
+          label="Travel fee (home visits)"
+          field="travelFeeCents"
           initialCents={initialTravelFeeCents}
-          studioDefaultCents={studioTravelFeeCents}
+          editTitle="Optional per-student travel fee. Only billed on home visits."
         />
       </div>
     </Card>
@@ -241,120 +242,39 @@ function PracticeSinceField({
   );
 }
 
-function RateField({
+function MoneyOverrideField({
   studentId,
+  label,
+  field,
   initialCents,
-  studioDefaultCents,
+  displaySuffix = "",
+  editTitle,
 }: {
   studentId: string;
+  label: string;
+  field: "defaultRateCents" | "travelFeeCents";
   initialCents: number | null;
-  studioDefaultCents: number | null;
+  displaySuffix?: string;
+  editTitle: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(centsToDollarsInput(initialCents));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const studioPlaceholder =
-    studioDefaultCents != null
-      ? centsToDollarsInput(studioDefaultCents)
-      : "60.00";
-  const emptyLabel =
-    studioDefaultCents != null
-      ? `${formatMoney(studioDefaultCents)}/hr (studio)`
-      : "Use studio default";
 
-  async function save() {
-    const cents =
-      value.trim() === "" ? null : dollarsToCents(value);
-    if (value.trim() !== "" && cents === null) {
-      setError("Invalid amount");
-      return;
-    }
+  async function saveCents(cents: number | null) {
     setSaving(true);
     setError(null);
     await fetch(`/api/students/${studentId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ defaultRateCents: cents }),
+      body: JSON.stringify({ [field]: cents }),
     });
     setSaving(false);
     setEditing(false);
     router.refresh();
   }
-
-  return (
-    <div>
-      <div className="text-xs text-muted font-medium mb-0.5">
-        Default lesson rate / hour
-      </div>
-      {editing ? (
-        <span className="inline-flex items-center gap-1.5">
-          <span className="text-sm text-muted">$</span>
-          <input
-            autoFocus
-            type="text"
-            inputMode="decimal"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") save();
-              if (e.key === "Escape") setEditing(false);
-            }}
-            placeholder={studioPlaceholder}
-            className="px-2 py-0.5 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm w-24"
-          />
-          <button
-            onClick={save}
-            disabled={saving}
-            className="text-xs text-primary hover:text-primary-dark font-semibold cursor-pointer"
-          >
-            {saving ? "..." : "Save"}
-          </button>
-          {error && <span className="text-xs text-error">{error}</span>}
-        </span>
-      ) : (
-        <button
-          onClick={() => {
-            setValue(centsToDollarsInput(initialCents));
-            setEditing(true);
-          }}
-          className="text-sm hover:text-primary transition-colors cursor-pointer"
-          title="Edit default lesson rate"
-        >
-          {initialCents != null ? (
-            <span className="font-medium">{formatMoney(initialCents)}/hr</span>
-          ) : (
-            <span className="text-muted">{emptyLabel}</span>
-          )}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function TravelFeeField({
-  studentId,
-  initialCents,
-  studioDefaultCents,
-}: {
-  studentId: string;
-  initialCents: number | null;
-  studioDefaultCents: number | null;
-}) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(centsToDollarsInput(initialCents));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const studioPlaceholder =
-    studioDefaultCents != null
-      ? centsToDollarsInput(studioDefaultCents)
-      : "5.00";
-  const emptyLabel =
-    studioDefaultCents != null
-      ? `${formatMoney(studioDefaultCents)} (studio)`
-      : "Use studio default";
 
   async function save() {
     const cents = value.trim() === "" ? null : dollarsToCents(value);
@@ -362,23 +282,12 @@ function TravelFeeField({
       setError("Invalid amount");
       return;
     }
-    setSaving(true);
-    setError(null);
-    await fetch(`/api/students/${studentId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ travelFeeCents: cents }),
-    });
-    setSaving(false);
-    setEditing(false);
-    router.refresh();
+    await saveCents(cents);
   }
 
   return (
     <div>
-      <div className="text-xs text-muted font-medium mb-0.5">
-        Travel fee (home visits)
-      </div>
+      <div className="text-xs text-muted font-medium mb-0.5">{label}</div>
       {editing ? (
         <span className="inline-flex items-center gap-1.5">
           <span className="text-sm text-muted">$</span>
@@ -392,7 +301,7 @@ function TravelFeeField({
               if (e.key === "Enter") save();
               if (e.key === "Escape") setEditing(false);
             }}
-            placeholder={studioPlaceholder}
+            placeholder="Use default"
             className="px-2 py-0.5 rounded border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm w-24"
           />
           <button
@@ -401,6 +310,14 @@ function TravelFeeField({
             className="text-xs text-primary hover:text-primary-dark font-semibold cursor-pointer"
           >
             {saving ? "..." : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={() => saveCents(null)}
+            disabled={saving}
+            className="text-xs text-muted hover:text-foreground cursor-pointer"
+          >
+            Clear
           </button>
           {error && <span className="text-xs text-error">{error}</span>}
         </span>
@@ -411,12 +328,15 @@ function TravelFeeField({
             setEditing(true);
           }}
           className="text-sm hover:text-primary transition-colors cursor-pointer"
-          title="Edit travel fee override"
+          title={editTitle}
         >
           {initialCents != null ? (
-            <span className="font-medium">{formatMoney(initialCents)}</span>
+            <span className="font-medium">
+              {formatMoney(initialCents)}
+              {displaySuffix}
+            </span>
           ) : (
-            <span className="text-muted">{emptyLabel}</span>
+            <span className="text-muted">Use default</span>
           )}
         </button>
       )}

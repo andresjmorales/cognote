@@ -71,16 +71,16 @@ export default async function MusicLibraryPage({
   const studentList = students ?? [];
 
   return (
-    <div>
-      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
+    <div className="min-w-0">
+      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap min-w-0">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Music Library</h1>
           <p className="text-muted text-sm mt-1">
             Upload PDFs and MusicXML scores, or find free public-domain / CC scores,
             then assign them to students. Families view them in the portal.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 min-w-0 max-w-full">
           <FindScoresPanel />
           <UploadMusicForm />
         </div>
