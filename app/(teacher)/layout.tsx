@@ -29,7 +29,7 @@ export default async function TeacherLayout({
         teacherName={teacher?.display_name ?? user.email ?? "Teacher"}
         avatarUrl={teacher?.avatar_url ?? null}
       />
-      <main className="max-w-6xl mx-auto px-4 py-6 min-w-0">
+      <main className="max-w-6xl mx-auto px-4 py-6 min-w-0">{children}</main>
     </TeacherThemeProvider>
   );
 }
