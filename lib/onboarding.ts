@@ -38,7 +38,7 @@ export function stringFromUserMetadata(
 export const WELCOME_NOTIFICATION = {
   type: "welcome" as const,
   title: "Welcome to CogNote!",
-  body: "Add students, set your studio policy, and share a family portal when you are ready. Help in the account menu has the full guide.",
+  body: "Add students, set your studio policy, and share a family portal when you're ready. Help in the account menu has the full guide.",
   href: "/help",
 };
 

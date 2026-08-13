@@ -104,6 +104,7 @@ export function OnboardingTour({ initialShow }: { initialShow: boolean }) {
       const next = ONBOARDING_TOUR_STEPS[nextIndex];
       if (!next) return;
       setStepIndex(nextIndex);
+      window.scrollTo(0, 0);
       if (next.href && next.href !== pathname) {
         router.push(next.href);
       }
@@ -152,7 +153,7 @@ export function OnboardingTour({ initialShow }: { initialShow: boolean }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 rounded-xl border border-border bg-surface shadow-xl p-4 space-y-3"
+        className="relative z-10 rounded-xl border border-border bg-surface shadow-xl p-4 space-y-3 max-h-[min(28rem,calc(100vh-2rem))] overflow-y-auto"
         style={cardPosition(highlight)}
       >
         <p className="text-[11px] uppercase tracking-wide text-muted">
