@@ -59,8 +59,8 @@ INSERT INTO auth.identities (
 -- Teacher row matching the auth user above.
 -- hosted_plan=pro so local COGNOTE_DEPLOYMENT=hosted is not capped at 5 students
 -- (seed alone fills the free tier). Ignored when self_hosted.
-INSERT INTO teachers (id, email, display_name, hosted_plan) VALUES
-  ('00000000-0000-0000-0000-000000000001', 'teacher@example.com', 'Ms. Johnson', 'pro');
+INSERT INTO teachers (id, email, display_name, hosted_plan, onboarding_tour_completed_at) VALUES
+  ('00000000-0000-0000-0000-000000000001', 'teacher@example.com', 'Ms. Johnson', 'pro', now());
 
 -- Families: siblings (Jordan), single-child (Sam), adult-self (Noah)
 INSERT INTO guardians (

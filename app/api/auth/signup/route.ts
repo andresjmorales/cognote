@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { requiresBetaCode } from "@/lib/entitlements";
+import { shouldProvisionTeacherFromSignup, signupEmailRedirectTo } from "@/lib/onboarding";
+import { requestOrigin } from "@/lib/server/http";
 import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
 import {
   BETA_GUESS_LIMIT,
@@ -80,13 +82,26 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await createClient();
+  const timezoneValue = typeof timezone === "string" ? timezone : undefined;
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName } },
+    options: {
+      data: {
+        display_name: displayName,
+        ...(timezoneValue ? { timezone: timezoneValue } : {}),
+      },
+      emailRedirectTo: signupEmailRedirectTo(requestOrigin(req)),
+    },
   });
   if (signUpError) {
     return NextResponse.json({ error: signUpError.message }, { status: 400 });
+  }
+
+  if (!shouldProvisionTeacherFromSignup(signUpData.user)) {
+    // Duplicate email (dummy user) or missing user object. Same response as
+    // "check your inbox" so we do not leak whether the address is taken.
+    return NextResponse.json({ ok: true, needsConfirmation: true });
   }
 
   const userId = signUpData.user?.id;

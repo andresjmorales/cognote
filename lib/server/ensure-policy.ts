@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isValidTimezone } from "@/lib/timezones";
+import { isUniqueViolation } from "@/lib/onboarding";
 
 /**
  * Persist a studio_policies row for a new teacher so DB defaults (per-hour,
@@ -11,7 +12,7 @@ export async function ensureStudioPolicyRow(
   supabase: SupabaseClient,
   teacherId: string,
   timezone?: string | null
-): Promise<void> {
+): Promise<{ ok: boolean }> {
   const row: { teacher_id: string; timezone?: string } = {
     teacher_id: teacherId,
   };
@@ -23,7 +24,9 @@ export async function ensureStudioPolicyRow(
     onConflict: "teacher_id",
     ignoreDuplicates: true,
   });
-  if (error) {
+  if (error && !isUniqueViolation(error)) {
     console.error("ensureStudioPolicyRow failed:", error.message);
+    return { ok: false };
   }
+  return { ok: true };
 }

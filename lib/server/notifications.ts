@@ -1,9 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
+import { isUniqueViolation, WELCOME_NOTIFICATION } from "@/lib/onboarding";
 import { getPolicy } from "@/lib/server/scheduling";
 import type { StudioPolicy } from "@/lib/schedule";
 
-export type NotificationType = "portal_cancel" | "invoice_paid" | "event_rsvp";
+export type NotificationType =
+  | "portal_cancel"
+  | "invoice_paid"
+  | "event_rsvp"
+  | "welcome";
 
 export async function createTeacherNotification(
   supabase: SupabaseClient,
@@ -87,4 +92,29 @@ export async function createTeacherNotification(
   });
 
   return { emailed: result.sent, emailError: result.error };
+}
+
+/** One unread "Welcome to CogNote!" bell item for brand-new teachers. */
+export async function ensureWelcomeNotification(
+  supabase: SupabaseClient,
+  teacherId: string
+): Promise<void> {
+  const { data } = await supabase
+    .from("notifications")
+    .select("id")
+    .eq("teacher_id", teacherId)
+    .eq("type", "welcome")
+    .maybeSingle();
+  if (data) return;
+
+  const { error } = await supabase.from("notifications").insert({
+    teacher_id: teacherId,
+    type: WELCOME_NOTIFICATION.type,
+    title: WELCOME_NOTIFICATION.title,
+    body: WELCOME_NOTIFICATION.body,
+    href: WELCOME_NOTIFICATION.href,
+  });
+  if (error && !isUniqueViolation(error)) {
+    console.error("ensureWelcomeNotification failed:", error.message);
+  }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { stringFromUserMetadata } from "@/lib/onboarding";
 import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
@@ -60,14 +61,16 @@ export async function GET(req: NextRequest) {
     // Safety net: signup with email-confirm used to return before creating
     // the teachers row. Ensure it exists (hosted trial) via service role.
     const serviceClient = createServiceClient();
-    const displayName =
-      typeof user.user_metadata?.display_name === "string"
-        ? user.user_metadata.display_name
-        : null;
+    const displayName = stringFromUserMetadata(
+      user.user_metadata,
+      "display_name"
+    );
+    const timezone = stringFromUserMetadata(user.user_metadata, "timezone");
     await ensureTeacherForAuthUser(serviceClient, {
       userId: user.id,
       email: user.email,
       displayName,
+      timezone,
     });
 
     await supabase
