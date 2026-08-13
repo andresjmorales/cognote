@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   isUniqueViolation,
   ONBOARDING_TOUR_STEPS,
+  parseStoredTourState,
+  pathWithoutTourQuery,
+  searchHasTourQuery,
   shouldProvisionTeacherFromSignup,
   signupEmailRedirectTo,
   stringFromUserMetadata,
@@ -87,5 +90,41 @@ describe("onboarding tour steps", () => {
       expect(step.body).not.toMatch(/—/);
       expect(step.body).not.toMatch(/\b(delve|testament|tapestry|moreover)\b/i);
     }
+  });
+
+  it("points each step at a unique teacher route", () => {
+    const hrefs = ONBOARDING_TOUR_STEPS.map((s) => s.href);
+    expect(hrefs.every(Boolean)).toBe(true);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+});
+
+describe("tour query and stored state", () => {
+  it("detects and strips the tour query without dropping other params", () => {
+    expect(searchHasTourQuery("?tour=1")).toBe(true);
+    expect(searchHasTourQuery("tour=1")).toBe(true);
+    expect(searchHasTourQuery("?week=2026-08-10&tour=1")).toBe(true);
+    expect(searchHasTourQuery("?tour=0")).toBe(false);
+    expect(searchHasTourQuery("")).toBe(false);
+    expect(pathWithoutTourQuery("/dashboard", "?tour=1")).toBe("/dashboard");
+    expect(pathWithoutTourQuery("/schedule", "?week=2026-08-10&tour=1")).toBe(
+      "/schedule?week=2026-08-10"
+    );
+  });
+
+  it("restores a valid in-progress tour and rejects junk", () => {
+    expect(parseStoredTourState(null)).toBe(null);
+    expect(parseStoredTourState("{")).toBe(null);
+    expect(parseStoredTourState(JSON.stringify({ active: false, stepIndex: 1 }))).toBe(
+      null
+    );
+    expect(parseStoredTourState(JSON.stringify({ active: true, stepIndex: 99 }))).toBe(
+      null
+    );
+    expect(
+      parseStoredTourState(
+        JSON.stringify({ active: true, stepIndex: 2, restart: true })
+      )
+    ).toEqual({ active: true, stepIndex: 2, restart: true });
   });
 });

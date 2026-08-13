@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { requiresBetaCode } from "@/lib/entitlements";
@@ -52,9 +51,7 @@ export default async function TeacherLayout({
         teacherName={teacher?.display_name ?? user.email ?? "Teacher"}
         avatarUrl={teacher?.avatar_url ?? null}
       />
-      <Suspense fallback={null}>
-        <OnboardingTour initialShow={showTour} />
-      </Suspense>
+      <OnboardingTour initialShow={showTour} />
       <main className="max-w-6xl mx-auto px-4 py-6 min-w-0">{children}</main>
     </TeacherThemeProvider>
   );
