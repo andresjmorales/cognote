@@ -34,6 +34,7 @@
 
   --color-surface: #ffffff;
   --color-surface-dim: #f0eeeb;
+  --color-skeleton: #e6e3de;
   --color-border: #e0ddd8;
   --color-muted: #7a7872;
 
@@ -71,6 +72,7 @@ body {
 
   --color-surface: #1c1f28;
   --color-surface-dim: #262a35;
+  --color-skeleton: #262a35;
   --color-border: #343845;
   --color-muted: #9a978f;
 }
