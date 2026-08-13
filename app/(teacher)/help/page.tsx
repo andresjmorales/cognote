@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { getDeploymentMode } from "@/lib/entitlements";
 
@@ -19,7 +20,8 @@ export default function HelpPage() {
       <div>
         <h1 className="text-3xl font-bold mb-2">Help &amp; Guide</h1>
         <p className="text-muted">
-          How to run your studio day to day on CogNote.
+          How to run your studio day to day on CogNote. New accounts get a
+          short tour of the tabs; you can replay it at the bottom of this page.
         </p>
       </div>
 
@@ -470,6 +472,30 @@ export default function HelpPage() {
           </li>
         </ul>
       </Card>
+
+      <footer className="pt-2 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-muted">
+        <Link
+          href="/dashboard?tour=1"
+          className="text-primary hover:underline"
+        >
+          Take a short tour of the tabs
+        </Link>
+        <p className="flex items-center gap-3">
+          <Link
+            href="/privacy"
+            className="hover:text-foreground transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link
+            href="/terms"
+            className="hover:text-foreground transition-colors"
+          >
+            Terms of Service
+          </Link>
+        </p>
+      </footer>
     </div>
   );
 }

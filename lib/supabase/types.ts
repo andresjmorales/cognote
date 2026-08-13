@@ -47,6 +47,7 @@ export interface Database {
           stripe_subscription_id: string | null;
           stripe_cancel_at: string | null;
           founding_number: number | null;
+          onboarding_tour_completed_at: string | null;
         };
         Insert: {
           id: string;
@@ -61,6 +62,7 @@ export interface Database {
           stripe_subscription_id?: string | null;
           stripe_cancel_at?: string | null;
           founding_number?: number | null;
+          onboarding_tour_completed_at?: string | null;
         };
         Update: {
           id?: string;
@@ -74,6 +76,7 @@ export interface Database {
           stripe_subscription_id?: string | null;
           stripe_cancel_at?: string | null;
           founding_number?: number | null;
+          onboarding_tour_completed_at?: string | null;
         };
       };
       students: {
@@ -490,7 +493,7 @@ export interface Database {
         Row: {
           id: string;
           teacher_id: string;
-          type: "portal_cancel" | "invoice_paid";
+          type: "portal_cancel" | "invoice_paid" | "event_rsvp" | "welcome";
           title: string;
           body: string;
           href: string | null;
@@ -500,7 +503,7 @@ export interface Database {
         Insert: {
           id?: string;
           teacher_id: string;
-          type: "portal_cancel" | "invoice_paid";
+          type: "portal_cancel" | "invoice_paid" | "event_rsvp" | "welcome";
           title: string;
           body?: string;
           href?: string | null;

@@ -10,15 +10,15 @@ import { NotificationBell } from "@/components/teacher/NotificationBell";
 import { useTeacherTheme } from "@/components/teacher/TeacherThemeProvider";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/students", label: "Students" },
-  { href: "/families", label: "Families" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/events", label: "Events" },
-  { href: "/lessons", label: "Lessons" },
-  { href: "/music", label: "Music" },
-  { href: "/billing", label: "Billing" },
-  { href: "/studio", label: "Studio" },
+  { href: "/dashboard", label: "Dashboard", tour: "dashboard" },
+  { href: "/students", label: "Students", tour: "students" },
+  { href: "/families", label: "Families", tour: "families" },
+  { href: "/schedule", label: "Schedule", tour: "schedule" },
+  { href: "/events", label: "Events", tour: "events" },
+  { href: "/lessons", label: "Lessons", tour: "lessons" },
+  { href: "/music", label: "Music", tour: "music" },
+  { href: "/billing", label: "Billing", tour: "billing" },
+  { href: "/studio", label: "Studio", tour: "studio" },
 ];
 
 function initialsFromName(name: string): string {
@@ -79,6 +79,7 @@ function AccountMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         title={teacherName}
+        data-tour="account"
         className={`flex items-center justify-center h-9 w-9 rounded-full text-xs font-semibold transition-colors cursor-pointer overflow-hidden ${
           open || accountActive
             ? avatarUrl
@@ -150,6 +151,7 @@ function AccountMenu({
           <Link
             href="/help"
             role="menuitem"
+            data-tour="help"
             onClick={() => setOpen(false)}
             className={`block px-3 py-2.5 text-sm transition-colors ${
               helpActive
@@ -207,6 +209,7 @@ export function TeacherNav({
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={item.tour}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     active
                       ? "bg-primary/10 text-primary"
@@ -265,6 +268,7 @@ export function TeacherNav({
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={item.tour}
                 onClick={() => setMobileOpen(false)}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   active

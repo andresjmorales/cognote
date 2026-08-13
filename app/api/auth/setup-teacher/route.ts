@@ -22,24 +22,20 @@ export async function POST(req: NextRequest) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (existing) {
-    const { ensureStudioPolicyRow } = await import("@/lib/server/ensure-policy");
-    await ensureStudioPolicyRow(serviceClient, user.id, tz);
-    return NextResponse.json({ ok: true });
-  }
-
   // During private beta, teacher rows are only created via /api/auth/signup
   // (access code) or repaired on email confirm. This route must not be a
   // backdoor around the beta gate.
-  const { requiresBetaCode } = await import("@/lib/entitlements");
-  if (requiresBetaCode()) {
-    return NextResponse.json(
-      {
-        error:
-          "CogNote Studio is in private beta. Sign up with an access code.",
-      },
-      { status: 403 }
-    );
+  if (!existing) {
+    const { requiresBetaCode } = await import("@/lib/entitlements");
+    if (requiresBetaCode()) {
+      return NextResponse.json(
+        {
+          error:
+            "CogNote Studio is in private beta. Sign up with an access code.",
+        },
+        { status: 403 }
+      );
+    }
   }
 
   const ensured = await ensureTeacherForAuthUser(serviceClient, {
