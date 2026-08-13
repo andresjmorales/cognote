@@ -1,11 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState, type CSSProperties } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ONBOARDING_TOUR_STEPS } from "@/lib/onboarding";
+import {
+  ONBOARDING_TOUR_STEPS,
+  TOUR_START_EVENT,
+  TOUR_STORAGE_KEY,
+  parseStoredTourState,
+  pathWithoutTourQuery,
+  searchHasTourQuery,
+  type StoredTourState,
+} from "@/lib/onboarding";
 
 const CARD_WIDTH = 340;
+
+function readTourState(): StoredTourState | null {
+  try {
+    return parseStoredTourState(sessionStorage.getItem(TOUR_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function writeTourState(state: StoredTourState | null) {
+  try {
+    if (!state) sessionStorage.removeItem(TOUR_STORAGE_KEY);
+    else sessionStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* private mode / blocked storage */
+  }
+}
 
 function visibleTourTarget(id: string): DOMRect | null {
   const nodes = document.querySelectorAll(`[data-tour="${id}"]`);
@@ -50,16 +83,71 @@ function cardPosition(rect: DOMRect | null): CSSProperties {
 export function OnboardingTour({ initialShow }: { initialShow: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const titleId = useId();
-  const force = searchParams.get("tour") === "1";
-  const [dismissed, setDismissed] = useState(false);
+  const [active, setActive] = useState(initialShow);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const pushedHref = useRef<string | null>(null);
 
-  const visible = !dismissed && (initialShow || force);
+  const visible = active;
   const step = ONBOARDING_TOUR_STEPS[stepIndex] ?? ONBOARDING_TOUR_STEPS[0];
   const isLast = stepIndex === ONBOARDING_TOUR_STEPS.length - 1;
+
+  const persist = useCallback((nextIndex: number, nextActive = true) => {
+    if (!nextActive) {
+      writeTourState(null);
+      return;
+    }
+    writeTourState({ active: true, stepIndex: nextIndex });
+  }, []);
+
+  const startAt = useCallback(
+    (index: number) => {
+      pushedHref.current = null;
+      setActive(true);
+      setStepIndex(index);
+      persist(index, true);
+    },
+    [persist]
+  );
+
+  useEffect(() => {
+    function restoreOrStart(fromQuery: boolean) {
+      const stored = readTourState();
+      if (fromQuery || stored?.restart) {
+        startAt(0);
+        return;
+      }
+      if (stored?.active) {
+        setActive(true);
+        setStepIndex(stored.stepIndex);
+        return;
+      }
+      if (initialShow) {
+        persist(0, true);
+      }
+    }
+
+    const frame = requestAnimationFrame(() => {
+      restoreOrStart(searchHasTourQuery(window.location.search));
+    });
+
+    function onTourStart() {
+      startAt(0);
+    }
+    window.addEventListener(TOUR_START_EVENT, onTourStart);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener(TOUR_START_EVENT, onTourStart);
+    };
+  }, [initialShow, persist, startAt]);
+
+  useEffect(() => {
+    if (!searchHasTourQuery(window.location.search)) return;
+    router.replace(
+      pathWithoutTourQuery(pathname || "/dashboard", window.location.search)
+    );
+  }, [pathname, router]);
 
   const measure = useCallback(() => {
     if (!step.target) {
@@ -72,19 +160,43 @@ export function OnboardingTour({ initialShow }: { initialShow: boolean }) {
   useEffect(() => {
     if (!visible) return;
     const frame = requestAnimationFrame(measure);
-    const retry = window.setTimeout(measure, 80);
+    const interval = window.setInterval(measure, 100);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 2500);
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     return () => {
       cancelAnimationFrame(frame);
-      window.clearTimeout(retry);
+      window.clearInterval(interval);
+      window.clearTimeout(stop);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
   }, [visible, measure, pathname]);
 
+  useEffect(() => {
+    if (!visible) return;
+    const next = ONBOARDING_TOUR_STEPS[stepIndex + 1];
+    const prev = ONBOARDING_TOUR_STEPS[stepIndex - 1];
+    if (next?.href) router.prefetch(next.href);
+    if (prev?.href) router.prefetch(prev.href);
+  }, [visible, stepIndex, router]);
+
+  useEffect(() => {
+    if (!visible || !step.href) return;
+    if (pathname === step.href) {
+      pushedHref.current = step.href;
+      return;
+    }
+    if (pushedHref.current === step.href) return;
+    pushedHref.current = step.href;
+    startTransition(() => {
+      router.push(step.href!);
+    });
+  }, [visible, step.href, pathname, router]);
+
   const finish = useCallback(async () => {
-    setDismissed(true);
+    setActive(false);
+    persist(0, false);
     try {
       await fetch("/api/onboarding/tour", {
         method: "POST",
@@ -94,22 +206,20 @@ export function OnboardingTour({ initialShow }: { initialShow: boolean }) {
     } catch {
       /* tour flag is best-effort */
     }
-    if (force) {
-      router.replace(pathname || "/dashboard");
+    if (searchHasTourQuery(window.location.search)) {
+      router.replace(pathWithoutTourQuery(pathname || "/dashboard", window.location.search));
     }
-  }, [force, pathname, router]);
+  }, [pathname, persist, router]);
 
   const go = useCallback(
     (nextIndex: number) => {
       const next = ONBOARDING_TOUR_STEPS[nextIndex];
       if (!next) return;
       setStepIndex(nextIndex);
+      persist(nextIndex, true);
       window.scrollTo(0, 0);
-      if (next.href && next.href !== pathname) {
-        router.push(next.href);
-      }
     },
-    [pathname, router]
+    [persist]
   );
 
   useEffect(() => {

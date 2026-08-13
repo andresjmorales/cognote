@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { StartTourLink } from "@/components/teacher/StartTourLink";
 import { getDeploymentMode } from "@/lib/entitlements";
 
 export const metadata = { title: "Help" };
@@ -474,12 +475,7 @@ export default function HelpPage() {
       </Card>
 
       <footer className="pt-2 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-muted">
-        <Link
-          href="/dashboard?tour=1"
-          className="text-primary hover:underline"
-        >
-          Take a short tour of the tabs
-        </Link>
+        <StartTourLink className="text-primary hover:underline" />
         <p className="flex items-center gap-3">
           <Link
             href="/privacy"

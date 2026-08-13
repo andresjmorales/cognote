@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,6 +20,37 @@ const navItems = [
   { href: "/billing", label: "Billing", tour: "billing" },
   { href: "/studio", label: "Studio", tour: "studio" },
 ];
+
+function NavTab({
+  href,
+  tour,
+  active,
+  className,
+  onClick,
+  children,
+}: {
+  href: string;
+  tour: string;
+  active: boolean;
+  className: string;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  const router = useRouter();
+  return (
+    <Link
+      href={href}
+      data-tour={tour}
+      aria-current={active ? "page" : undefined}
+      className={className}
+      onClick={onClick}
+      onMouseEnter={() => router.prefetch(href)}
+      onFocus={() => router.prefetch(href)}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -206,10 +237,11 @@ export function TeacherNav({
             {navItems.map((item) => {
               const active = pathname.startsWith(item.href);
               return (
-                <Link
+                <NavTab
                   key={item.href}
                   href={item.href}
-                  data-tour={item.tour}
+                  tour={item.tour}
+                  active={active}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     active
                       ? "bg-primary/10 text-primary"
@@ -217,7 +249,7 @@ export function TeacherNav({
                   }`}
                 >
                   {item.label}
-                </Link>
+                </NavTab>
               );
             })}
           </nav>
@@ -265,10 +297,11 @@ export function TeacherNav({
           {navItems.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
-              <Link
+              <NavTab
                 key={item.href}
                 href={item.href}
-                data-tour={item.tour}
+                tour={item.tour}
+                active={active}
                 onClick={() => setMobileOpen(false)}
                 className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   active
@@ -277,7 +310,7 @@ export function TeacherNav({
                 }`}
               >
                 {item.label}
-              </Link>
+              </NavTab>
             );
           })}
         </div>

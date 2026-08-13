@@ -42,14 +42,25 @@ export const WELCOME_NOTIFICATION = {
   href: "/help",
 };
 
+export const TOUR_QUERY_PARAM = "tour";
+export const TOUR_QUERY_VALUE = "1";
+export const TOUR_STORAGE_KEY = "cognote-onboarding-tour";
+export const TOUR_START_EVENT = "cognote-tour-start";
+
 export type TourStep = {
   id: string;
   title: string;
   body: string;
   /** data-tour attribute to spotlight on desktop. */
   target?: string;
-  /** Navigate here while this step is showing (layout stays mounted). */
+  /** Show this module while the step is active (nav spotlight is in the layout). */
   href?: string;
+};
+
+export type StoredTourState = {
+  active: boolean;
+  stepIndex: number;
+  restart?: boolean;
 };
 
 export const ONBOARDING_TOUR_STEPS: TourStep[] = [
@@ -102,3 +113,43 @@ export const ONBOARDING_TOUR_STEPS: TourStep[] = [
     href: "/account",
   },
 ];
+
+export function parseStoredTourState(
+  raw: string | null | undefined
+): StoredTourState | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    const rec = parsed as Record<string, unknown>;
+    if (rec.active !== true) return null;
+    if (
+      typeof rec.stepIndex !== "number" ||
+      !Number.isInteger(rec.stepIndex) ||
+      rec.stepIndex < 0 ||
+      rec.stepIndex >= ONBOARDING_TOUR_STEPS.length
+    ) {
+      return null;
+    }
+    return {
+      active: true,
+      stepIndex: rec.stepIndex,
+      restart: rec.restart === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function searchHasTourQuery(search: string): boolean {
+  const normalized = search.startsWith("?") ? search.slice(1) : search;
+  return new URLSearchParams(normalized).get(TOUR_QUERY_PARAM) === TOUR_QUERY_VALUE;
+}
+
+export function pathWithoutTourQuery(pathname: string, search: string): string {
+  const normalized = search.startsWith("?") ? search.slice(1) : search;
+  const params = new URLSearchParams(normalized);
+  params.delete(TOUR_QUERY_PARAM);
+  const next = params.toString();
+  return next ? `${pathname}?${next}` : pathname;
+}
