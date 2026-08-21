@@ -42,11 +42,14 @@ export function FamilyForm({
   guardian,
   students,
   onClose,
+  embedded = false,
 }: {
   /** null = create a new family */
   guardian: FamilyGuardian | null;
   students: FamilyStudent[];
   onClose: () => void;
+  /** Skip the outer card so the form can sit inside a family row. */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -129,10 +132,9 @@ export function FamilyForm({
 
   const hasSecondaryEmail = !!secondaryEmail.trim();
 
-  return (
-    <Card padding="sm" className="mb-4">
-      <form onSubmit={handleSave} className="flex flex-col gap-3">
-        <h3 className="font-semibold">{guardian ? "Edit Family" : "New Family"}</h3>
+  const form = (
+    <form onSubmit={handleSave} className="flex flex-col gap-3">
+      <h3 className="font-semibold">{guardian ? "Edit Family" : "New Family"}</h3>
 
         <div>
           <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
@@ -341,6 +343,13 @@ export function FamilyForm({
           </Button>
         </div>
       </form>
+  );
+
+  if (embedded) return form;
+
+  return (
+    <Card padding="sm" className="mb-4">
+      {form}
     </Card>
   );
 }

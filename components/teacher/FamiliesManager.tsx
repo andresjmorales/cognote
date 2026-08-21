@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,12 @@ export function FamiliesManager({
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<FamilyGuardian | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [editing]);
 
   async function handleDelete() {
     if (!confirmDelete) return;
@@ -38,23 +44,21 @@ export function FamiliesManager({
 
   return (
     <div>
-      {editing === null ? (
+      {editing === "new" ? (
+        <div ref={editorRef} className="scroll-mt-4">
+          <FamilyForm
+            key="new"
+            guardian={null}
+            students={students}
+            onClose={() => setEditing(null)}
+          />
+        </div>
+      ) : (
         <div className="mb-4">
           <Button size="sm" onClick={() => setEditing("new")}>
             Add Family
           </Button>
         </div>
-      ) : (
-        <FamilyForm
-          key={editing}
-          guardian={
-            editing === "new"
-              ? null
-              : (guardians.find((g) => g.id === editing) ?? null)
-          }
-          students={students}
-          onClose={() => setEditing(null)}
-        />
       )}
 
       {guardians.length === 0 && editing === null ? (
@@ -82,8 +86,13 @@ export function FamiliesManager({
                   }`
                 : null,
             ].filter(Boolean);
+            const isEditing = editing === g.id;
             return (
-              <Card key={g.id} padding="sm">
+              <Card
+                key={g.id}
+                padding="sm"
+                className={isEditing ? "ring-2 ring-primary/35 border-primary/40" : undefined}
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <Link
@@ -113,8 +122,13 @@ export function FamiliesManager({
                       title="Family portal link"
                       label="Portal Link"
                     />
-                    <Button size="sm" variant="secondary" onClick={() => setEditing(g.id)}>
-                      Edit
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      aria-expanded={isEditing}
+                      onClick={() => setEditing(isEditing ? null : g.id)}
+                    >
+                      {isEditing ? "Close" : "Edit"}
                     </Button>
                     <Button
                       size="sm"
@@ -126,6 +140,20 @@ export function FamiliesManager({
                     </Button>
                   </div>
                 </div>
+                {isEditing && (
+                  <div
+                    ref={editorRef}
+                    className="mt-4 pt-4 border-t border-border scroll-mt-4"
+                  >
+                    <FamilyForm
+                      key={g.id}
+                      guardian={g}
+                      students={students}
+                      onClose={() => setEditing(null)}
+                      embedded
+                    />
+                  </div>
+                )}
               </Card>
             );
           })}
