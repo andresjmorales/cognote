@@ -28,7 +28,9 @@ export function FamiliesManager({
 
   useEffect(() => {
     if (!editing) return;
-    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    // Tall form: bring the card to the top of the viewport so the fields
+    // are not stranded below the fold when Edit is clicked near the bottom.
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [editing]);
 
   async function handleDelete() {
@@ -90,8 +92,13 @@ export function FamiliesManager({
             return (
               <Card
                 key={g.id}
+                ref={isEditing ? editorRef : undefined}
                 padding="sm"
-                className={isEditing ? "ring-2 ring-primary/35 border-primary/40" : undefined}
+                className={
+                  isEditing
+                    ? "scroll-mt-4 ring-2 ring-primary/35 border-primary/40"
+                    : undefined
+                }
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
@@ -141,10 +148,7 @@ export function FamiliesManager({
                   </div>
                 </div>
                 {isEditing && (
-                  <div
-                    ref={editorRef}
-                    className="mt-4 pt-4 border-t border-border scroll-mt-4"
-                  >
+                  <div className="mt-4 pt-4 border-t border-border">
                     <FamilyForm
                       key={g.id}
                       guardian={g}
