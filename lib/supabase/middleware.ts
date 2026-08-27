@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { AUTH_REQUEST_TIMEOUT_MS, withTimeout } from "@/lib/auth-errors";
+import { resolveSessionGate } from "@/lib/auth-session";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -25,35 +27,30 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Redirect unauthenticated users trying to access teacher pages
-  const isTeacherRoute =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/students") ||
-    request.nextUrl.pathname.startsWith("/lessons") ||
-    request.nextUrl.pathname.startsWith("/families") ||
-    request.nextUrl.pathname.startsWith("/schedule") ||
-    request.nextUrl.pathname.startsWith("/settings") ||
-    request.nextUrl.pathname.startsWith("/studio") ||
-    request.nextUrl.pathname.startsWith("/account") ||
-    request.nextUrl.pathname.startsWith("/billing") ||
-    request.nextUrl.pathname.startsWith("/events") ||
-    request.nextUrl.pathname.startsWith("/music") ||
-    request.nextUrl.pathname.startsWith("/help");
-
-  if (!user && isTeacherRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+  let hasUser = false;
+  let authUnreachable = false;
+  try {
+    const {
+      data: { user },
+    } = await withTimeout(
+      supabase.auth.getUser(),
+      AUTH_REQUEST_TIMEOUT_MS,
+      "Auth service timed out"
+    );
+    hasUser = Boolean(user);
+  } catch {
+    authUnreachable = true;
   }
 
-  // Redirect authenticated users away from login and landing page
-  if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/")) {
+  const decision = resolveSessionGate({
+    pathname: request.nextUrl.pathname,
+    hasUser,
+    authUnreachable,
+  });
+
+  if (decision === "login" || decision === "dashboard") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = decision === "login" ? "/login" : "/dashboard";
     return NextResponse.redirect(url);
   }
 
