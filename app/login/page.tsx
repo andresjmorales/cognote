@@ -4,10 +4,12 @@ import { LoginForm } from "@/components/auth/LoginForm";
 export const metadata = { title: "Login — CogNote" };
 
 export default function LoginPage() {
+  const hosted = getDeploymentMode() === "hosted";
   return (
     <LoginForm
       betaRequired={requiresBetaCode()}
-      showLegalLinks={getDeploymentMode() === "hosted"}
+      showLegalLinks={hosted}
+      isHosted={hosted}
     />
   );
 }

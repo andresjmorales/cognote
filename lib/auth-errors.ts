@@ -32,7 +32,16 @@ export function isAuthUnreachableMessage(message: string): boolean {
 }
 
 export function isLocalHostname(hostname: string): boolean {
-  return hostname === "localhost" || hostname === "127.0.0.1";
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+/** Docker / npx supabase copy is only for a local self-host checkout, never hosted. */
+export function shouldShowLocalDevAuthHints(input: {
+  hostname: string;
+  isHosted: boolean;
+}): boolean {
+  if (input.isHosted) return false;
+  return isLocalHostname(input.hostname);
 }
 
 export function authReachabilityDetail(isLocal: boolean): string {

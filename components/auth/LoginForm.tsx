@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   AUTH_REQUEST_TIMEOUT_MS,
   authFormErrorFromUnknown,
-  isLocalHostname,
+  shouldShowLocalDevAuthHints,
   type AuthFormError,
   withTimeout,
 } from "@/lib/auth-errors";
@@ -21,9 +21,11 @@ const inputClass =
 export function LoginForm({
   betaRequired,
   showLegalLinks = false,
+  isHosted = false,
 }: {
   betaRequired: boolean;
   showLegalLinks?: boolean;
+  isHosted?: boolean;
 }) {
   const router = useRouter();
   useEffect(() => {
@@ -146,7 +148,10 @@ export function LoginForm({
     } catch (err: unknown) {
       setError(
         authFormErrorFromUnknown(err, {
-          isLocal: isLocalHostname(window.location.hostname),
+          isLocal: shouldShowLocalDevAuthHints({
+            hostname: window.location.hostname,
+            isHosted,
+          }),
           action: mode,
         })
       );
