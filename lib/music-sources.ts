@@ -1,61 +1,28 @@
-import type { MusicLicenseCode } from "@/lib/sheet-music";
 import openscoreLieder from "@/lib/music-indexes/openscore-lieder.json";
 import openscoreQuartets from "@/lib/music-indexes/openscore-quartets.json";
 import mutopia from "@/lib/music-indexes/mutopia.json";
+import type {
+  MusicSearchFilters,
+  SheetMusicSearchResult,
+} from "@/lib/music-source-labels";
 
-export type MusicSourceId =
-  | "openscore-lieder"
-  | "openscore-quartets"
-  | "mutopia"
-  | "imslp";
+/**
+ * Server-side catalogue search. Importing this module pulls in the bundled
+ * JSON indexes (several MB), so client components must import the shared
+ * constants and types from `@/lib/music-source-labels` instead.
+ */
 
-export type SearchResultFormat = "pdf" | "musicxml" | "mxl" | "external";
-
-export interface SheetMusicSearchResult {
-  id: string;
-  source: MusicSourceId;
-  title: string;
-  composer: string;
-  arranger?: string;
-  format: SearchResultFormat;
-  license_code: MusicLicenseCode;
-  license_url?: string | null;
-  source_url: string;
-  /** Direct GitHub blob/raw page when relevant (OpenScore). */
-  github_url?: string | null;
-  file_url?: string | null;
-  import_allowed: boolean;
-  attribution?: string;
-  instrument?: string;
-  style?: string;
-  key?: string;
-  librettist?: string;
-  external_only?: boolean;
-}
-
-export interface MusicSearchFilters {
-  sources?: MusicSourceId[];
-  /** Only results that can be one-click imported into the library. */
-  importableOnly?: boolean;
-  /** Substring match against instrument field (e.g. "piano"). */
-  instrument?: string;
-  /** Substring match against style/period when present. */
-  style?: string;
-}
-
-export const SOURCE_LABELS: Record<MusicSourceId, string> = {
-  "openscore-lieder": "OpenScore Lieder",
-  "openscore-quartets": "OpenScore Quartets",
-  mutopia: "Mutopia",
-  imslp: "IMSLP",
-};
-
-export const ALL_SOURCES: MusicSourceId[] = [
-  "mutopia",
-  "openscore-lieder",
-  "openscore-quartets",
-  "imslp",
-];
+export type {
+  MusicSearchFilters,
+  MusicSourceId,
+  SearchResultFormat,
+  SheetMusicSearchResult,
+} from "@/lib/music-source-labels";
+export {
+  ALL_SOURCES,
+  SOURCE_LABELS,
+  sourceLinkLabel,
+} from "@/lib/music-source-labels";
 
 type IndexedRow = SheetMusicSearchResult & Record<string, unknown>;
 
@@ -401,11 +368,3 @@ export async function searchImslp(
   return results;
 }
 
-/** Button / link label for opening the human source page. */
-export function sourceLinkLabel(source: MusicSourceId): string {
-  if (source === "openscore-lieder" || source === "openscore-quartets") {
-    return "Open in MuseScore";
-  }
-  if (source === "imslp") return "View source";
-  return "View source";
-}
