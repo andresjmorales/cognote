@@ -143,6 +143,20 @@ export function searchStaticIndexes(
   return scored.map((s) => s.item);
 }
 
+let composerCache: string[] | null = null;
+
+/** Distinct composer strings across the bundled indexes (memoized). */
+export function indexedComposers(): string[] {
+  if (composerCache) return composerCache;
+  const seen = new Set<string>();
+  for (const row of STATIC_INDEXES) {
+    const name = (row.composer ?? "").trim();
+    if (name) seen.add(name);
+  }
+  composerCache = Array.from(seen);
+  return composerCache;
+}
+
 export function findIndexedResult(id: string): SheetMusicSearchResult | null {
   const row = STATIC_INDEXES.find((r) => r.id === id);
   return row ? toResult(row) : null;
