@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requestOrigin } from "@/lib/server/http";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { stringFromUserMetadata } from "@/lib/onboarding";
 import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       ? nextParam
       : "/dashboard";
 
-  const redirectTo = req.nextUrl.clone();
+  const redirectTo = new URL(requestOrigin(req));
   redirectTo.search = "";
 
   const supabase = await createClient();
