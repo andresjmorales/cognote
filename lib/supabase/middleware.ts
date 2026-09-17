@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { requestOrigin } from "@/lib/server/http";
 import { AUTH_REQUEST_TIMEOUT_MS, withTimeout } from "@/lib/auth-errors";
 import { resolveSessionGate } from "@/lib/auth-session";
 
@@ -49,7 +50,7 @@ export async function updateSession(request: NextRequest) {
   });
 
   if (decision === "login" || decision === "dashboard") {
-    const url = request.nextUrl.clone();
+    const url = new URL(requestOrigin(request));
     url.pathname = decision === "login" ? "/login" : "/dashboard";
     return NextResponse.redirect(url);
   }
