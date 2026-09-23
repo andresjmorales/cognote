@@ -41,6 +41,7 @@ export function InvoiceDetailClient({
   stripeConfigured,
   checkoutUrl,
   paymentInstructions,
+  paymentQrCode,
   payments = [],
 }: {
   invoiceId: string;
@@ -56,6 +57,7 @@ export function InvoiceDetailClient({
   stripeConfigured: boolean;
   checkoutUrl: string | null;
   paymentInstructions: string;
+  paymentQrCode: string | null;
   payments?: {
     id: string;
     amountCents: number;
@@ -465,12 +467,22 @@ export function InvoiceDetailClient({
         </Card>
       )}
 
-      {paymentProvider === "manual" && paymentInstructions && (
+      {paymentProvider === "manual" && (paymentInstructions || paymentQrCode) && (
         <Card padding="sm">
           <h2 className="font-semibold mb-2">Payment instructions</h2>
-          <p className="text-sm whitespace-pre-wrap text-muted">
-            {paymentInstructions}
-          </p>
+          {paymentInstructions && (
+            <p className="text-sm whitespace-pre-wrap text-muted">
+              {paymentInstructions}
+            </p>
+          )}
+          {paymentQrCode && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={paymentQrCode}
+              alt="Payment QR code"
+              className="mt-3 h-36 w-36 rounded-lg border border-border bg-white object-contain p-1"
+            />
+          )}
         </Card>
       )}
     </div>

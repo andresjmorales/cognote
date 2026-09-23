@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPolicy } from "@/lib/server/scheduling";
 import { sendEmail } from "@/lib/email";
 import { buildInvoicePdf } from "@/lib/server/invoice-pdf";
+import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { formatMoney } from "@/lib/billing";
 import { createCheckoutSession } from "@/lib/payments";
 import {
@@ -105,6 +106,8 @@ export async function sendInvoice(
       })),
       subtotalCents: invoice.subtotal_cents,
       paymentInstructions: policy.payment_instructions,
+      paymentQrCode:
+        policy.payment_provider === "manual" ? policy.payment_qr_code : null,
       notes: invoice.notes,
     });
   } catch (err) {
@@ -185,17 +188,24 @@ export async function sendInvoice(
     const total = formatMoney(invoice.subtotal_cents, invoice.currency);
     const greeting = familyGreetingNames(family);
 
+    const qrNote =
+      !checkoutUrl &&
+      policy.payment_provider === "manual" &&
+      isValidPaymentQrDataUrl(policy.payment_qr_code)
+        ? "A payment QR code is included on the attached invoice."
+        : "";
+
     const payText = checkoutUrl
       ? `Pay online: ${checkoutUrl}`
       : policy.payment_instructions.trim()
-        ? `Payment instructions:\n${policy.payment_instructions.trim()}`
-        : "See your family portal for payment details.";
+        ? `Payment instructions:\n${policy.payment_instructions.trim()}${qrNote ? `\n\n${qrNote}` : ""}`
+        : qrNote || "See your family portal for payment details.";
 
     const payHtml = checkoutUrl
       ? `<p><a href="${escapeHtml(checkoutUrl)}">Pay online</a></p>`
       : policy.payment_instructions.trim()
-        ? `<p><strong>Payment instructions</strong></p><p style="white-space:pre-wrap;">${escapeHtml(policy.payment_instructions.trim())}</p>`
-        : `<p>See your family portal for payment details.</p>`;
+        ? `<p><strong>Payment instructions</strong></p><p style="white-space:pre-wrap;">${escapeHtml(policy.payment_instructions.trim())}</p>${qrNote ? `<p>${qrNote}</p>` : ""}`
+        : `<p>${qrNote || "See your family portal for payment details."}</p>`;
 
     const text = `Hi ${greeting},\n\nPlease find attached your invoice for ${periodLabel}.\n\nTotal due: ${total}\n\n${payText}\n\n— ${studio} (sent via CogNote Studio)`;
 
