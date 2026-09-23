@@ -10,6 +10,7 @@ import {
   type RateBasis,
 } from "@/lib/schedule";
 import type { AiProviderId } from "@/lib/ai/provider";
+import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 
 /** Client-safe policy: secrets are masked, never returned in full. */
 function toClientPolicy(
@@ -150,6 +151,18 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  const paymentQrCode = body.paymentQrCode as string | null | undefined;
+  if (
+    paymentQrCode !== undefined &&
+    paymentQrCode !== null &&
+    !isValidPaymentQrDataUrl(paymentQrCode)
+  ) {
+    return NextResponse.json(
+      { error: "Payment QR code must be a PNG or JPEG image under 300 KB" },
+      { status: 400 }
+    );
+  }
+
   const upsert: Record<string, unknown> = {
     teacher_id: user.id,
     ...(body.studioName !== undefined && {
@@ -232,6 +245,7 @@ export async function PUT(req: NextRequest) {
     ...(body.paymentInstructions !== undefined && {
       payment_instructions: String(body.paymentInstructions).slice(0, 2000),
     }),
+    ...(paymentQrCode !== undefined && { payment_qr_code: paymentQrCode }),
     ...(paymentProvider !== undefined && {
       payment_provider: paymentProvider,
     }),

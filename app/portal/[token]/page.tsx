@@ -17,6 +17,7 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
 import { formatMoney } from "@/lib/billing";
+import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { formatEventWhen } from "@/lib/events";
 import { PortalCancelButton } from "@/components/portal/PortalCancelButton";
 import { PortalEventRsvp } from "@/components/portal/PortalEventRsvp";
@@ -176,6 +177,14 @@ export default async function PortalPage({
     .order("period_end", { ascending: false })
     .limit(12);
   invoices = (invoicesRes.data ?? []) as typeof invoices;
+  // Rendered once below the invoice list, only while something is owed
+  // without an online pay link.
+  const paymentQrCode =
+    policy.payment_provider === "manual" &&
+    isValidPaymentQrDataUrl(policy.payment_qr_code) &&
+    invoices.some((inv) => inv.status === "sent" && !inv.stripe_checkout_url)
+      ? policy.payment_qr_code
+      : null;
 
   if (studentIds.length > 0) {
     await materializeLessons(supabase, guardian.teacher_id, today, addDays(today, 28));
@@ -706,6 +715,22 @@ export default async function PortalPage({
                 </Card>
               ))}
             </div>
+          )}
+          {paymentQrCode && (
+            <Card padding="sm" className="mt-2 flex items-center gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={paymentQrCode}
+                alt="Payment QR code"
+                className="h-36 w-36 shrink-0 rounded-lg border border-border bg-white object-contain p-1"
+              />
+              <div className="text-sm">
+                <div className="font-medium">Scan to pay</div>
+                <p className="text-xs text-muted">
+                  Use your banking or payment app to scan this code.
+                </p>
+              </div>
+            </Card>
           )}
         </section>
 

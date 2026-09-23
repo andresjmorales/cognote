@@ -201,7 +201,7 @@ Use **cloud** Supabase keys on Vercel, not Docker local keys.
 
 ### 6. Family tuition payments (optional)
 
-Manual mark-paid works with zero config (Billing → Payment settings → payment instructions).
+Manual mark-paid works with zero config (Billing → Payment settings → payment instructions, plus an optional payment QR code such as PayNow, UPI, or PIX that is added to invoice PDFs and the family portal).
 
 **Teacher BYO Stripe** (lesson invoices, not CogNote Hosted Pro subscriptions):
 

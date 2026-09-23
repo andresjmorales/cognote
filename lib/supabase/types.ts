@@ -192,6 +192,7 @@ export interface Database {
           currency: string;
           invoice_cadence: InvoiceCadence;
           payment_instructions: string;
+          payment_qr_code: string | null;
           payment_provider: PaymentProvider;
           stripe_secret_key: string | null;
           stripe_publishable_key: string | null;
@@ -234,6 +235,7 @@ export interface Database {
           currency?: string;
           invoice_cadence?: InvoiceCadence;
           payment_instructions?: string;
+          payment_qr_code?: string | null;
           payment_provider?: PaymentProvider;
           stripe_secret_key?: string | null;
           stripe_publishable_key?: string | null;
@@ -274,6 +276,7 @@ export interface Database {
           currency?: string;
           invoice_cadence?: InvoiceCadence;
           payment_instructions?: string;
+          payment_qr_code?: string | null;
           payment_provider?: PaymentProvider;
           stripe_secret_key?: string | null;
           stripe_publishable_key?: string | null;
