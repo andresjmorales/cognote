@@ -55,7 +55,8 @@ export type LoadInvoicePdfErrorCode =
   | "not_draft"
   | "no_items"
   | "no_family"
-  | "pdf_failed";
+  | "pdf_failed"
+  | "db_error";
 
 /** Codes a non-draft-gated caller (e.g. the download route) can receive. */
 export type DownloadableInvoicePdfErrorCode = Exclude<
@@ -99,7 +100,7 @@ export async function loadInvoicePdf(
 ): Promise<LoadInvoicePdfResult> {
   const { invoiceId, teacherId, requireDraft = false } = opts;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("invoices")
     .select(
       `
@@ -113,7 +114,12 @@ export async function loadInvoicePdf(
     )
     .eq("id", invoiceId)
     .eq("teacher_id", teacherId)
-    .single();
+    .maybeSingle();
+
+  if (error) {
+    console.error("loadInvoicePdf query failed:", error.message);
+    return { ok: false, code: "db_error" };
+  }
 
   const invoice = data as unknown as InvoicePdfInvoiceRow | null;
   if (!invoice) return { ok: false, code: "not_found" };

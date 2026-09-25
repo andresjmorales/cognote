@@ -11,6 +11,15 @@ const ERROR_MESSAGES: Record<DownloadableInvoicePdfErrorCode, string> = {
   no_family: "Family not found",
   pdf_failed:
     "Could not build the invoice PDF. Try removing emoji from names or notes.",
+  db_error: "Could not load the invoice. Try again.",
+};
+
+const ERROR_STATUS: Record<DownloadableInvoicePdfErrorCode, number> = {
+  not_found: 404,
+  no_family: 404,
+  no_items: 400,
+  pdf_failed: 500,
+  db_error: 500,
 };
 
 /**
@@ -37,21 +46,19 @@ export async function GET(
   });
 
   if (!loaded.ok) {
-    const status = loaded.code === "not_found" || loaded.code === "no_family"
-      ? 404
-      : 400;
     return NextResponse.json(
       { error: ERROR_MESSAGES[loaded.code] },
-      { status }
+      { status: ERROR_STATUS[loaded.code] }
     );
   }
 
   const { pdfBytes, filename } = loaded.data;
+  const safeFilename = filename.replace(/[^A-Za-z0-9._-]/g, "_");
   return new NextResponse(Buffer.from(pdfBytes), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename="${safeFilename}"`,
       "Cache-Control": "private, no-store",
       "Content-Length": String(pdfBytes.byteLength),
     },

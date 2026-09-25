@@ -57,6 +57,8 @@ export async function sendInvoice(
           error:
             "Could not build the invoice PDF. Try removing emoji from names or notes.",
         };
+      case "db_error":
+        return { ok: false, error: "Could not load the invoice" };
     }
   }
 
