@@ -322,7 +322,7 @@ export function SlotManager({
                 onSubmit={handleEdit}
                 className="flex flex-col gap-3 py-2 px-3 -mx-1 rounded-lg border border-primary/40 bg-primary/5"
               >
-                <div className="text-sm font-medium">
+                <div className="text-sm font-medium break-words">
                   Edit {slot.studentName}&apos;s slot
                 </div>
                 {dayTimeDurationFields}
@@ -350,11 +350,11 @@ export function SlotManager({
             ) : (
               <div
                 key={slot.id}
-                className={`flex items-center justify-between gap-2 text-sm ${
+                className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm ${
                   slot.active ? "" : "opacity-50"
                 }`}
               >
-                <div>
+                <div className="min-w-0 flex-1 break-words">
                   <span className="font-medium">{slot.studentName}</span>{" "}
                   <span className="text-muted">
                     · {DAY_NAMES[slot.day_of_week]}s{" "}

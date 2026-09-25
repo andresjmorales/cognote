@@ -97,7 +97,9 @@ export function MakeupPanel({
           {groups.map((group) => (
             <div key={group.studentId}>
               <div className="flex items-baseline justify-between gap-2 mb-1.5">
-                <h3 className="text-sm font-semibold">{group.studentName}</h3>
+                <h3 className="text-sm font-semibold break-words">
+                  {group.studentName}
+                </h3>
                 <span className="text-xs text-muted">
                   {group.credits.length} credit
                   {group.credits.length === 1 ? "" : "s"}
@@ -134,27 +136,39 @@ export function MakeupPanel({
       {scheduling && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-sm w-full">
-            <h3 className="font-semibold mb-1">Make-up for {scheduling.studentName}</h3>
+            <h3 className="font-semibold mb-1 break-words">
+              Make-up for {scheduling.studentName}
+            </h3>
             <p className="text-xs text-muted mb-3">
               Replaces the {ATTENDANCE_LABELS[scheduling.status].toLowerCase()} lesson from{" "}
               {formatLessonDate(scheduling.missedAt, timezone, "long")}. Each credit can
               be used once.
             </p>
             <form onSubmit={handleSchedule} className="flex flex-col gap-3">
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={inputClass}
-                required
-              />
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className={inputClass}
-                required
-              />
+              <label className="text-sm">
+                <span className="block text-xs font-semibold text-muted mb-1">
+                  Date
+                </span>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={inputClass}
+                  required
+                />
+              </label>
+              <label className="text-sm">
+                <span className="block text-xs font-semibold text-muted mb-1">
+                  Time
+                </span>
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  className={inputClass}
+                  required
+                />
+              </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
