@@ -169,35 +169,46 @@ export function SlotManager({
 
   const dayTimeDurationFields = (
     <div className="grid grid-cols-3 gap-3">
-      <select
-        value={dayOfWeek}
-        onChange={(e) => setDayOfWeek(Number(e.target.value))}
-        className={inputClass}
-      >
-        {DAY_NAMES.map((day, i) => (
-          <option key={day} value={i}>
-            {day}
-          </option>
-        ))}
-      </select>
-      <input
-        type="time"
-        value={startTime}
-        onChange={(e) => setStartTime(e.target.value)}
-        className={inputClass}
-        required
-      />
-      <select
-        value={duration}
-        onChange={(e) => setDuration(Number(e.target.value))}
-        className={inputClass}
-      >
-        {durationOptions.map((minutes) => (
-          <option key={minutes} value={minutes}>
-            {minutes} min
-          </option>
-        ))}
-      </select>
+      <label className="text-sm">
+        <span className="block text-xs font-semibold text-muted mb-1">Day</span>
+        <select
+          value={dayOfWeek}
+          onChange={(e) => setDayOfWeek(Number(e.target.value))}
+          className={inputClass}
+        >
+          {DAY_NAMES.map((day, i) => (
+            <option key={day} value={i}>
+              {day}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-sm">
+        <span className="block text-xs font-semibold text-muted mb-1">Time</span>
+        <input
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          className={inputClass}
+          required
+        />
+      </label>
+      <label className="text-sm">
+        <span className="block text-xs font-semibold text-muted mb-1">
+          Duration
+        </span>
+        <select
+          value={duration}
+          onChange={(e) => setDuration(Number(e.target.value))}
+          className={inputClass}
+        >
+          {durationOptions.map((minutes) => (
+            <option key={minutes} value={minutes}>
+              {minutes} min
+            </option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 
@@ -272,22 +283,27 @@ export function SlotManager({
           onSubmit={handleAdd}
           className="flex flex-col gap-3 mb-4 pb-4 border-b border-border"
         >
-          <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            className={inputClass}
-            required
-          >
-            {students.length === 0 ? (
-              <option value="">No students</option>
-            ) : (
-              students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))
-            )}
-          </select>
+          <label className="text-sm">
+            <span className="block text-xs font-semibold text-muted mb-1">
+              Student
+            </span>
+            <select
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              className={inputClass}
+              required
+            >
+              {students.length === 0 ? (
+                <option value="">No students</option>
+              ) : (
+                students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
           {dayTimeDurationFields}
           {rateField}
           {homeVisitField}

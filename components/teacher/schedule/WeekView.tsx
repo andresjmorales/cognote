@@ -271,7 +271,7 @@ export function WeekView({
                       Event
                     </div>
                     <div className="text-xs font-semibold truncate">{event.title}</div>
-                    <div className="text-xs text-muted">
+                    <div className="text-xs text-muted truncate">
                       {formatLessonTime(event.startsAt, timezone)}
                       {event.location ? ` · ${event.location}` : ""}
                     </div>
@@ -858,7 +858,7 @@ function AdHocModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="max-w-sm w-full">
+      <Card className="max-w-sm w-full max-h-[90vh] overflow-y-auto">
         <h3 className="font-semibold mb-3">One-off Lesson</h3>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="text-sm">

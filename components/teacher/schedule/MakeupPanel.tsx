@@ -97,7 +97,7 @@ export function MakeupPanel({
           {groups.map((group) => (
             <div key={group.studentId}>
               <div className="flex items-baseline justify-between gap-2 mb-1.5">
-                <h3 className="text-sm font-semibold break-words">
+                <h3 className="text-sm font-semibold min-w-0 break-words">
                   {group.studentName}
                 </h3>
                 <span className="text-xs text-muted">
@@ -135,7 +135,7 @@ export function MakeupPanel({
 
       {scheduling && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-sm w-full">
+          <Card className="max-w-sm w-full max-h-[90vh] overflow-y-auto">
             <h3 className="font-semibold mb-1 break-words">
               Make-up for {scheduling.studentName}
             </h3>
