@@ -161,7 +161,10 @@ export default async function AccountPage({
           {hostingSection}
         </AccountSettings>
 
-        <NotificationSettingsForm policy={clientPolicy} />
+        <NotificationSettingsForm
+          policy={clientPolicy}
+          accountEmail={accountEmail}
+        />
         <OptionalAiSettingsForm
           policy={clientPolicy}
           aiStatus={{

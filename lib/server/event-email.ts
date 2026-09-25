@@ -4,6 +4,7 @@ import { formatEventWhen } from "@/lib/events";
 import {
   familyEmailRecipients,
   familyGreetingNames,
+  familyEmailBcc,
   type FamilyContact,
 } from "@/lib/guardians";
 import { oneToOne, type StudioPolicy } from "@/lib/schedule";
@@ -168,6 +169,7 @@ export async function sendEventEmails(args: {
     const portalToken = family.portal_token;
     const result = await sendEmail({
       to: recipients,
+      bcc: familyEmailBcc(policy),
       subject,
       text: `Hi ${greeting},\n\n${intro}\n\nWhen: ${when}${locationLine}${descriptionLine}${repertoireLines}\n\n${cta}\n\n${signature}`,
       fromName: policy.studio_name

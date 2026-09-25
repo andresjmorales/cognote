@@ -12,6 +12,14 @@ import {
 import type { AiProviderId } from "@/lib/ai/provider";
 import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 
+/**
+ * Must match the CHECK constraint on studio_policies.bcc_email. The allowed
+ * set keeps characters that would break an SMTP RCPT TO (`<`, `>`, `,`, etc.)
+ * out of the stored address.
+ */
+const BCC_EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const BCC_EMAIL_MAX_LENGTH = 320;
+
 /** Client-safe policy: secrets are masked, never returned in full. */
 function toClientPolicy(
   policy: Awaited<ReturnType<typeof getPolicy>>,
@@ -163,6 +171,25 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  const bccFamilyEmails = body.bccFamilyEmails as boolean | undefined;
+  let bccEmail: string | null | undefined;
+  if (body.bccEmail !== undefined) {
+    const trimmed = body.bccEmail === null ? "" : String(body.bccEmail).trim();
+    if (trimmed.length > BCC_EMAIL_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: "BCC email address is too long" },
+        { status: 400 }
+      );
+    }
+    if (trimmed && !BCC_EMAIL_RE.test(trimmed)) {
+      return NextResponse.json(
+        { error: "Enter a valid email address to BCC" },
+        { status: 400 }
+      );
+    }
+    bccEmail = trimmed || null;
+  }
+
   const upsert: Record<string, unknown> = {
     teacher_id: user.id,
     ...(body.studioName !== undefined && {
@@ -258,6 +285,10 @@ export async function PUT(req: NextRequest) {
     ...(body.notifyEmailInvoicePaid !== undefined && {
       notify_email_invoice_paid: Boolean(body.notifyEmailInvoicePaid),
     }),
+    ...(bccFamilyEmails !== undefined && {
+      bcc_family_emails: Boolean(bccFamilyEmails),
+    }),
+    ...(bccEmail !== undefined && { bcc_email: bccEmail }),
     ...(aiProvider !== undefined && { ai_provider: aiProvider }),
     ...(body.streaksEnabled !== undefined && {
       streaks_enabled: Boolean(body.streaksEnabled),
@@ -280,6 +311,23 @@ export async function PUT(req: NextRequest) {
   // already-stored) whenever Stripe is (or will be) the provider.
   const { encryptSecret } = await import("@/lib/token");
   const currentPolicy = await getPolicy(supabase, user.id);
+
+  // Default the BCC address to the account email when the toggle is turned on
+  // without an explicit address, so one click yields a usable setting.
+  const bccEnabled = bccFamilyEmails ?? currentPolicy.bcc_family_emails;
+  const nextBccEmail =
+    "bcc_email" in upsert
+      ? (upsert.bcc_email as string | null)
+      : currentPolicy.bcc_email;
+  if (bccEnabled && !nextBccEmail) {
+    if (!user.email) {
+      return NextResponse.json(
+        { error: "Add an email address to BCC" },
+        { status: 400 }
+      );
+    }
+    upsert.bcc_email = user.email;
+  }
 
   const nextSecretRaw = body.clearStripeSecretKey
     ? null

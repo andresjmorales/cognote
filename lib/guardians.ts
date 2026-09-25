@@ -1,4 +1,5 @@
 import type { EmailRecipients } from "@/lib/supabase/types";
+import type { StudioPolicy } from "@/lib/schedule";
 
 /**
  * The contact fields a family (guardians row) carries. A family has a
@@ -44,6 +45,18 @@ export function familyEmailRecipients(family: FamilyContact): string[] {
     default:
       return primary ? [primary] : secondary ? [secondary] : [];
   }
+}
+
+/**
+ * BCC address for family-facing email, from the teacher's BCC setting.
+ * Undefined unless the toggle is on and an address is set, so it can be
+ * passed straight to sendEmail's optional `bcc`.
+ */
+export function familyEmailBcc(
+  policy: Pick<StudioPolicy, "bcc_family_emails" | "bcc_email">
+): string | undefined {
+  const email = policy.bcc_email?.trim();
+  return policy.bcc_family_emails && email ? email : undefined;
 }
 
 /**

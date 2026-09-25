@@ -9,6 +9,7 @@ import {
   familyEmailRecipients,
   familyDisplayName,
   familyGreetingNames,
+  familyEmailBcc,
   stripeCheckoutPrefillEmail,
   type FamilyContact,
 } from "@/lib/guardians";
@@ -219,6 +220,7 @@ ${payHtml}
 
     const result = await sendEmail({
       to: recipients,
+      bcc: familyEmailBcc(policy),
       subject: `Invoice for ${periodLabel} - ${studio}`,
       text,
       html,

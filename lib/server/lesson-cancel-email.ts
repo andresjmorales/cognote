@@ -3,6 +3,7 @@ import { sendEmail } from "@/lib/email";
 import {
   familyEmailRecipients,
   familyGreetingNames,
+  familyEmailBcc,
   type FamilyContact,
 } from "@/lib/guardians";
 import {
@@ -68,6 +69,7 @@ export async function emailFamilyTeacherCancel(args: {
 
   const result = await sendEmail({
     to: recipients,
+    bcc: familyEmailBcc(args.policy),
     subject: `Lesson cancelled — ${student.name} · ${when}`,
     text: `Hi ${familyGreetingNames(family)},\n\n${studio} has cancelled ${student.name}'s lesson on ${when}.${noteLine}\n\nPlease check your family portal for the updated schedule.\n\n${signature}`,
     fromName: args.policy.studio_name
@@ -179,6 +181,7 @@ export async function emailFamiliesTeacherCancelBulk(args: {
 
     const result = await sendEmail({
       to: recipients,
+      bcc: familyEmailBcc(args.policy),
       subject: `${sortedLessons.length} ${plural} cancelled`,
       text: `Hi ${familyGreetingNames(family)},\n\n${studio} has cancelled the following ${plural}:\n\n${lessonLines}\n\nPlease check your family portal for the updated schedule.\n\n${signature}`,
       fromName: args.policy.studio_name

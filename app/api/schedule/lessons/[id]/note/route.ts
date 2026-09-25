@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import {
   familyEmailRecipients,
   familyGreetingNames,
+  familyEmailBcc,
   type FamilyContact,
 } from "@/lib/guardians";
 import { getPolicy } from "@/lib/server/scheduling";
@@ -107,6 +108,7 @@ export async function PUT(
           : "";
         const result = await sendEmail({
           to: recipients,
+          bcc: familyEmailBcc(policy),
           subject: `Lesson notes for ${student.name} — ${when}`,
           text: `Hi ${familyGreetingNames(family)},\n\nNotes from ${student.name}'s lesson on ${when}:\n\n${statusLine}${familyBody}\n\n${signature}`,
           fromName: policy.studio_name
