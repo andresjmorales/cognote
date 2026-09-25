@@ -188,7 +188,7 @@ export function WeekView({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <Link
             href={`/schedule?week=${addDays(weekStart, -7)}`}
@@ -271,7 +271,7 @@ export function WeekView({
                       Event
                     </div>
                     <div className="text-xs font-semibold truncate">{event.title}</div>
-                    <div className="text-xs text-muted">
+                    <div className="text-xs text-muted truncate">
                       {formatLessonTime(event.startsAt, timezone)}
                       {event.location ? ` · ${event.location}` : ""}
                     </div>
@@ -544,7 +544,9 @@ function LessonModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-1 gap-2">
-          <h3 className="font-semibold text-lg">{lesson.studentName}</h3>
+          <h3 className="font-semibold text-lg min-w-0 break-words">
+            {lesson.studentName}
+          </h3>
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
@@ -856,51 +858,71 @@ function AdHocModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="max-w-sm w-full">
+      <Card className="max-w-sm w-full max-h-[90vh] overflow-y-auto">
         <h3 className="font-semibold mb-3">One-off Lesson</h3>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            className={inputClass}
-            required
-          >
-            {students.length === 0 ? (
-              <option value="">No students</option>
-            ) : (
-              students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))
-            )}
-          </select>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className={inputClass}
-            required
-          />
-          <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm">
+            <span className="block text-xs font-semibold text-muted mb-1">
+              Student
+            </span>
+            <select
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              className={inputClass}
+              required
+            >
+              {students.length === 0 ? (
+                <option value="">No students</option>
+              ) : (
+                students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="block text-xs font-semibold text-muted mb-1">
+              Date
+            </span>
             <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               className={inputClass}
               required
             />
-            <select
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className={inputClass}
-            >
-              {durationOptions.map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {minutes} min
-                </option>
-              ))}
-            </select>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <span className="block text-xs font-semibold text-muted mb-1">
+                Time
+              </span>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </label>
+            <label className="text-sm">
+              <span className="block text-xs font-semibold text-muted mb-1">
+                Duration
+              </span>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className={inputClass}
+              >
+                {durationOptions.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {minutes} min
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
