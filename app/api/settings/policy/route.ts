@@ -12,6 +12,14 @@ import {
 import type { AiProviderId } from "@/lib/ai/provider";
 import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 
+/**
+ * Must match the CHECK constraint on studio_policies.bcc_email. The allowed
+ * set keeps characters that would break an SMTP RCPT TO (`<`, `>`, `,`, etc.)
+ * out of the stored address.
+ */
+const BCC_EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const BCC_EMAIL_MAX_LENGTH = 320;
+
 /** Client-safe policy: secrets are masked, never returned in full. */
 function toClientPolicy(
   policy: Awaited<ReturnType<typeof getPolicy>>,
@@ -167,13 +175,19 @@ export async function PUT(req: NextRequest) {
   let bccEmail: string | null | undefined;
   if (body.bccEmail !== undefined) {
     const trimmed = body.bccEmail === null ? "" : String(body.bccEmail).trim();
-    if (trimmed && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+    if (trimmed.length > BCC_EMAIL_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: "BCC email address is too long" },
+        { status: 400 }
+      );
+    }
+    if (trimmed && !BCC_EMAIL_RE.test(trimmed)) {
       return NextResponse.json(
         { error: "Enter a valid email address to BCC" },
         { status: 400 }
       );
     }
-    bccEmail = trimmed.slice(0, 320) || null;
+    bccEmail = trimmed || null;
   }
 
   const upsert: Record<string, unknown> = {
@@ -305,7 +319,13 @@ export async function PUT(req: NextRequest) {
     "bcc_email" in upsert
       ? (upsert.bcc_email as string | null)
       : currentPolicy.bcc_email;
-  if (bccEnabled && !nextBccEmail && user.email) {
+  if (bccEnabled && !nextBccEmail) {
+    if (!user.email) {
+      return NextResponse.json(
+        { error: "Add an email address to BCC" },
+        { status: 400 }
+      );
+    }
     upsert.bcc_email = user.email;
   }
 

@@ -81,7 +81,7 @@ function normalizeBcc(
   bcc: string | string[] | undefined,
   recipients: string[]
 ): string[] {
-  const seen = new Set(recipients.map((r) => r.toLowerCase()));
+  const seen = new Set(recipients.map((r) => r.trim().toLowerCase()));
   const out: string[] = [];
   for (const addr of toAddressList(bcc)) {
     const key = addr.toLowerCase();
@@ -134,7 +134,7 @@ export async function sendEmail(rawArgs: SendEmailArgs): Promise<SendEmailResult
     default:
       console.log(
         `[email no-op — EMAIL_PROVIDER=${provider}] to=${recipients.join(", ")}` +
-          (args.bcc?.length ? ` bcc=${args.bcc.join(", ")}` : "") +
+          (args.bcc?.length ? ` bcc=${args.bcc.length}` : "") +
           ` subject="${args.subject}"` +
           (args.attachments?.length
             ? ` attachments=${args.attachments.map((a) => a.filename).join(",")}`

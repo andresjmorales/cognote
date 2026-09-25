@@ -9,7 +9,7 @@ ALTER TABLE studio_policies
       bcc_email IS NULL
       OR (
         length(bcc_email) <= 320
-        AND bcc_email ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'
+        AND bcc_email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}$'
       )
     );
 

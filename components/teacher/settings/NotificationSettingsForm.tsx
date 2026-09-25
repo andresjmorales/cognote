@@ -24,6 +24,21 @@ export function NotificationSettingsForm({
     policy.bcc_email ?? accountEmail ?? ""
   );
 
+  // Re-sync after a save/refresh so the field shows the stored address (the
+  // API may have defaulted it to the account email).
+  const [prevBcc, setPrevBcc] = useState({
+    enabled: policy.bcc_family_emails,
+    email: policy.bcc_email,
+  });
+  if (
+    prevBcc.enabled !== policy.bcc_family_emails ||
+    prevBcc.email !== policy.bcc_email
+  ) {
+    setPrevBcc({ enabled: policy.bcc_family_emails, email: policy.bcc_email });
+    setBccEnabled(policy.bcc_family_emails);
+    setBccEmail(policy.bcc_email ?? accountEmail ?? "");
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -36,7 +51,9 @@ export function NotificationSettingsForm({
         notifyEmailPortalCancel: emailCancel,
         notifyEmailInvoicePaid: emailPaid,
         bccFamilyEmails: bccEnabled,
-        bccEmail,
+        // Only touch the address while the toggle is on, so saving other
+        // notification settings doesn't persist an unused address.
+        ...(bccEnabled ? { bccEmail } : {}),
       }),
     });
     setBusy(false);
