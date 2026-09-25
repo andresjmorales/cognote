@@ -1,7 +1,14 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { signInAsTeacher } from "./helpers/auth";
 
 const MOBILE_WIDTHS = [320, 360, 375, 412];
+
+function overflowOf(page: Page) {
+  return page.evaluate(() => {
+    const el = document.scrollingElement ?? document.documentElement;
+    return el.scrollWidth - el.clientWidth;
+  });
+}
 
 test.describe("mobile layout", () => {
   test("schedule has no horizontal overflow across mobile widths", async ({
@@ -16,10 +23,7 @@ test.describe("mobile layout", () => {
         page.getByRole("heading", { name: "Schedule" })
       ).toBeVisible();
 
-      const overflow = await page.evaluate(() => {
-        const el = document.scrollingElement ?? document.documentElement;
-        return el.scrollWidth - el.clientWidth;
-      });
+      const overflow = await overflowOf(page);
       expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(
         1
       );
@@ -61,10 +65,7 @@ test.describe("mobile layout", () => {
     await page.getByRole("button", { name: "Add Slot" }).last().click();
 
     // The slot row must not widen the page.
-    const overflow = await page.evaluate(() => {
-      const el = document.scrollingElement ?? document.documentElement;
-      return el.scrollWidth - el.clientWidth;
-    });
+    const overflow = await overflowOf(page);
     expect(overflow, "slot row overflow").toBeLessThanOrEqual(1);
 
     // The lesson modal must keep the long name inside the viewport.

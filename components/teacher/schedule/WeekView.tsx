@@ -188,7 +188,7 @@ export function WeekView({
 
   return (
     <div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <Link
             href={`/schedule?week=${addDays(weekStart, -7)}`}
@@ -212,11 +212,10 @@ export function WeekView({
             Today
           </Link>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="secondary"
-            className="whitespace-nowrap"
             onClick={async () => {
               if (students.length === 0) {
                 const go = await confirm({
@@ -235,7 +234,7 @@ export function WeekView({
             Add One-off Lesson
           </Button>
           <Link href={`/events/new?date=${today}`}>
-            <Button size="sm" variant="secondary" className="whitespace-nowrap">
+            <Button size="sm" variant="secondary">
               + Event
             </Button>
           </Link>
