@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email";
 import {
   familyEmailRecipients,
   familyGreetingNames,
+  familyEmailBcc,
   type FamilyContact,
 } from "@/lib/guardians";
 import { getPolicy } from "@/lib/server/scheduling";
@@ -192,6 +193,7 @@ export async function POST(
 
     const result = await sendEmail({
       to: recipients,
+      bcc: familyEmailBcc(policy),
       subject: `New practice assignment for ${student.name}: ${plan.name}`,
       text: `Hi ${familyGreetingNames(guardian)},\n\n${student.name} has a new practice assignment: "${plan.name}".\n\nStart practicing here:\n${practiceUrl}\n\n${signature}`,
       fromName: policy.studio_name

@@ -21,6 +21,11 @@ export interface SmtpMessage {
   /** RFC 5322 From header, e.g. `"Studio (via CogNote)" <notifications@...>`. */
   fromHeader: string;
   to: string | string[];
+  /**
+   * Blind-copy recipients. Delivered via RCPT TO only; never written to the
+   * message headers, so the family never sees the teacher's address.
+   */
+  bcc?: string | string[];
   subject: string;
   text: string;
   html?: string;
@@ -29,6 +34,18 @@ export interface SmtpMessage {
 }
 
 const TIMEOUT_MS = 10_000;
+
+/**
+ * Envelope recipients: every To address plus every BCC address. BCC
+ * recipients get a RCPT TO and no header. Exported for tests.
+ */
+export function smtpEnvelopeRecipients(
+  msg: Pick<SmtpMessage, "to" | "bcc">
+): string[] {
+  const to = Array.isArray(msg.to) ? msg.to : [msg.to];
+  const bcc = msg.bcc ? (Array.isArray(msg.bcc) ? msg.bcc : [msg.bcc]) : [];
+  return [...to, ...bcc];
+}
 
 export async function sendViaSmtp(msg: SmtpMessage): Promise<void> {
   const socket = net.connect({ host: msg.host, port: msg.port });
@@ -80,7 +97,7 @@ export async function sendViaSmtp(msg: SmtpMessage): Promise<void> {
     await readReply(220); // server greeting
     await send("EHLO localhost", 250);
     await send(`MAIL FROM:<${msg.from}>`, 250);
-    for (const recipient of Array.isArray(msg.to) ? msg.to : [msg.to]) {
+    for (const recipient of smtpEnvelopeRecipients(msg)) {
       await send(`RCPT TO:<${recipient}>`, 250);
     }
     await send("DATA", 354);
@@ -92,7 +109,8 @@ export async function sendViaSmtp(msg: SmtpMessage): Promise<void> {
   }
 }
 
-function buildData(msg: SmtpMessage): string {
+/** Exported for tests. BCC recipients are intentionally absent from headers. */
+export function buildData(msg: SmtpMessage): string {
   const headers = [
     `From: ${msg.fromHeader}`,
     `To: ${Array.isArray(msg.to) ? msg.to.join(", ") : msg.to}`,
