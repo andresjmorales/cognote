@@ -55,6 +55,10 @@ export interface StudioPolicy {
   notify_in_app: boolean;
   notify_email_portal_cancel: boolean;
   notify_email_invoice_paid: boolean;
+  /** BCC the teacher's own address on family-facing email. */
+  bcc_family_emails: boolean;
+  /** Address to BCC when `bcc_family_emails` is on; null means the account email. */
+  bcc_email: string | null;
   /** Optional BYO LLM for assist features (import mapping, future drafts). */
   ai_provider: "none" | "openai" | "anthropic";
   ai_api_key: string | null;
@@ -101,6 +105,8 @@ export const DEFAULT_POLICY: StudioPolicy = {
   notify_in_app: true,
   notify_email_portal_cancel: true,
   notify_email_invoice_paid: true,
+  bcc_family_emails: false,
+  bcc_email: null,
   ai_provider: "none",
   ai_api_key: null,
   streaks_enabled: false,
