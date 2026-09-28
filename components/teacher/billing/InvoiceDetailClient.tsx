@@ -291,6 +291,14 @@ export function InvoiceDetailClient({
               Mark paid
             </Button>
           )}
+          {initialItems.length > 0 && (
+            <a
+              href={`/api/billing/invoices/${invoiceId}/pdf`}
+              className="inline-flex items-center justify-center font-semibold bg-surface text-foreground border border-border hover:bg-surface-dim px-3 py-1.5 text-sm rounded-lg transition-colors"
+            >
+              Download PDF
+            </a>
+          )}
           {status === "sent" &&
             paymentProvider === "stripe" &&
             stripeConfigured && (
