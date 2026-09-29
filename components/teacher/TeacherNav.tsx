@@ -8,6 +8,7 @@ import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 import { createClient } from "@/lib/supabase/client";
 import { NotificationBell } from "@/components/teacher/NotificationBell";
 import { useTeacherTheme } from "@/components/teacher/TeacherThemeProvider";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", tour: "dashboard" },
@@ -192,6 +193,10 @@ function AccountMenu({
           >
             Help
           </Link>
+
+          <div className="border-t border-border mt-1 pt-1 px-3 py-2">
+            <InstallPrompt />
+          </div>
 
           <div className="border-t border-border mt-1 pt-1">
             <button
