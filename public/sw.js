@@ -1,9 +1,12 @@
-// Bump this on every release that changes the shell so clients pick it up.
-const CACHE = "cognote-shell-v1";
+// Bump when the precache list or /offline changes: activate() drops every other
+// cache name, which is what evicts the previous shell.
+const CACHE = "cognote-shell-v2";
 const OFFLINE_URL = "/offline";
 // The offline page is self-contained, so only it and the home-screen icon are
 // needed for a correct cold first offline render.
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png"];
+// Mirrored in lib/pwa.ts as CACHE_EXCLUDED_PATTERN (lib/pwa.test.ts keeps them in sync).
+const EXCLUDED = /^\/(api|auth|portal)(?:\/|$)/;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -33,40 +36,21 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Never touch dynamic, authenticated, or API traffic.
-  if (/^\/(api|auth|portal)\//.test(url.pathname)) return;
+  if (EXCLUDED.test(url.pathname)) return;
 
-  // Navigations: network only, offline page on failure. Do NOT cache HTML —
-  // it can contain family/studio data and must not persist on a device.
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(OFFLINE_URL).then((r) => r ?? Response.error())
-      )
-    );
-    return;
-  }
+  // Navigations only. Assets are left to the HTTP cache (/_next/static is
+  // immutable): caching them here would accumulate one copy per deploy with
+  // nothing to evict, and they are unreachable offline anyway because HTML is
+  // never cached.
+  if (request.mode !== "navigate") return;
 
-  // Immutable build assets: cache-first, with an explicit error path so an
-  // uncached asset while offline degrades to a network error (not a rejection).
-  // /sw.js is excluded — the worker must never serve itself from cache.
-  if (
-    url.pathname !== "/sw.js" &&
-    (url.pathname.startsWith("/_next/static/") ||
-      /\.(?:css|js|woff2?|png|svg|webp)$/.test(url.pathname))
-  ) {
-    event.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ??
-          fetch(request).then((response) => {
-            // Only cache successful responses — never a 404/500.
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(CACHE).then((cache) => cache.put(request, copy));
-            }
-            return response;
-          })
-      )
-    );
-  }
+  // Network first, cached /offline on failure. Do NOT cache HTML — it can
+  // contain family/studio data and must not persist on a device. fetch() only
+  // rejects on a network failure, so a 4xx/5xx or an auth redirect is passed
+  // through untouched.
+  event.respondWith(
+    fetch(request).catch(() =>
+      caches.match(OFFLINE_URL).then((r) => r ?? Response.error())
+    )
+  );
 });

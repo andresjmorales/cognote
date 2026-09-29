@@ -22,5 +22,23 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    // Used by Chrome's richer install UI: at least one per form factor, each
+    // side 320–3840px, max:min ratio under 2.3, identical ratio per factor.
+    screenshots: [
+      {
+        src: "/screenshots/dashboard-narrow.png",
+        sizes: "412x915",
+        type: "image/png",
+        form_factor: "narrow",
+        label: "Studio dashboard on a phone",
+      },
+      {
+        src: "/screenshots/dashboard-wide.png",
+        sizes: "1280x800",
+        type: "image/png",
+        form_factor: "wide",
+        label: "Studio dashboard on a desktop",
+      },
+    ],
   };
 }

@@ -8,7 +8,7 @@ import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 import { createClient } from "@/lib/supabase/client";
 import { NotificationBell } from "@/components/teacher/NotificationBell";
 import { useTeacherTheme } from "@/components/teacher/TeacherThemeProvider";
-import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { IosInstallHint } from "@/components/pwa/IosInstallHint";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", tour: "dashboard" },
@@ -195,7 +195,7 @@ function AccountMenu({
           </Link>
 
           <div className="border-t border-border mt-1 pt-1 px-3 py-2">
-            <InstallPrompt />
+            <IosInstallHint />
           </div>
 
           <div className="border-t border-border mt-1 pt-1">
