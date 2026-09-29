@@ -3,6 +3,7 @@ import { Inter, Nunito } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { TouchHoverGuard } from "@/components/ui/touch-hover-guard";
+import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,6 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="can-hover">
       <body className={`${inter.variable} ${nunito.variable} antialiased`}>
+        <ServiceWorkerRegistrar />
         <TouchHoverGuard />
         <ToastProvider>
           <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
