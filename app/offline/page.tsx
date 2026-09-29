@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 export const metadata = { title: "Offline" };
 
-/** Deliberately self-contained: inline styles only, no Tailwind classes and no
- *  client JS, so it renders correctly from cache on a cold first offline load. */
+/** Deliberately self-contained: inline styles only, no Tailwind classes, so it
+ *  renders correctly from cache on a cold first offline load. next/link emits a
+ *  plain anchor in SSR HTML, so the page is readable without hydration. */
 export default function OfflinePage() {
   return (
     <main
@@ -25,9 +28,9 @@ export default function OfflinePage() {
       <p style={{ fontSize: "0.875rem", color: "#6b7280", maxWidth: "24rem", margin: 0 }}>
         CogNote needs a connection to load your studio. Reconnect and try again.
       </p>
-      <a href="/" style={{ fontSize: "0.875rem", color: "#2a9d8f" }}>
+      <Link href="/" style={{ fontSize: "0.875rem", color: "#2a9d8f" }}>
         Retry
-      </a>
+      </Link>
     </main>
   );
 }
