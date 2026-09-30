@@ -220,33 +220,46 @@ Platform Hosted Pro billing (restricted platform keys, separate from teacher tui
 
 ### Deploy with Docker
 
-For a container deploy instead of Vercel:
+`docker-compose.example.yml` runs the whole stack on one host — CogNote plus its
+own trimmed Supabase (Postgres, Auth, PostgREST, Storage and a small gateway),
+with migrations applied automatically. No cloud accounts needed.
 
-1. Create a Supabase project and push the schema (steps 1–3 above).
-2. Copy the compose example and env template, then fill in `.env.local`:
+1. Copy the compose example and env template. The stack needs a few generated
+   secrets; `generate-secrets.sh` prints them, ready to paste into `.env.local`:
 
    ```bash
    cp docker-compose.example.yml docker-compose.yml
    cp .env.example .env.local
-   # edit .env.local — see comments in .env.example
+   sh docker/supabase/generate-secrets.sh   # paste output into .env.local
    ```
 
-3. Build and start:
+2. Build and start:
 
    ```bash
    docker compose --env-file .env.local up -d --build
    ```
 
+   Open <http://localhost:3000> and create the teacher account. New signups are
+   auto-confirmed by default (`ENABLE_EMAIL_AUTOCONFIRM=true`) so no mail server
+   is needed; the first signup becomes the studio owner.
+
+3. Reminder emails (optional): the stack ships a `cron` profile that hits
+   `/api/cron/event-reminders` daily, standing in for Vercel Cron:
+
+   ```bash
+   docker compose --env-file .env.local --profile cron up -d
+   ```
+
 `--env-file` is required: Compose substitutes `${...}` build args from it, while `env_file:` only injects the container's runtime environment. Pass it to **every** compose command (`up`, `ps`, `logs`, `stop`, …) — `${VAR:?}` is interpolated at parse time, so bare `docker compose ps` fails without it. Secrets stay in `.env.local` and are never baked into image layers.
 
-`NEXT_PUBLIC_*` values are inlined into the client bundle at **build** time — changing them needs a rebuild (`up -d --build`), not just a restart. Full variable reference and further notes live in [docker-compose.example.yml](docker-compose.example.yml).
+`NEXT_PUBLIC_*` values are inlined into the client bundle at **build** time — changing them needs a rebuild (`up -d --build`), not just a restart. By default the app reaches Supabase at `http://supabase.localhost:8000`: browsers resolve `*.localhost` to loopback, and the app container is given an `extra_hosts` entry for the same name. For production, point `SUPABASE_PUBLIC_URL` at a real domain that resolves from both the browser and the server. Migrations run in the one-shot `migrate` service and are tracked in `public.cognote_migrations`, so upgrading is `up -d --build`. Full variable reference and further notes live in [docker-compose.example.yml](docker-compose.example.yml).
 
 ### Hosted vs self-host
 
 | | |
 |--|--|
 | **Hosted** | Official cognote.studio instance (`COGNOTE_DEPLOYMENT=hosted`) |
-| **Self-host** | MIT, free forever — you run Vercel/Supabase/DNS/email yourself |
+| **Self-host** | MIT, free forever — run the Docker stack above, or bring your own Vercel/Supabase/DNS/email |
 
 ---
 
