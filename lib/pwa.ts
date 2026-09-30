@@ -39,15 +39,21 @@ export function isIosBrowser({
 }
 
 /** Shared PWA metadata. Kept in lib/ so vitest's node environment can cover it.
- *  Manifest colours are single-valued: light theme only (dark-mode launch is
- *  governed by the OS, not by the manifest). */
+ *  themeColor is the light default; themeColorDark is the dark surface. The
+ *  theme-color meta follows the in-app teacher theme (a localStorage preference
+ *  that deliberately does not follow the OS). */
 export const PWA = {
   name: "CogNote Studio",
   shortName: "CogNote",
   description:
     "Studio management for private music teachers: scheduling, attendance, family portals, and progress tracking.",
   themeColor: "#ffffff", // --color-surface (light)
+  themeColorDark: "#1c1f28", // --color-surface (dark)
   backgroundColor: "#faf9f7", // --color-background (light) — matches <body>, avoids a white flash
   startUrl: "/",
   scope: "/",
 } as const;
+
+export function themeColorFor(mode: "light" | "dark"): string {
+  return mode === "dark" ? PWA.themeColorDark : PWA.themeColor;
+}

@@ -8,6 +8,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { themeColorFor } from "@/lib/pwa";
 
 export type ThemeMode = "light" | "dark";
 
@@ -72,8 +73,11 @@ export function TeacherThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-teacher-theme", theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute("content", themeColorFor(theme));
     return () => {
       root.removeAttribute("data-teacher-theme");
+      meta?.setAttribute("content", themeColorFor("light"));
     };
   }, [theme]);
 

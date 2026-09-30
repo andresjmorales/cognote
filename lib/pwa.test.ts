@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CACHE_EXCLUDED_PATTERN, isIosBrowser, PWA } from "./pwa";
+import { CACHE_EXCLUDED_PATTERN, isIosBrowser, PWA, themeColorFor } from "./pwa";
 
 describe("PWA constants", () => {
   it("has a short name that fits a home-screen label", () => {
@@ -9,9 +9,15 @@ describe("PWA constants", () => {
   });
 
   it("uses valid hex colours for the manifest", () => {
-    for (const c of [PWA.themeColor, PWA.backgroundColor]) {
+    for (const c of [PWA.themeColor, PWA.themeColorDark, PWA.backgroundColor]) {
       expect(c).toMatch(/^#[0-9a-fA-F]{6}$/);
     }
+  });
+
+  it("maps theme modes to the correct surface colour", () => {
+    expect(themeColorFor("light")).toBe(PWA.themeColor);
+    expect(themeColorFor("dark")).toBe(PWA.themeColorDark);
+    expect(PWA.themeColorDark).toBe("#1c1f28");
   });
 
   it("scopes the app to the site root", () => {

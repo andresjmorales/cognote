@@ -15,7 +15,7 @@
 
 /*
  * Use @theme (not inline) so utilities reference CSS variables.
- * Teacher dark mode redefines those variables under .dark.
+ * Teacher dark mode redefines those variables under [data-teacher-theme='dark'].
  */
 @theme {
   --color-background: #faf9f7;
