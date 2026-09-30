@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CACHE_EXCLUDED_PATTERN, isIosBrowser, PWA, themeColorFor } from "./pwa";
+import { CACHE_EXCLUDED_PATTERN, isIosBrowser, PWA, THEME_COOKIE, themeColorFor, themeModeFromCookie } from "./pwa";
 
 describe("PWA constants", () => {
   it("has a short name that fits a home-screen label", () => {
@@ -27,6 +27,20 @@ describe("PWA constants", () => {
 
   it("does not reuse the surface colour as the background (avoids a white flash)", () => {
     expect(PWA.backgroundColor).not.toBe(PWA.themeColor);
+  });
+});
+
+describe("theme cookie", () => {
+  it("marks the theme cookie name as stable", () => {
+    expect(THEME_COOKIE).toBe("cognote-theme");
+  });
+
+  it("maps a cookie value to a theme mode, defaulting to light", () => {
+    expect(themeModeFromCookie("dark")).toBe("dark");
+    expect(themeModeFromCookie("light")).toBe("light");
+    expect(themeModeFromCookie(undefined)).toBe("light");
+    expect(themeModeFromCookie("Dark")).toBe("light");
+    expect(themeModeFromCookie("garbage")).toBe("light");
   });
 });
 

@@ -57,3 +57,17 @@ export const PWA = {
 export function themeColorFor(mode: "light" | "dark"): string {
   return mode === "dark" ? PWA.themeColorDark : PWA.themeColor;
 }
+
+/** Cookie mirroring the teacher theme so the server can render a matching
+ *  theme-color. Written by TeacherThemeProvider; localStorage stays the client
+ *  source of truth. */
+export const THEME_COOKIE = "cognote-theme";
+
+export type ThemeModeName = "light" | "dark";
+
+/** Maps a raw cookie value to a theme mode. Anything unrecognised (missing
+ *  cookie, tampering, an older value) falls back to light, matching the
+ *  server-rendered default. */
+export function themeModeFromCookie(value: string | undefined): ThemeModeName {
+  return value === "dark" ? "dark" : "light";
+}
