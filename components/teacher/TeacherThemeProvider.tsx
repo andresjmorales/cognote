@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { themeColorFor } from "@/lib/pwa";
+import { THEME_COOKIE, themeColorFor } from "@/lib/pwa";
 
 export type ThemeMode = "light" | "dark";
 
@@ -52,6 +52,8 @@ function writeStoredTheme(mode: ThemeMode) {
   } catch {
     /* ignore */
   }
+  const secure = location.protocol === "https:" ? "; secure" : "";
+  document.cookie = `${THEME_COOKIE}=${mode}; path=/; max-age=31536000; samesite=lax${secure}`;
   for (const listener of themeListeners) listener();
 }
 
