@@ -75,10 +75,36 @@ export function TeacherThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-teacher-theme", theme);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute("content", themeColorFor(theme));
+
+    // Assigning content the value it already holds still records a mutation, so
+    // only write when it actually differs — otherwise the observer below spins.
+    // Re-query every time: Next replaces the meta element on navigation, so a
+    // captured reference goes stale.
+    const apply = () => {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      const wanted = themeColorFor(theme);
+      if (meta && meta.getAttribute("content") !== wanted) {
+        meta.setAttribute("content", wanted);
+      }
+    };
+    apply();
+
+    // Next re-applies the viewport metadata during client-side navigation, which
+    // resets theme-color to the static light default. Re-assert on every head
+    // mutation rather than racing that update, so soft navigation lands on the
+    // right colour without needing a reload.
+    const observer = new MutationObserver(apply);
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["content"],
+    });
+
     return () => {
+      observer.disconnect();
       root.removeAttribute("data-teacher-theme");
+      const meta = document.querySelector('meta[name="theme-color"]');
       meta?.setAttribute("content", themeColorFor("light"));
     };
   }, [theme]);
