@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { centsToDollarsInput, dollarsToCents } from "@/lib/billing";
+import { formatLessonDate, nextWeekdayOnOrAfter } from "@/lib/schedule";
 
 interface Slot {
   id: string;
@@ -14,6 +16,7 @@ interface Slot {
   day_of_week: number;
   start_time: string;
   duration_minutes: number;
+  start_date: string;
   end_date: string | null;
   active: boolean;
   rate_cents: number | null;
@@ -37,16 +40,24 @@ export function SlotManager({
   slots,
   students,
   durationOptions,
+  today,
 }: {
   slots: Slot[];
   students: { id: string; name: string }[];
   durationOptions: number[];
+  /** Today's date in the studio timezone ("YYYY-MM-DD"). */
+  today: string;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
+  const { showToast } = useToast();
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // router.refresh() re-renders the page on the server (materializing
+  // lessons); stay busy until the new slot/lessons are actually on screen.
+  const [refreshing, startRefresh] = useTransition();
+  const busy = saving || refreshing;
   const [error, setError] = useState<string | null>(null);
 
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");
@@ -55,6 +66,30 @@ export function SlotManager({
   const [duration, setDuration] = useState(durationOptions[0] ?? 30);
   const [rateDollars, setRateDollars] = useState("");
   const [isHomeVisit, setIsHomeVisit] = useState(false);
+  const [startDate, setStartDate] = useState(today);
+
+  function refresh() {
+    startRefresh(() => router.refresh());
+  }
+
+  /** fetch that never throws: network failures come back as an error message. */
+  async function send(
+    url: string,
+    init: RequestInit,
+    fallbackError: string
+  ): Promise<{ ok: true; data: { warning?: string } } | { ok: false; error: string }> {
+    setSaving(true);
+    try {
+      const res = await fetch(url, init);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data.error ?? fallbackError };
+      return { ok: true, data };
+    } catch {
+      return { ok: false, error: `${fallbackError}. Check your connection.` };
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function startEdit(slot: Slot) {
     setAdding(false);
@@ -64,6 +99,7 @@ export function SlotManager({
     setDuration(slot.duration_minutes);
     setRateDollars(centsToDollarsInput(slot.rate_cents));
     setIsHomeVisit(Boolean(slot.is_home_visit));
+    setStartDate(slot.start_date);
     setError(null);
   }
 
@@ -85,29 +121,32 @@ export function SlotManager({
       setError("Enter a valid rate (e.g. 45.00) or leave blank");
       return;
     }
-    setBusy(true);
     setError(null);
-    const res = await fetch("/api/schedule/slots", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId,
-        dayOfWeek,
-        startTime,
-        durationMinutes: duration,
-        rateCents,
-        isHomeVisit,
-      }),
-    });
-    setBusy(false);
-    if (res.ok) {
+    const result = await send(
+      "/api/schedule/slots",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId,
+          dayOfWeek,
+          startTime,
+          durationMinutes: duration,
+          rateCents,
+          isHomeVisit,
+          startDate: startDate || today,
+        }),
+      },
+      "Failed to add slot"
+    );
+    if (result.ok) {
       setAdding(false);
       setRateDollars("");
       setIsHomeVisit(false);
-      router.refresh();
+      showToast(`Slot added — first lesson ${firstLessonLabel()}`);
+      refresh();
     } else {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Failed to add slot");
+      setError(result.error);
     }
   }
 
@@ -119,38 +158,45 @@ export function SlotManager({
       setError("Enter a valid rate (e.g. 45.00) or leave blank");
       return;
     }
-    setBusy(true);
     setError(null);
-    const res = await fetch(`/api/schedule/slots/${editingId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        dayOfWeek,
-        startTime,
-        durationMinutes: duration,
-        rateCents,
-        isHomeVisit,
-      }),
-    });
-    setBusy(false);
-    if (res.ok) {
+    const result = await send(
+      `/api/schedule/slots/${editingId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dayOfWeek,
+          startTime,
+          durationMinutes: duration,
+          rateCents,
+          isHomeVisit,
+          startDate: startDate || today,
+        }),
+      },
+      "Failed to update slot"
+    );
+    if (result.ok) {
       setEditingId(null);
-      router.refresh();
+      if (result.data.warning) showToast(result.data.warning, "error");
+      refresh();
     } else {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Failed to update slot");
+      setError(result.error);
     }
   }
 
   async function toggleActive(slot: Slot) {
-    setBusy(true);
-    await fetch(`/api/schedule/slots/${slot.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !slot.active }),
-    });
-    setBusy(false);
-    router.refresh();
+    const result = await send(
+      `/api/schedule/slots/${slot.id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !slot.active }),
+      },
+      slot.active ? "Failed to pause slot" : "Failed to resume slot"
+    );
+    if (!result.ok) showToast(result.error, "error");
+    else if (result.data.warning) showToast(result.data.warning, "error");
+    refresh();
   }
 
   async function handleDelete(slot: Slot) {
@@ -161,10 +207,21 @@ export function SlotManager({
       variant: "danger",
     });
     if (!ok) return;
-    setBusy(true);
-    await fetch(`/api/schedule/slots/${slot.id}`, { method: "DELETE" });
-    setBusy(false);
-    router.refresh();
+    const result = await send(
+      `/api/schedule/slots/${slot.id}`,
+      { method: "DELETE" },
+      "Failed to delete slot"
+    );
+    if (!result.ok) showToast(result.error, "error");
+    refresh();
+  }
+
+  /** e.g. "Tue, Oct 6" — the first date this slot will produce a lesson. */
+  function firstLessonLabel(): string {
+    const from = startDate && startDate > today ? startDate : today;
+    const first = nextWeekdayOnOrAfter(from, dayOfWeek);
+    const label = formatDateOnly(first);
+    return first === today ? `today (${label})` : label;
   }
 
   const dayTimeDurationFields = (
@@ -212,6 +269,24 @@ export function SlotManager({
     </div>
   );
 
+  const startDateField = (
+    <label className="text-sm">
+      <span className="block text-xs font-semibold text-muted mb-1">
+        Starts on
+      </span>
+      <input
+        type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        className={inputClass}
+        required
+      />
+      <span className="block text-xs text-muted mt-1">
+        First lesson: {firstLessonLabel()}
+      </span>
+    </label>
+  );
+
   const rateField = (
     <label className="text-sm">
       <span className="block text-xs font-semibold text-muted mb-1">
@@ -251,11 +326,19 @@ export function SlotManager({
   return (
     <Card padding="sm">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold">Weekly Slots</h2>
+        <h2 className="font-semibold">
+          Weekly Slots
+          {refreshing && (
+            <span className="ml-2 text-xs font-normal text-muted">
+              Updating schedule…
+            </span>
+          )}
+        </h2>
         {!adding && !editingId && (
           <Button
             size="sm"
             variant="secondary"
+            disabled={busy}
             onClick={async () => {
               if (students.length === 0) {
                 const go = await confirm({
@@ -268,6 +351,7 @@ export function SlotManager({
                 return;
               }
               setAdding(true);
+              setStartDate(today);
               setRateDollars("");
               setIsHomeVisit(false);
               setError(null);
@@ -305,6 +389,7 @@ export function SlotManager({
             </select>
           </label>
           {dayTimeDurationFields}
+          {startDateField}
           {rateField}
           {homeVisitField}
           {error && <p className="text-error text-xs">{error}</p>}
@@ -342,6 +427,7 @@ export function SlotManager({
                   Edit {slot.studentName}&apos;s slot
                 </div>
                 {dayTimeDurationFields}
+                {startDateField}
                 {rateField}
                 {homeVisitField}
                 <p className="text-xs text-muted">
@@ -378,6 +464,12 @@ export function SlotManager({
                     {slot.rate_cents != null &&
                       ` · $${(slot.rate_cents / 100).toFixed(2)}/hr`}
                     {slot.is_home_visit ? " · home visit" : ""}
+                    {slot.start_date > today &&
+                      ` · starts ${formatDateOnly(slot.start_date)}`}
+                    {slot.end_date &&
+                      (slot.end_date < today
+                        ? " · ended"
+                        : ` · until ${formatDateOnly(slot.end_date)}`)}
                     {!slot.active && " · paused"}
                   </span>
                 </div>
@@ -411,6 +503,11 @@ export function SlotManager({
       )}
     </Card>
   );
+}
+
+function formatDateOnly(date: string): string {
+  // Noon UTC keeps the formatted date on the same calendar day everywhere
+  return formatLessonDate(`${date}T12:00:00Z`, "UTC");
 }
 
 function formatTime(time: string): string {

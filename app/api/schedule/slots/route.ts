@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { materializeLessons } from "@/lib/server/scheduling";
-import { addDays, toLocalDateString } from "@/lib/schedule";
-import { getPolicy } from "@/lib/server/scheduling";
+import { materializeLessons, getPolicy } from "@/lib/server/scheduling";
+import { addDays, isDateString, toLocalDateString } from "@/lib/schedule";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -40,8 +39,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
+  if (
+    (body.startDate && !isDateString(body.startDate)) ||
+    (body.endDate && !isDateString(body.endDate))
+  ) {
+    return NextResponse.json(
+      { error: "startDate and endDate must be YYYY-MM-DD" },
+      { status: 400 }
+    );
+  }
+
   const policy = await getPolicy(supabase, user.id);
   const today = toLocalDateString(new Date(), policy.timezone);
+  const startDate: string = body.startDate || today;
+  if (body.endDate && body.endDate < startDate) {
+    return NextResponse.json(
+      { error: "End date can't be before the start date" },
+      { status: 400 }
+    );
+  }
 
   const { data: slot, error } = await supabase
     .from("lesson_slots")
@@ -54,7 +70,7 @@ export async function POST(req: NextRequest) {
       // Explicit local date — the DB default CURRENT_DATE is the *UTC* date,
       // which is already tomorrow during US evenings, silently skipping a
       // same-day slot's first occurrence.
-      start_date: body.startDate || today,
+      start_date: startDate,
       end_date: body.endDate || null,
       rate_cents:
         body.rateCents === null || body.rateCents === undefined || body.rateCents === ""

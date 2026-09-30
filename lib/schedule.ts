@@ -183,6 +183,21 @@ export function addDays(dateStr: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+/** Whether a value is a "YYYY-MM-DD" string naming a real calendar date. */
+export function isDateString(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const [y, m, d] = value.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+/** First date on/after `fromDate` that falls on `weekday` (0 = Sunday). */
+export function nextWeekdayOnOrAfter(fromDate: string, weekday: number): string {
+  return addDays(fromDate, (weekday - dayOfWeek(fromDate) + 7) % 7);
+}
+
 /** Start (Sunday) of the week containing the given local date. */
 export function startOfWeek(dateStr: string): string {
   return addDays(dateStr, -dayOfWeek(dateStr));
@@ -229,10 +244,7 @@ export function computeOccurrences(
   if (rangeStart > rangeEnd) return [];
 
   // First occurrence on/after rangeStart that falls on the slot's weekday
-  const first = addDays(
-    rangeStart,
-    (slot.day_of_week - dayOfWeek(rangeStart) + 7) % 7
-  );
+  const first = nextWeekdayOnOrAfter(rangeStart, slot.day_of_week);
 
   const occurrences: OccurrenceInsert[] = [];
   for (let date = first; date <= rangeEnd; date = addDays(date, 7)) {
