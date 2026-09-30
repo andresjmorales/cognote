@@ -11,6 +11,8 @@ node_modules
 .git
 .gitignore
 .github
+# compose stack assets (nginx config, db init SQL) — used by compose, not the build
+docker
 
 # secrets — never bake these into an image
 .env

@@ -1,11 +1,12 @@
-# Example: running CogNote as a container.
+# Example: self-hosting CogNote with its own trimmed Supabase stack.
 #
 # NOT used automatically — `docker compose` only picks up compose.yaml,
 # compose.yml, docker-compose.yaml or docker-compose.yml, so this file can live
 # in the repo without hijacking anything. To use it:
 #
 #   cp docker-compose.example.yml docker-compose.yml
-#   cp .env.example .env.local          # then fill it in
+#   cp .env.example .env.local
+#   sh docker/supabase/generate-secrets.sh   # paste the output into .env.local
 #   docker compose --env-file .env.local up -d --build
 #
 # Pass --env-file .env.local to EVERY compose command (ps, logs, stop, …).
@@ -13,46 +14,228 @@
 #
 # WHY --env-file: compose substitutes ${...} from the shell environment and from
 # a file called `.env` — NOT from a service's `env_file:`. `env_file:` sets the
-# CONTAINER's environment and is a separate mechanism. Without --env-file the
-# build args below would resolve to empty strings, the image would build
-# successfully, and the browser bundle would point at nothing.
+# CONTAINER's environment and is a separate mechanism.
 #
-# Variables the app reads (see .env.example for the full list):
-#   NEXT_PUBLIC_SUPABASE_URL        public  — inlined into the browser bundle
-#   NEXT_PUBLIC_SUPABASE_ANON_KEY   public  — inlined into the browser bundle
-#   SUPABASE_SERVICE_ROLE_KEY       secret  — server-only, bypasses RLS
-#   TOKEN_ENCRYPTION_KEY            secret  — encrypts stored portal tokens
-#   CRON_SECRET                     secret  — authorises /api/cron/* endpoints
-#   EMAIL_PROVIDER, RESEND_API_KEY, EMAIL_FROM_ADDRESS
-#                                   optional — unset, the app runs and sends
-#                                   nothing, which is a valid configuration
+# WHAT RUNS HERE
+#   db        Postgres (supabase/postgres image: roles, auth + storage schemas)
+#   auth      GoTrue  — email/password signup + sessions
+#   rest      PostgREST — the Data API the app queries
+#   storage   Storage API — the private sheet-music bucket (files on a volume)
+#   gateway   nginx reverse proxy fronting auth/rest/storage at /auth/v1,
+#             /rest/v1, /storage/v1 and terminating CORS
+#   migrate   one-shot: applies supabase/migrations/*.sql, tracked in a ledger
+#   app       CogNote itself
+#   cron      optional (profile "cron"): pings /api/cron/event-reminders daily
+#
+# Services intentionally omitted vs. upstream Supabase: Studio, Realtime, Edge
+# Functions, Analytics, Supavisor and imgproxy — CogNote uses none of them.
+#
+# WIRING (set in .env.local, see .env.example):
+#   SUPABASE_PUBLIC_URL   where the browser AND the app reach the gateway
+#   SUPABASE_HOST_ALIAS   hostname in that URL, for the app container's
+#                         extra_hosts entry (see `app` below)
+#   ANON_KEY / SERVICE_ROLE_KEY   signed with JWT_SECRET; the app receives them
+#                         as NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY
+
+name: cognote
 
 services:
+  db:
+    image: supabase/postgres:17.6.1.136
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: 5432
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: postgres
+      PGDATABASE: postgres
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?run sh docker/supabase/generate-secrets.sh}"
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      JWT_EXP: ${JWT_EXPIRY:-3600}
+    volumes:
+      # The image's top-level entrypoint runs init-scripts/*.sql on first boot;
+      # "99-" sorts after the base schema it ships with.
+      - ./docker/supabase/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+      - ./docker/supabase/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
+      - db-data:/var/lib/postgresql/data
+      - db-config:/etc/postgresql-custom
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      # First boot runs the schema/role init scripts before accepting TCP
+      # connections; don't let those failures count against the retry budget.
+      start_period: 90s
+
+  auth:
+    image: supabase/gotrue:v2.196.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL:?}/auth/v1
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:?}@db:5432/postgres
+      GOTRUE_SITE_URL: ${APP_URL:-http://localhost:3000}
+      GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS:-}
+      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:?}
+      GOTRUE_JWT_ISSUER: ${SUPABASE_PUBLIC_URL:?}/auth/v1
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
+      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-true}
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+      # AUTH_* (not SMTP_*) so these don't collide with the app's own outbound
+      # mail settings, which use SMTP_HOST / SMTP_PORT.
+      GOTRUE_SMTP_ADMIN_EMAIL: ${AUTH_SMTP_ADMIN_EMAIL:-}
+      GOTRUE_SMTP_HOST: ${AUTH_SMTP_HOST:-}
+      # Must parse as an int; an empty value makes GoTrue exit at startup.
+      GOTRUE_SMTP_PORT: ${AUTH_SMTP_PORT:-2500}
+      GOTRUE_SMTP_USER: ${AUTH_SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${AUTH_SMTP_PASS:-}
+      GOTRUE_SMTP_SENDER_NAME: ${AUTH_SMTP_SENDER_NAME:-}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  rest:
+    image: postgrest/postgrest:v14.17
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:?}@db:5432/postgres
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public}
+      PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
+      PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:?}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-3600}
+      # The `postgrest --ready` healthcheck probes the admin server.
+      PGRST_ADMIN_SERVER_HOST: localhost
+      PGRST_ADMIN_SERVER_PORT: 3001
+    healthcheck:
+      test: ["CMD", "postgrest", "--ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  storage:
+    image: supabase/storage-api:v1.74.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ANON_KEY: ${ANON_KEY:?}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY:?}
+      POSTGREST_URL: http://rest:3000
+      AUTH_JWT_SECRET: ${JWT_SECRET:?}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD:?}@db:5432/postgres
+      STORAGE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:?}
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      GLOBAL_S3_BUCKET: stub
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: ${STORAGE_TENANT_ID:-stub}
+      REGION: ${REGION:-stub}
+      # imgproxy is not run; the app never requests transformed images.
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+      # Only used by the optional S3 protocol endpoint. Defaults are the
+      # upstream demo values; rotate them if you expose that endpoint.
+      S3_PROTOCOL_ACCESS_KEY_ID: ${S3_PROTOCOL_ACCESS_KEY_ID:-625729a08b95bf1b7ff351a663f3a23c}
+      S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET:-850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907}
+    volumes:
+      - storage-data:/var/lib/storage
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://storage:5000/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - auth
+      - rest
+      - storage
+    environment:
+      # Substituted into the nginx template by the image entrypoint.
+      APP_URL: ${APP_URL:-http://localhost:3000}
+    volumes:
+      - ./docker/supabase/volumes/api/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    ports:
+      - "${API_GW_HTTP_PORT:-8000}:8000"
+
+  migrate:
+    image: supabase/postgres:17.6.1.136
+    entrypoint: ["/bin/bash", "/migrate.sh"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      # The app's sheet-music migration inserts into storage.buckets, which the
+      # Storage API creates on first start — so wait for it to be ready.
+      storage:
+        condition: service_healthy
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      DB_HOST: db
+      MIGRATIONS_DIR: /migrations
+    volumes:
+      - ./supabase/migrations:/migrations:ro
+      - ./docker/supabase/migrate.sh:/migrate.sh:ro
+
   app:
     build:
       context: .
-      # NEXT_PUBLIC_* are NOT runtime settings. Next inlines them into the
-      # client bundle during `next build`, so they have to be present as BUILD
-      # args. Changing them needs a rebuild, not a restart.
+      # NEXT_PUBLIC_* are inlined into the client bundle during `next build`,
+      # so they must be present as BUILD args. Changing them needs a rebuild.
       args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set it in .env.local, see --env-file above}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set it in .env.local, see --env-file above}
-      # Prefer a prebuilt image in production:
-      #   image: ghcr.io/OWNER/cognote:latest
-      # ...and drop `build:` entirely.
-
-    # Secrets are injected at runtime. They are never baked into an image layer:
-    # image layers are readable by anyone who can pull the image.
+        NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_PUBLIC_URL:?}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      gateway:
+        condition: service_started
     env_file:
       - .env.local
-
+    # These override anything of the same name in .env.local, so the app can
+    # never drift from the stack (single source of truth: ANON_KEY etc.).
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_PUBLIC_URL:?}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?}
+      NEXT_PUBLIC_SITE_URL: ${APP_URL:-http://localhost:3000}
     ports:
       - "${APP_PORT:-3000}:3000"
-
-    restart: unless-stopped
-
-    # The image already runs as uid 1001. These keep it that way, so a
-    # compromised process cannot gain privileges or write to the filesystem.
+    extra_hosts:
+      # The server reaches the gateway via the same hostname the browser uses.
+      # *.localhost resolves to loopback in browsers; inside the container this
+      # entry points at the Docker host, where the gateway port is published.
+      - "${SUPABASE_HOST_ALIAS:-supabase.localhost}:host-gateway"
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -60,7 +243,25 @@ services:
     tmpfs:
       - /tmp
 
-    # Logging: leave unset to use the engine default (works on Docker Desktop
-    # for macOS/Windows). On Linux with systemd you can opt into the journal:
-    #   logging:
-    #     driver: journald
+  # Optional: event-reminder emails on a schedule (Vercel Cron equivalent).
+  # Enable with: docker compose --env-file .env.local --profile cron up -d
+  cron:
+    image: alpine:3.20
+    profiles: ["cron"]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    environment:
+      CRON_SECRET: ${CRON_SECRET:-}
+      CRON_SCHEDULE: ${CRON_SCHEDULE:-0 14 * * *}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "$$CRON_SCHEDULE wget -q -O- --header 'Authorization: Bearer $$CRON_SECRET' http://app:3000/api/cron/event-reminders >/proc/1/fd/1 2>&1" > /etc/crontabs/root
+        exec crond -f -l 8
+
+volumes:
+  db-data:
+  db-config:
+  storage-data:
