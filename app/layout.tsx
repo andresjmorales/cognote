@@ -21,7 +21,6 @@ export const viewport: Viewport = {
   themeColor: PWA.themeColor,
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
