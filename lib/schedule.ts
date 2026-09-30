@@ -44,6 +44,8 @@ export interface StudioPolicy {
   currency: string;
   invoice_cadence: InvoiceCadence;
   payment_instructions: string;
+  /** Optional payment QR image (data:image/png|jpeg;base64 URL). */
+  payment_qr_code: string | null;
   payment_provider: PaymentProvider;
   // Stripe BYO (Phase 4) — secrets never sent to the client in full
   stripe_secret_key: string | null;
@@ -53,6 +55,10 @@ export interface StudioPolicy {
   notify_in_app: boolean;
   notify_email_portal_cancel: boolean;
   notify_email_invoice_paid: boolean;
+  /** BCC the teacher's own address on family-facing email. */
+  bcc_family_emails: boolean;
+  /** Address to BCC when `bcc_family_emails` is on; null means the account email. */
+  bcc_email: string | null;
   /** Optional BYO LLM for assist features (import mapping, future drafts). */
   ai_provider: "none" | "openai" | "anthropic";
   ai_api_key: string | null;
@@ -91,6 +97,7 @@ export const DEFAULT_POLICY: StudioPolicy = {
   currency: "USD",
   invoice_cadence: "monthly",
   payment_instructions: "",
+  payment_qr_code: null,
   payment_provider: "manual",
   stripe_secret_key: null,
   stripe_publishable_key: null,
@@ -98,6 +105,8 @@ export const DEFAULT_POLICY: StudioPolicy = {
   notify_in_app: true,
   notify_email_portal_cancel: true,
   notify_email_invoice_paid: true,
+  bcc_family_emails: false,
+  bcc_email: null,
   ai_provider: "none",
   ai_api_key: null,
   streaks_enabled: false,

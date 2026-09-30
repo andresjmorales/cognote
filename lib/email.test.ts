@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { fromHeader, withPortalFooter, sendEmail } from "@/lib/email";
 
+const { resendSend } = vi.hoisted(() => ({ resendSend: vi.fn() }));
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send: resendSend };
+  },
+}));
+
 beforeEach(() => {
   vi.unstubAllEnvs();
 });
@@ -101,5 +108,49 @@ describe("sendEmail provider selection", () => {
     });
     expect(result.sent).toBe(false);
     expect(result.error).toContain("RESEND_API_KEY");
+  });
+});
+
+describe("sendEmail BCC", () => {
+  beforeEach(() => {
+    resendSend.mockReset();
+    resendSend.mockResolvedValue({ error: null });
+    vi.stubEnv("EMAIL_PROVIDER", "resend");
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+  });
+
+  it("passes the BCC address to the provider", async () => {
+    const result = await sendEmail({
+      to: "parent@example.com",
+      subject: "Hi",
+      text: "Body",
+      bcc: "teacher@example.com",
+    });
+    expect(result.sent).toBe(true);
+    expect(resendSend).toHaveBeenCalledWith(
+      expect.objectContaining({ bcc: ["teacher@example.com"] })
+    );
+  });
+
+  it("drops a BCC address that is already a To recipient", async () => {
+    await sendEmail({
+      to: ["parent@example.com", "teacher@example.com"],
+      subject: "Hi",
+      text: "Body",
+      bcc: ["teacher@example.com"],
+    });
+    const payload = resendSend.mock.calls[0][0];
+    expect(payload.bcc).toBeUndefined();
+  });
+
+  it("omits bcc when the address is blank", async () => {
+    await sendEmail({
+      to: "parent@example.com",
+      subject: "Hi",
+      text: "Body",
+      bcc: "   ",
+    });
+    const payload = resendSend.mock.calls[0][0];
+    expect(payload.bcc).toBeUndefined();
   });
 });

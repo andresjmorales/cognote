@@ -271,8 +271,8 @@ export default function HelpPage() {
             Use Export / Import under Account settings to back up or move
             studio data. Export files contain your students&apos; records, so
             treat them as confidential; payment and AI keys are never included.
-            Configure Stripe or payment instructions from Billing → Payment
-            settings.
+            Configure Stripe, payment instructions, or a payment QR code from
+            Billing → Payment settings.
           </p>
         </div>
       </Card>

@@ -27,6 +27,11 @@ export interface SendEmailArgs {
   subject: string;
   text: string;
   html?: string;
+  /**
+   * Optional BCC recipients, e.g. the teacher keeping a copy of family email.
+   * Addresses already in `to` are dropped so nobody is copied twice.
+   */
+  bcc?: string | string[];
   /** Per-teacher: the teacher's contact email. Parent replies go here. */
   replyTo?: string;
   /** Per-teacher: display name, e.g. `"Morales Piano Studio (via CogNote)"`. */
@@ -63,6 +68,30 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function toAddressList(value: string | string[] | undefined): string[] {
+  const raw = Array.isArray(value) ? value : value ? [value] : [];
+  return raw.map((a) => a.trim()).filter(Boolean);
+}
+
+/**
+ * BCC list for a send: trimmed, de-duplicated (case-insensitively), and with
+ * any address already in `to` removed so a recipient never gets two copies.
+ */
+function normalizeBcc(
+  bcc: string | string[] | undefined,
+  recipients: string[]
+): string[] {
+  const seen = new Set(recipients.map((r) => r.trim().toLowerCase()));
+  const out: string[] = [];
+  for (const addr of toAddressList(bcc)) {
+    const key = addr.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(addr);
+  }
+  return out;
+}
+
 /** Append the family-portal footer to both bodies: every parent/student
  * email links back to the family's personal portal. Exported for tests. */
 export function withPortalFooter(args: SendEmailArgs): SendEmailArgs {
@@ -94,6 +123,9 @@ export async function sendEmail(rawArgs: SendEmailArgs): Promise<SendEmailResult
   }
   args.to = recipients;
 
+  const bcc = normalizeBcc(args.bcc, recipients);
+  args.bcc = bcc.length > 0 ? bcc : undefined;
+
   switch (provider) {
     case "resend":
       return sendWithResend(args);
@@ -101,7 +133,9 @@ export async function sendEmail(rawArgs: SendEmailArgs): Promise<SendEmailResult
       return sendWithSmtp(args);
     default:
       console.log(
-        `[email no-op — EMAIL_PROVIDER=${provider}] to=${recipients.join(", ")} subject="${args.subject}"` +
+        `[email no-op — EMAIL_PROVIDER=${provider}] to=${recipients.join(", ")}` +
+          (args.bcc?.length ? ` bcc=${args.bcc.length}` : "") +
+          ` subject="${args.subject}"` +
           (args.attachments?.length
             ? ` attachments=${args.attachments.map((a) => a.filename).join(",")}`
             : "")
@@ -115,6 +149,7 @@ async function sendWithResend({
   subject,
   text,
   html,
+  bcc,
   replyTo,
   fromName,
   attachments,
@@ -129,6 +164,7 @@ async function sendWithResend({
   const { error } = await resend.emails.send({
     from: fromHeader(fromName),
     to,
+    ...(bcc?.length ? { bcc } : {}),
     subject,
     text,
     ...(html ? { html } : {}),
@@ -156,6 +192,7 @@ async function sendWithSmtp({
   subject,
   text,
   html,
+  bcc,
   replyTo,
   fromName,
   attachments,
@@ -172,6 +209,7 @@ async function sendWithSmtp({
       from: fromAddress,
       fromHeader: fromHeader(fromName),
       to,
+      bcc,
       subject,
       text,
       html,

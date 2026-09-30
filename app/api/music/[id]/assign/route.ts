@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import {
   familyEmailRecipients,
   familyGreetingNames,
+  familyEmailBcc,
   type FamilyContact,
 } from "@/lib/guardians";
 import { getPolicy } from "@/lib/server/scheduling";
@@ -168,6 +169,7 @@ export async function POST(
 
     const result = await sendEmail({
       to: recipients,
+      bcc: familyEmailBcc(policy),
       subject: `New sheet music for ${student.name}: ${item.title}`,
       text: `Hi ${familyGreetingNames(guardian)},\n\n${student.name} has new sheet music: "${item.title}"${composerBit}.${noteBit}${dueBit}\n\nView it in the family portal:\n${portalUrl ?? "(ask your teacher for the portal link)"}\n\n${signature}`,
       fromName: policy.studio_name

@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { formatMoney } from "@/lib/billing";
+import { decodePaymentQrDataUrl } from "@/lib/payment-qr";
 
 export interface InvoicePdfItem {
   description: string;
@@ -17,8 +18,13 @@ export interface InvoicePdfInput {
   items: InvoicePdfItem[];
   subtotalCents: number;
   paymentInstructions: string;
+  /** Optional payment QR (data:image/png|jpeg;base64 URL). */
+  paymentQrCode?: string | null;
   notes?: string;
 }
+
+/** Printed QR edge length (pt); ~1.75in scans reliably from paper or screen. */
+const QR_SIZE = 126;
 
 /**
  * Helvetica (StandardFonts) only supports WinAnsi. Map common punctuation
@@ -77,7 +83,7 @@ export async function buildInvoicePdf(
   input: InvoicePdfInput
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  const page = doc.addPage([612, 792]); // US Letter
+  let page = doc.addPage([612, 792]); // US Letter
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const { height } = page.getSize();
@@ -156,14 +162,45 @@ export async function buildInvoicePdf(
     x: 480,
   });
 
-  if (input.paymentInstructions.trim()) {
+  const qr = decodePaymentQrDataUrl(input.paymentQrCode);
+  const qrImage = qr
+    ? qr.format === "png"
+      ? await doc.embedPng(qr.bytes)
+      : await doc.embedJpg(qr.bytes)
+    : null;
+
+  if (input.paymentInstructions.trim() || qrImage) {
+    // Keep the QR whole: move the payment block to a new page if it won't fit.
+    if (qrImage && y - 50 - QR_SIZE < margin) {
+      page = doc.addPage([612, 792]);
+      y = height - margin + 36;
+    }
     y -= 36;
     draw("Payment instructions", { font: bold, size: 11 });
+    const headerY = y;
     y -= 14;
-    for (const line of wrapText(input.paymentInstructions, 90)) {
+    // Wrap text beside the QR code when there is one.
+    for (const line of wrapText(input.paymentInstructions, qrImage ? 64 : 90)) {
       draw(line, { size: 10 });
       y -= 13;
       if (y < 60) break;
+    }
+    if (qrImage) {
+      const scale = Math.min(QR_SIZE / qrImage.width, QR_SIZE / qrImage.height);
+      const w = qrImage.width * scale;
+      const h = qrImage.height * scale;
+      const x = 612 - margin - w;
+      const bottom = headerY + 10 - h;
+      page.drawImage(qrImage, { x, y: bottom, width: w, height: h });
+      const caption = "Scan to pay";
+      page.drawText(caption, {
+        x: x + w / 2 - font.widthOfTextAtSize(caption, 9) / 2,
+        y: bottom - 12,
+        size: 9,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+      y = Math.min(y, bottom - 12);
     }
   }
 

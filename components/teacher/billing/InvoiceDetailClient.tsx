@@ -41,6 +41,7 @@ export function InvoiceDetailClient({
   stripeConfigured,
   checkoutUrl,
   paymentInstructions,
+  paymentQrCode,
   payments = [],
 }: {
   invoiceId: string;
@@ -56,6 +57,7 @@ export function InvoiceDetailClient({
   stripeConfigured: boolean;
   checkoutUrl: string | null;
   paymentInstructions: string;
+  paymentQrCode: string | null;
   payments?: {
     id: string;
     amountCents: number;
@@ -289,6 +291,14 @@ export function InvoiceDetailClient({
               Mark paid
             </Button>
           )}
+          {initialItems.length > 0 && (
+            <a
+              href={`/api/billing/invoices/${invoiceId}/pdf`}
+              className="inline-flex items-center justify-center font-semibold bg-surface text-foreground border border-border hover:bg-surface-dim px-3 py-1.5 text-sm rounded-lg transition-colors"
+            >
+              Download PDF
+            </a>
+          )}
           {status === "sent" &&
             paymentProvider === "stripe" &&
             stripeConfigured && (
@@ -465,12 +475,22 @@ export function InvoiceDetailClient({
         </Card>
       )}
 
-      {paymentProvider === "manual" && paymentInstructions && (
+      {paymentProvider === "manual" && (paymentInstructions || paymentQrCode) && (
         <Card padding="sm">
           <h2 className="font-semibold mb-2">Payment instructions</h2>
-          <p className="text-sm whitespace-pre-wrap text-muted">
-            {paymentInstructions}
-          </p>
+          {paymentInstructions && (
+            <p className="text-sm whitespace-pre-wrap text-muted">
+              {paymentInstructions}
+            </p>
+          )}
+          {paymentQrCode && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={paymentQrCode}
+              alt="Payment QR code"
+              className="mt-3 h-36 w-36 rounded-lg border border-border bg-white object-contain p-1"
+            />
+          )}
         </Card>
       )}
     </div>

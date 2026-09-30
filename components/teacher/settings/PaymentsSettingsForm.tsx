@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,12 @@ import {
   validateLiveStripeKeys,
   type StripeKeyStatus,
 } from "@/lib/billing";
+import {
+  PAYMENT_QR_ACCEPT,
+  PAYMENT_QR_MAX_DATA_URL_LENGTH,
+  PAYMENT_QR_MAX_DIMENSION,
+  PAYMENT_QR_MAX_INPUT_BYTES,
+} from "@/lib/payment-qr";
 
 const inputClass =
   "px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm";
@@ -39,6 +45,10 @@ export function PaymentsSettingsForm({
     policy.payment_provider
   );
   const [instructions, setInstructions] = useState(policy.payment_instructions);
+  const [qrCode, setQrCode] = useState<string | null>(policy.payment_qr_code);
+  const [qrDirty, setQrDirty] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const qrInputRef = useRef<HTMLInputElement>(null);
   const [secretKey, setSecretKey] = useState("");
   const [publishableKey, setPublishableKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
@@ -49,6 +59,27 @@ export function PaymentsSettingsForm({
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://your-host";
   const webhookUrl = `${origin}/api/webhooks/stripe/${teacherId}`;
+
+  async function onQrFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setQrError(null);
+    if (!file.type.startsWith("image/")) {
+      setQrError("Choose an image file");
+      return;
+    }
+    if (file.size > PAYMENT_QR_MAX_INPUT_BYTES) {
+      setQrError("Image must be under 8 MB");
+      return;
+    }
+    try {
+      setQrCode(await qrImageToDataUrl(file));
+      setQrDirty(true);
+    } catch (err) {
+      setQrError(err instanceof Error ? err.message : "Could not read image");
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +105,7 @@ export function PaymentsSettingsForm({
       body: JSON.stringify({
         paymentProvider: provider,
         paymentInstructions: instructions,
+        ...(qrDirty && { paymentQrCode: qrCode }),
         ...(secretKey.trim() && { stripeSecretKey: secretKey.trim() }),
         ...(publishableKey.trim() && {
           stripePublishableKey: publishableKey.trim(),
@@ -95,6 +127,7 @@ export function PaymentsSettingsForm({
       setClearSecret(false);
       setClearPublishable(false);
       setClearWebhook(false);
+      setQrDirty(false);
       router.refresh();
       onSaved?.();
     } else {
@@ -158,6 +191,63 @@ export function PaymentsSettingsForm({
             Shown on invoices and the family portal when using manual payments.
           </span>
         </label>
+      )}
+
+      {provider === "manual" && (
+        <div className="text-sm">
+          <span className="block text-xs font-semibold text-muted mb-1">
+            Payment QR code (optional)
+          </span>
+          <div className="flex items-start gap-3">
+            {qrCode ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={qrCode}
+                alt="Payment QR code"
+                className="h-28 w-28 rounded-lg border border-border bg-white object-contain p-1"
+              />
+            ) : (
+              <div className="h-28 w-28 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted text-center px-2">
+                No QR code
+              </div>
+            )}
+            <div className="flex flex-col items-start gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => qrInputRef.current?.click()}
+              >
+                {qrCode ? "Replace image" : "Upload image"}
+              </Button>
+              {qrCode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQrCode(null);
+                    setQrDirty(true);
+                    setQrError(null);
+                  }}
+                  className="text-xs text-muted hover:text-foreground cursor-pointer"
+                >
+                  Remove
+                </button>
+              )}
+              {qrError && <span className="text-xs text-error">{qrError}</span>}
+            </div>
+          </div>
+          <input
+            ref={qrInputRef}
+            type="file"
+            accept={PAYMENT_QR_ACCEPT}
+            className="hidden"
+            onChange={onQrFileChange}
+          />
+          <span className="block text-xs text-muted mt-1">
+            e.g. PayNow, UPI, PIX, or Venmo. Added to invoice PDFs and shown in
+            the family portal. Test-scan it after saving.
+          </span>
+        </div>
       )}
 
       {provider === "stripe" && (
@@ -336,4 +426,43 @@ function KeyField({
       )}
     </label>
   );
+}
+
+/**
+ * Downscale an uploaded QR image and re-encode it as a data URL small enough
+ * to store on the policy. PNG keeps QR edges crisp; JPEG is the fallback for
+ * photos of a QR code that PNG can't compress under the limit.
+ */
+async function qrImageToDataUrl(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Could not read image"));
+      el.src = url;
+    });
+    const scale = Math.min(
+      1,
+      PAYMENT_QR_MAX_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight)
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not process image");
+    // White backdrop so transparent PNGs stay scannable (and JPEG-safe).
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const png = canvas.toDataURL("image/png");
+    if (png.length <= PAYMENT_QR_MAX_DATA_URL_LENGTH) return png;
+    const jpeg = canvas.toDataURL("image/jpeg", 0.9);
+    if (jpeg.length <= PAYMENT_QR_MAX_DATA_URL_LENGTH) return jpeg;
+    throw new Error("Image is too detailed; crop it to just the QR code");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

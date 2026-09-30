@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
+import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { familyDisplayName } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
 import { InvoiceDetailClient } from "@/components/teacher/billing/InvoiceDetailClient";
@@ -112,6 +113,11 @@ export default async function InvoiceDetailPage({
         stripeConfigured={!!policy.stripe_secret_key}
         checkoutUrl={invoice.stripe_checkout_url}
         paymentInstructions={policy.payment_instructions}
+        paymentQrCode={
+          isValidPaymentQrDataUrl(policy.payment_qr_code)
+            ? policy.payment_qr_code
+            : null
+        }
         payments={payments}
       />
     </div>

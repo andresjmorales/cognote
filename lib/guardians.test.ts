@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   familyEmailRecipients,
   familyGreetingNames,
+  familyEmailBcc,
   stripeCheckoutPrefillEmail,
 } from "@/lib/guardians";
 
@@ -110,5 +111,28 @@ describe("familyGreetingNames", () => {
     expect(
       familyGreetingNames({ ...base, email: null, secondary_email: null })
     ).toBe("Jordan");
+  });
+});
+
+describe("familyEmailBcc", () => {
+  it("returns the address when the toggle is on", () => {
+    expect(
+      familyEmailBcc({ bcc_family_emails: true, bcc_email: "me@example.com" })
+    ).toBe("me@example.com");
+  });
+
+  it("returns undefined when the toggle is off", () => {
+    expect(
+      familyEmailBcc({ bcc_family_emails: false, bcc_email: "me@example.com" })
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when no address is set", () => {
+    expect(
+      familyEmailBcc({ bcc_family_emails: true, bcc_email: null })
+    ).toBeUndefined();
+    expect(
+      familyEmailBcc({ bcc_family_emails: true, bcc_email: "   " })
+    ).toBeUndefined();
   });
 });

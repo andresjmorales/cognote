@@ -1,17 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getPolicy } from "@/lib/server/scheduling";
 import { sendEmail } from "@/lib/email";
-import { buildInvoicePdf } from "@/lib/server/invoice-pdf";
+import { loadInvoicePdf } from "@/lib/server/invoice-pdf-data";
+import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { formatMoney } from "@/lib/billing";
 import { createCheckoutSession } from "@/lib/payments";
 import {
   familyEmailRecipients,
   familyDisplayName,
   familyGreetingNames,
+  familyEmailBcc,
   stripeCheckoutPrefillEmail,
-  type FamilyContact,
 } from "@/lib/guardians";
-import { oneToOne } from "@/lib/schedule";
 
 export interface SendInvoiceResult {
   ok: boolean;
@@ -37,86 +36,35 @@ export async function sendInvoice(
 ): Promise<SendInvoiceResult> {
   const { invoiceId: id, teacherId, teacherEmail, origin } = opts;
 
-  const { data: invoice } = await supabase
-    .from("invoices")
-    .select(
-      `
-      *,
-      guardians (
-        id, name, family_name, email, secondary_name, secondary_email,
-        email_recipients, portal_token
-      ),
-      invoice_items ( * )
-    `
-    )
-    .eq("id", id)
-    .eq("teacher_id", teacherId)
-    .single();
+  const loaded = await loadInvoicePdf(supabase, {
+    invoiceId: id,
+    teacherId,
+    requireDraft: true,
+  });
 
-  if (!invoice) return { ok: false, error: "Not found" };
-  if (invoice.status !== "draft") {
-    return { ok: false, error: "Only draft invoices can be sent" };
+  if (!loaded.ok) {
+    switch (loaded.code) {
+      case "not_found":
+        return { ok: false, error: "Not found" };
+      case "not_draft":
+        return { ok: false, error: "Only draft invoices can be sent" };
+      case "no_items":
+        return { ok: false, error: "Add at least one line item before sending" };
+      case "no_family":
+        return { ok: false, error: "Family not found" };
+      case "pdf_failed":
+        return {
+          ok: false,
+          error:
+            "Could not build the invoice PDF. Try removing emoji from names or notes.",
+        };
+      case "db_error":
+        return { ok: false, error: "Could not load the invoice" };
+    }
   }
 
-  const items = (
-    (invoice.invoice_items as {
-      description: string;
-      quantity: number;
-      unit_cents: number;
-      amount_cents: number;
-      sort_order: number;
-    }[]) ?? []
-  ).sort((a, b) => a.sort_order - b.sort_order);
-
-  if (items.length === 0) {
-    return { ok: false, error: "Add at least one line item before sending" };
-  }
-
-  const policy = await getPolicy(supabase, teacherId);
-  const family = oneToOne(
-    invoice.guardians as
-      | (FamilyContact & {
-          family_name: string | null;
-          portal_token: string | null;
-        })
-      | (FamilyContact & {
-          family_name: string | null;
-          portal_token: string | null;
-        })[]
-      | null
-  );
-
-  if (!family) return { ok: false, error: "Family not found" };
-
+  const { invoice, family, policy, pdfBytes } = loaded.data;
   const familyName = familyDisplayName(family);
-  let pdfBytes: Uint8Array;
-  try {
-    pdfBytes = await buildInvoicePdf({
-      studioName: policy.studio_name,
-      familyName,
-      periodStart: invoice.period_start,
-      periodEnd: invoice.period_end,
-      currency: invoice.currency,
-      items: items.map((i) => ({
-        description: i.description,
-        quantity: i.quantity,
-        unitCents: i.unit_cents,
-        amountCents: i.amount_cents,
-      })),
-      subtotalCents: invoice.subtotal_cents,
-      paymentInstructions: policy.payment_instructions,
-      notes: invoice.notes,
-    });
-  } catch (err) {
-    console.error(
-      "Invoice PDF build failed:",
-      err instanceof Error ? err.message : err
-    );
-    return {
-      ok: false,
-      error: "Could not build the invoice PDF. Try removing emoji from names or notes.",
-    };
-  }
 
   let checkoutUrl: string | null = invoice.stripe_checkout_url;
   let checkoutError: string | undefined;
@@ -185,17 +133,24 @@ export async function sendInvoice(
     const total = formatMoney(invoice.subtotal_cents, invoice.currency);
     const greeting = familyGreetingNames(family);
 
+    const qrNote =
+      !checkoutUrl &&
+      policy.payment_provider === "manual" &&
+      isValidPaymentQrDataUrl(policy.payment_qr_code)
+        ? "A payment QR code is included on the attached invoice."
+        : "";
+
     const payText = checkoutUrl
       ? `Pay online: ${checkoutUrl}`
       : policy.payment_instructions.trim()
-        ? `Payment instructions:\n${policy.payment_instructions.trim()}`
-        : "See your family portal for payment details.";
+        ? `Payment instructions:\n${policy.payment_instructions.trim()}${qrNote ? `\n\n${qrNote}` : ""}`
+        : qrNote || "See your family portal for payment details.";
 
     const payHtml = checkoutUrl
       ? `<p><a href="${escapeHtml(checkoutUrl)}">Pay online</a></p>`
       : policy.payment_instructions.trim()
-        ? `<p><strong>Payment instructions</strong></p><p style="white-space:pre-wrap;">${escapeHtml(policy.payment_instructions.trim())}</p>`
-        : `<p>See your family portal for payment details.</p>`;
+        ? `<p><strong>Payment instructions</strong></p><p style="white-space:pre-wrap;">${escapeHtml(policy.payment_instructions.trim())}</p>${qrNote ? `<p>${qrNote}</p>` : ""}`
+        : `<p>${qrNote || "See your family portal for payment details."}</p>`;
 
     const text = `Hi ${greeting},\n\nPlease find attached your invoice for ${periodLabel}.\n\nTotal due: ${total}\n\n${payText}\n\n— ${studio} (sent via CogNote Studio)`;
 
@@ -209,6 +164,7 @@ ${payHtml}
 
     const result = await sendEmail({
       to: recipients,
+      bcc: familyEmailBcc(policy),
       subject: `Invoice for ${periodLabel} - ${studio}`,
       text,
       html,
