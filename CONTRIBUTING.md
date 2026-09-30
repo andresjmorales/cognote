@@ -41,6 +41,16 @@ npm run test:e2e               # or npm run test:e2e:ui
 
 Override the app URL with `PLAYWRIGHT_BASE_URL` if needed. Not wired into CI yet (needs Docker + a running Next server).
 
+The four service-worker specs in `e2e/pwa.spec.ts` skip unless you set `PWA_E2E=1`, because the worker only registers in a production build. To run them:
+
+```bash
+npm run build
+npm run start                # stop `npm run dev` first (both want :3000)
+PWA_E2E=1 npm run test:e2e   # PowerShell: $env:PWA_E2E="1"; npm run test:e2e
+```
+
+To keep dev running, start the production build elsewhere (`PORT=3001 npm run start`) and point Playwright at it with `PLAYWRIGHT_BASE_URL`.
+
 Playwright uses its own browser context — it does not reuse your logged-in Chrome session. Sign-in / create-student can pass against an existing local DB if the seed teacher still exists. Flows that hit fixed seed tokens or named seed students need a successful `db reset` (or equivalent seed data).
 
 ## Adding a migration

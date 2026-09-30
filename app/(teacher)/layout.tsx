@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { THEME_COOKIE, themeColorFor, themeModeFromCookie } from "@/lib/pwa";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { requiresBetaCode } from "@/lib/entitlements";
@@ -6,6 +8,16 @@ import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
 import { OnboardingTour } from "@/components/teacher/OnboardingTour";
 import { TeacherNav } from "@/components/teacher/TeacherNav";
 import { TeacherThemeProvider } from "@/components/teacher/TeacherThemeProvider";
+
+/** The installed app's title bar follows the teacher theme. Reading the cookie
+ *  here is free: this segment is dynamic already, because the Supabase client
+ *  below reads cookies for auth. */
+export async function generateViewport() {
+  const cookieStore = await cookies();
+  return {
+    themeColor: themeColorFor(themeModeFromCookie(cookieStore.get(THEME_COOKIE)?.value)),
+  };
+}
 
 export default async function TeacherLayout({
   children,
