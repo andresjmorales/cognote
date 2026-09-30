@@ -206,6 +206,7 @@ export default async function SchedulePage({
             }))}
             students={studentsRes.data ?? []}
             durationOptions={policy.lesson_duration_options}
+            today={today}
           />
         </div>
         <div className="space-y-6">

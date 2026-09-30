@@ -5,6 +5,8 @@ import {
   dayOfWeek,
   addDays,
   startOfWeek,
+  isDateString,
+  nextWeekdayOnOrAfter,
   computeOccurrences,
   earnsMakeupCredit,
   creditIsValid,
@@ -88,6 +90,33 @@ describe("date string helpers", () => {
   it("startOfWeek returns the containing Sunday", () => {
     expect(startOfWeek("2026-07-08")).toBe("2026-07-05");
     expect(startOfWeek("2026-07-05")).toBe("2026-07-05"); // already Sunday
+  });
+});
+
+describe("isDateString", () => {
+  it("accepts real calendar dates", () => {
+    expect(isDateString("2026-09-30")).toBe(true);
+    expect(isDateString("2028-02-29")).toBe(true);
+  });
+
+  it("rejects malformed or impossible dates", () => {
+    expect(isDateString("2026-02-30")).toBe(false);
+    expect(isDateString("2026-9-30")).toBe(false);
+    expect(isDateString("")).toBe(false);
+    expect(isDateString(undefined)).toBe(false);
+  });
+});
+
+describe("nextWeekdayOnOrAfter", () => {
+  it("returns the same date when it already falls on the weekday", () => {
+    // 2026-09-29 is a Tuesday
+    expect(nextWeekdayOnOrAfter("2026-09-29", 2)).toBe("2026-09-29");
+  });
+
+  it("rolls forward to the upcoming weekday", () => {
+    // Wednesday → next Tuesday, across a month boundary
+    expect(nextWeekdayOnOrAfter("2026-09-30", 2)).toBe("2026-10-06");
+    expect(nextWeekdayOnOrAfter("2026-09-30", 4)).toBe("2026-10-01");
   });
 });
 

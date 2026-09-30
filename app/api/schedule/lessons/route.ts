@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
-import { zonedTimeToUtc, oneToOne } from "@/lib/schedule";
+import { zonedTimeToUtc, oneToOne, isDateString } from "@/lib/schedule";
 
 /**
  * Create an ad-hoc lesson (slot_id NULL) — used for one-off lessons and
@@ -22,13 +22,25 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   if (
     !body.studentId ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(body.date ?? "") ||
+    !isDateString(body.date) ||
     !/^\d{2}:\d{2}$/.test(body.time ?? "")
   ) {
     return NextResponse.json(
       { error: "studentId, date (YYYY-MM-DD) and time (HH:mm) are required" },
       { status: 400 }
     );
+  }
+
+  // The lesson's student must belong to this teacher (RLS only checks
+  // lessons.teacher_id, not whose student it references).
+  const { data: student } = await supabase
+    .from("students")
+    .select("id")
+    .eq("id", body.studentId)
+    .eq("teacher_id", user.id)
+    .maybeSingle();
+  if (!student) {
+    return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
   let durationMinutes = Number(body.durationMinutes) || 30;

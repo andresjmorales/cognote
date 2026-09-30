@@ -349,12 +349,21 @@ export function WeekView({
         <AdHocModal
           students={students}
           durationOptions={durationOptions}
+          defaultDate={
+            today >= weekStart && today <= addDays(weekStart, 6) ? today : weekStart
+          }
           busy={busy}
           setBusy={setBusy}
           onClose={() => setShowAdHoc(false)}
-          onSaved={() => {
+          onSaved={(date) => {
             setShowAdHoc(false);
-            router.refresh();
+            if (date < weekStart || date > addDays(weekStart, 6)) {
+              // Scheduled outside the visible week — go there so it's visible
+              router.push(`/schedule?week=${date}`);
+              notify(`Scheduled for ${fmtDate(date)}`);
+            } else {
+              router.refresh();
+            }
           }}
           notify={notify}
         />
@@ -807,6 +816,7 @@ function LessonModal({
 function AdHocModal({
   students,
   durationOptions,
+  defaultDate,
   busy,
   setBusy,
   onClose,
@@ -815,14 +825,15 @@ function AdHocModal({
 }: {
   students: { id: string; name: string }[];
   durationOptions: number[];
+  defaultDate: string;
   busy: boolean;
   setBusy: (busy: boolean) => void;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (date: string) => void;
   notify: (message: string, variant?: "success" | "error" | "info") => void;
 }) {
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("16:00");
   const [duration, setDuration] = useState(durationOptions[0] ?? 30);
   const [isHomeVisit, setIsHomeVisit] = useState(false);
@@ -844,7 +855,7 @@ function AdHocModal({
         }),
       });
       if (res.ok) {
-        onSaved();
+        onSaved(date);
       } else {
         const data = await res.json().catch(() => ({}));
         notify(data.error ?? "Failed to schedule lesson", "error");
