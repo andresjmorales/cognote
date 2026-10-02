@@ -13,6 +13,12 @@ POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 
 JWT_SECRET="$(openssl rand -hex 32)"
 
+# S3 protocol endpoint credentials. The gateway denies that endpoint (see
+# nginx.conf.template), but the compose requires these rather than defaulting to
+# the demo pair Supabase publishes, so they are minted with everything else.
+S3_PROTOCOL_ACCESS_KEY_ID="$(openssl rand -hex 16)"
+S3_PROTOCOL_ACCESS_KEY_SECRET="$(openssl rand -hex 32)"
+
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
 
 # jwt <role> -> a signed HS256 token for that role.
@@ -38,4 +44,6 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 JWT_SECRET=$JWT_SECRET
 ANON_KEY=$ANON_KEY
 SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
+S3_PROTOCOL_ACCESS_KEY_ID=$S3_PROTOCOL_ACCESS_KEY_ID
+S3_PROTOCOL_ACCESS_KEY_SECRET=$S3_PROTOCOL_ACCESS_KEY_SECRET
 EOF
