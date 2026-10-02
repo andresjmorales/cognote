@@ -254,6 +254,23 @@ with migrations applied automatically. No cloud accounts needed.
 
 `NEXT_PUBLIC_*` values are inlined into the client bundle at **build** time — changing them needs a rebuild (`up -d --build`), not just a restart. By default the app reaches Supabase at `http://supabase.localhost:8000`: browsers resolve `*.localhost` to loopback, and the app container is given an `extra_hosts` entry for the same name. For production, point `SUPABASE_PUBLIC_URL` at a real domain that resolves from both the browser and the server. Migrations run in the one-shot `migrate` service and are tracked in `public.cognote_migrations`, so upgrading is `up -d --build`. Full variable reference and further notes live in [docker-compose.example.yml](docker-compose.example.yml).
 
+### Behind a reverse proxy
+
+Forward the client `Host` header unchanged and set `X-Forwarded-Proto`, or set
+`NEXT_PUBLIC_SITE_URL` to the public origin. The app builds absolute redirect URLs
+from those; when none of them is present it trusts the request `Host` and assumes
+`https`, which is wrong for a plain-HTTP deployment — the bundled stack sets
+`NEXT_PUBLIC_SITE_URL` (from `APP_URL`) for exactly that reason.
+
+### S3 protocol endpoint
+
+Storage mounts an S3-compatible API at `/storage/v1/s3`, and upstream ships a
+published demo key pair for it. CogNote does not use that endpoint, so the bundled
+gateway denies the path (`docker/supabase/volumes/api/nginx.conf.template`) and the
+stack requires real `S3_PROTOCOL_ACCESS_*` values instead of defaulting to the demo
+pair. To use the S3 protocol, delete the deny block in the gateway template and set
+the two values — the values `generate-secrets.sh` mints are fine.
+
 ### Hosted vs self-host
 
 | | |
