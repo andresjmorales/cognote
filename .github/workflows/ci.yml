@@ -103,4 +103,11 @@ jobs:
           ANON_KEY: dummy-anon-key
           SERVICE_ROLE_KEY: dummy-service-role-key
           SUPABASE_PUBLIC_URL: http://supabase.localhost:8000
-        run: docker compose -f docker-compose.example.yml config --quiet
+          # Required (no defaults) — see the storage service in the example.
+          S3_PROTOCOL_ACCESS_KEY_ID: dummy-s3-access-key-id
+          S3_PROTOCOL_ACCESS_KEY_SECRET: dummy-s3-access-key-secret
+        run: |
+          docker compose -f docker-compose.example.yml config --quiet
+          # The cron service only exists under its profile, so a bare `config`
+          # never renders it. Validate both.
+          docker compose -f docker-compose.example.yml --profile cron config --quiet
