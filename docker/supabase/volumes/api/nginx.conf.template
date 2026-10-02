@@ -1,0 +1,90 @@
+# Minimal API gateway for the trimmed self-hosted Supabase stack.
+#
+# Fronts the three services supabase-js talks to, at the paths it expects:
+#   /auth/v1/*      -> GoTrue
+#   /rest/v1/*      -> PostgREST
+#   /storage/v1/*   -> Storage API
+#
+# It also terminates CORS. The browser calls this gateway directly (Supabase's
+# anon/service keys are sent as headers), so every response and preflight must
+# carry CORS headers. ${APP_URL} is substituted by the nginx image entrypoint
+# (envsubst) with the app's public origin.
+
+server {
+  listen 8000;
+  server_name _;
+
+  # Resolve upstreams through Docker's embedded DNS at request time (nginx
+  # caches statically-resolved names for the worker's lifetime, which breaks
+  # when a container is recreated and gets a new IP).
+  resolver 127.0.0.11 valid=10s ipv6=off;
+
+  # Sheet-music uploads are capped at 25 MiB by the app; leave headroom.
+  client_max_body_size 60m;
+  proxy_http_version 1.1;
+  proxy_read_timeout 300s;
+  proxy_send_timeout 300s;
+
+  # Upstream services set their own CORS headers; hide them so we emit exactly
+  # one set (duplicate Access-Control-Allow-Origin makes browsers reject it).
+  proxy_hide_header Access-Control-Allow-Origin;
+  proxy_hide_header Access-Control-Allow-Methods;
+  proxy_hide_header Access-Control-Allow-Headers;
+  proxy_hide_header Access-Control-Expose-Headers;
+  proxy_hide_header Access-Control-Max-Age;
+
+  proxy_set_header Host              $host;
+  proxy_set_header X-Real-IP         $remote_addr;
+  proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+
+  location /auth/v1/ {
+    add_header Access-Control-Allow-Origin  "${APP_URL}" always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "authorization, apikey, content-type, accept, origin, x-client-info, x-supabase-api-version, x-requested-with, prefer, range, if-none-match, x-upsert" always;
+    add_header Access-Control-Max-Age 86400 always;
+    add_header Vary Origin always;
+    if ($request_method = OPTIONS) { return 204; }
+    set $upstream_auth http://auth:9999;
+    rewrite ^/auth/v1/(.*)$ /$1 break;
+    proxy_pass $upstream_auth;
+  }
+
+  location /rest/v1/ {
+    add_header Access-Control-Allow-Origin  "${APP_URL}" always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "authorization, apikey, content-type, accept, origin, x-client-info, x-supabase-api-version, x-requested-with, prefer, range, if-none-match, x-upsert" always;
+    add_header Access-Control-Expose-Headers "content-range, content-length, content-type, x-supabase-api-version" always;
+    add_header Access-Control-Max-Age 86400 always;
+    add_header Vary Origin always;
+    if ($request_method = OPTIONS) { return 204; }
+    set $upstream_rest http://rest:3000;
+    rewrite ^/rest/v1/(.*)$ /$1 break;
+    proxy_pass $upstream_rest;
+  }
+
+  # The app never uses the S3 protocol endpoint (Storage mounts it at /s3
+  # unconditionally), so deny it here. A self-hoster who never sets real
+  # S3_PROTOCOL_* keys must not be able to reach Storage with whatever value
+  # the image falls back to. Delete this block to re-enable the endpoint.
+  location ^~ /storage/v1/s3 {
+    return 404;
+  }
+
+  location /storage/v1/ {
+    add_header Access-Control-Allow-Origin  "${APP_URL}" always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "authorization, apikey, content-type, accept, origin, x-client-info, x-supabase-api-version, x-requested-with, prefer, range, if-none-match, x-upsert" always;
+    add_header Access-Control-Expose-Headers "content-range, content-length, content-type, x-supabase-api-version" always;
+    add_header Access-Control-Max-Age 86400 always;
+    add_header Vary Origin always;
+    if ($request_method = OPTIONS) { return 204; }
+    set $upstream_storage http://storage:5000;
+    rewrite ^/storage/v1/(.*)$ /$1 break;
+    proxy_pass $upstream_storage;
+  }
+
+  location = /health {
+    return 200 "ok\n";
+  }
+}

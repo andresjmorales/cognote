@@ -3,6 +3,9 @@ name: CI
 # Typecheck + unit tests on every push and PR. The unit suite is pure-logic
 # (lib/**/*.test.ts) and runs in under a second — no database or browser
 # needed, so this stays fast enough to never be worth skipping.
+#
+# A second job builds the Docker image when Docker-related paths change, so
+# Dockerfile rot is caught without paying for a full image build on every PR.
 
 on:
   push:
@@ -12,6 +15,8 @@ on:
 
 permissions:
   contents: read
+  # Required by dorny/paths-filter on pull_request (GET /pulls/{n}/files).
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -37,3 +42,72 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Docker-relevant paths
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            docker:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-compose.example.yml'
+              - 'docker/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'next.config.ts'
+              - 'tsconfig.json'
+              - 'postcss.config.mjs'
+              - 'proxy.ts'
+              - 'app/**'
+              - 'lib/**'
+              - 'components/**'
+              - 'public/**'
+
+      - name: Set up Docker Buildx
+        if: steps.filter.outputs.docker == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        if: steps.filter.outputs.docker == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The example references env_file: .env.local, which is gitignored.
+      - name: Create placeholder env file
+        run: touch .env.local
+
+      - name: Validate example compose renders
+        env:
+          POSTGRES_PASSWORD: dummy-postgres-password
+          JWT_SECRET: dummy-jwt-secret-at-least-32-characters-long
+          ANON_KEY: dummy-anon-key
+          SERVICE_ROLE_KEY: dummy-service-role-key
+          SUPABASE_PUBLIC_URL: http://supabase.localhost:8000
+          # Required (no defaults) — see the storage service in the example.
+          S3_PROTOCOL_ACCESS_KEY_ID: dummy-s3-access-key-id
+          S3_PROTOCOL_ACCESS_KEY_SECRET: dummy-s3-access-key-secret
+        run: |
+          docker compose -f docker-compose.example.yml config --quiet
+          # The cron service only exists under its profile, so a bare `config`
+          # never renders it. Validate both.
+          docker compose -f docker-compose.example.yml --profile cron config --quiet

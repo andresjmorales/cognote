@@ -1,0 +1,36 @@
+# Build context hygiene.
+#
+# The .env lines matter most: .env.local holds live secrets (service_role key,
+# TOKEN_ENCRYPTION_KEY, RESEND_API_KEY, CRON_SECRET). Excluding it here is what
+# guarantees they never land in an image layer. The app is given its environment
+# at RUNTIME by compose `env_file` instead — image layers are forever and
+# readable by anyone who can pull the image.
+
+node_modules
+.next
+.git
+.gitignore
+.github
+# compose stack assets (nginx config, db init SQL) — used by compose, not the build
+docker
+
+# secrets — never bake these into an image
+.env
+.env.*
+.env.local
+.env.local.*
+
+# tests and local-only artifacts, not needed to build or run
+e2e
+playwright-report
+test-results
+notes
+*.log
+*.tsbuildinfo
+
+# repo docs, Supabase SQL, and tooling configs — not needed for next build
+supabase
+scripts
+vitest.config.ts
+playwright.config.ts
+*.md

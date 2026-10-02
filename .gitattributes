@@ -1,0 +1,6 @@
+# Keep scripts and container assets LF, even when the repo is cloned on Windows.
+# A CRLF shebang breaks `sh` / `bash` inside Linux containers.
+*.sh text eol=lf
+docker/supabase/volumes/db/*.sql text eol=lf
+docker/supabase/volumes/api/*.template text eol=lf
+Dockerfile text eol=lf

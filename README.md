@@ -189,7 +189,8 @@ Connect the GitHub repo and set:
 | `NEXT_PUBLIC_BETA_ONLY` | Optional | `true` shows beta code + waitlist UI (redeploy after change) |
 | `BETA_ACCESS_CODE` | Optional | Server-only secret when beta is on. **Never** `NEXT_PUBLIC_*` |
 | `COGNOTE_DEPLOYMENT` | Official hosted only | Omit / `self_hosted` on your deploy. `hosted` only on cognote.studio for Free/Pro limits |
-| `HOSTED_*` / `HOSTED_STRIPE_*` / `STRIPE_PRICE_ID_PRO_MONTHLY` / `NEXT_PUBLIC_SITE_URL` | Official hosted only | Platform Hosted Pro — see `.env.example` |
+| `HOSTED_*` / `HOSTED_STRIPE_*` / `STRIPE_PRICE_ID_PRO_MONTHLY` | Official hosted only | Platform Hosted Pro — intentionally omitted from `.env.example` (cognote.studio only) |
+| `NEXT_PUBLIC_SITE_URL` | Optional | Absolute origin for cron-built links; see `.env.example` |
 
 Use **cloud** Supabase keys on Vercel, not Docker local keys.
 
@@ -217,12 +218,65 @@ Local webhook forwarding: `stripe listen --forward-to localhost:3000/api/webhook
 
 Platform Hosted Pro billing (restricted platform keys, separate from teacher tuition): [ARCHITECTURE.md](ARCHITECTURE.md#deployment-modes).
 
+### Deploy with Docker
+
+`docker-compose.example.yml` runs the whole stack on one host — CogNote plus its
+own trimmed Supabase (Postgres, Auth, PostgREST, Storage and a small gateway),
+with migrations applied automatically. No cloud accounts needed.
+
+1. Copy the compose example and env template. The stack needs a few generated
+   secrets; `generate-secrets.sh` prints them, ready to paste into `.env.local`:
+
+   ```bash
+   cp docker-compose.example.yml docker-compose.yml
+   cp .env.example .env.local
+   sh docker/supabase/generate-secrets.sh   # paste output into .env.local
+   ```
+
+2. Build and start:
+
+   ```bash
+   docker compose --env-file .env.local up -d --build
+   ```
+
+   Open <http://localhost:3000> and create the teacher account. New signups are
+   auto-confirmed by default (`ENABLE_EMAIL_AUTOCONFIRM=true`) so no mail server
+   is needed; the first signup becomes the studio owner.
+
+3. Reminder emails (optional): the stack ships a `cron` profile that hits
+   `/api/cron/event-reminders` daily, standing in for Vercel Cron:
+
+   ```bash
+   docker compose --env-file .env.local --profile cron up -d
+   ```
+
+`--env-file` is required: Compose substitutes `${...}` build args from it, while `env_file:` only injects the container's runtime environment. Pass it to **every** compose command (`up`, `ps`, `logs`, `stop`, …) — `${VAR:?}` is interpolated at parse time, so bare `docker compose ps` fails without it. Secrets stay in `.env.local` and are never baked into image layers.
+
+`NEXT_PUBLIC_*` values are inlined into the client bundle at **build** time — changing them needs a rebuild (`up -d --build`), not just a restart. By default the app reaches Supabase at `http://supabase.localhost:8000`: browsers resolve `*.localhost` to loopback, and the app container is given an `extra_hosts` entry for the same name. For production, point `SUPABASE_PUBLIC_URL` at a real domain that resolves from both the browser and the server. Migrations run in the one-shot `migrate` service and are tracked in `public.cognote_migrations`, so upgrading is `up -d --build`. Full variable reference and further notes live in [docker-compose.example.yml](docker-compose.example.yml).
+
+### Behind a reverse proxy
+
+Forward the client `Host` header unchanged and set `X-Forwarded-Proto`, or set
+`NEXT_PUBLIC_SITE_URL` to the public origin. The app builds absolute redirect URLs
+from those; when none of them is present it trusts the request `Host` and assumes
+`https`, which is wrong for a plain-HTTP deployment — the bundled stack sets
+`NEXT_PUBLIC_SITE_URL` (from `APP_URL`) for exactly that reason.
+
+### S3 protocol endpoint
+
+Storage mounts an S3-compatible API at `/storage/v1/s3`, and upstream ships a
+published demo key pair for it. CogNote does not use that endpoint, so the bundled
+gateway denies the path (`docker/supabase/volumes/api/nginx.conf.template`) and the
+stack requires real `S3_PROTOCOL_ACCESS_*` values instead of defaulting to the demo
+pair. To use the S3 protocol, delete the deny block in the gateway template and set
+the two values — the values `generate-secrets.sh` mints are fine.
+
 ### Hosted vs self-host
 
 | | |
 |--|--|
 | **Hosted** | Official cognote.studio instance (`COGNOTE_DEPLOYMENT=hosted`) |
-| **Self-host** | MIT, free forever — you run Vercel/Supabase/DNS/email yourself |
+| **Self-host** | MIT, free forever — run the Docker stack above, or bring your own Vercel/Supabase/DNS/email |
 
 ---
 

@@ -155,6 +155,10 @@ Lesson tuition Stripe (BYO per teacher) uses `/api/webhooks/stripe/[teacherId]` 
 
 `NEXT_PUBLIC_BETA_ONLY` + `BETA_ACCESS_CODE` are independent of deployment: beta UI/API vs soft limits / hosting marketing. Never put the access code in `NEXT_PUBLIC_*`.
 
+### Self-hosting topology
+
+`docker-compose.example.yml` runs a trimmed Supabase stack alongside the app: Postgres, GoTrue (Auth), PostgREST, Storage API and an nginx gateway that fronts `/auth/v1`, `/rest/v1` and `/storage/v1` (supabase-js uses one base URL, so those paths must share an origin). Studio, Realtime, Edge Functions, Analytics, Supavisor and imgproxy are omitted — the app uses none of them. `public.cognote_migrations` records applied files; the `migrate` service is idempotent, so the stack upgrades with `up -d --build`. A `cron` profile replaces Vercel Cron for `/api/cron/event-reminders`.
+
 ## Spaced repetition
 
 Flashcards use SM-2 (same algorithm as Anki). Kid-facing ratings and interval rules: [notes/spaced-repetition.md](notes/spaced-repetition.md).
