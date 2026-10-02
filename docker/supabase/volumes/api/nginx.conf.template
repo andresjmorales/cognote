@@ -63,6 +63,14 @@ server {
     proxy_pass $upstream_rest;
   }
 
+  # The app never uses the S3 protocol endpoint (Storage mounts it at /s3
+  # unconditionally), so deny it here. A self-hoster who never sets real
+  # S3_PROTOCOL_* keys must not be able to reach Storage with whatever value
+  # the image falls back to. Delete this block to re-enable the endpoint.
+  location ^~ /storage/v1/s3 {
+    return 404;
+  }
+
   location /storage/v1/ {
     add_header Access-Control-Allow-Origin  "${APP_URL}" always;
     add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
