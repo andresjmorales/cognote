@@ -102,7 +102,16 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-surface shadow-lg z-50 overflow-hidden">
+        // On a phone the bell sits well inside the right edge, because the
+        // avatar and the menu button follow it. Anchoring a 320px panel to the
+        // bell therefore pushed the panel past the left of the screen and off
+        // view. Below md the panel is pinned to the viewport so it always fits;
+        // from md up there is room for the anchored dropdown.
+        <div
+          role="dialog"
+          aria-label="Notifications"
+          className="fixed left-3 right-3 top-16 mt-1 md:absolute md:left-auto md:right-0 md:top-auto md:w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-surface shadow-lg z-50 overflow-hidden"
+        >
           <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <span className="text-sm font-semibold">Notifications</span>
             {unread > 0 && (

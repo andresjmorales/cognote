@@ -61,19 +61,25 @@ export function IosInstallHint() {
 
   if (!visible) return null;
 
+  // The separator lives here rather than in the caller. AccountMenu used to keep
+  // its own bordered wrapper around this component, so on every platform that
+  // never sees the hint the wrapper still rendered its border and padding, leaving
+  // a stray divider and a blank gap directly above Sign out.
   return (
-    <p className="flex items-start justify-between gap-2 text-xs text-muted">
-      <span>
-        Install CogNote: tap Share, then <strong>Add to Home Screen</strong>.
-      </span>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Dismiss install instructions"
-        className="shrink-0 p-2 -m-1 text-lg leading-none text-muted hover:text-foreground cursor-pointer"
-      >
-        ×
-      </button>
-    </p>
+    <div className="border-t border-border mt-1 pt-1 px-3 py-2">
+      <p className="flex items-start justify-between gap-2 text-xs text-muted">
+        <span>
+          Install CogNote: tap Share, then <strong>Add to Home Screen</strong>.
+        </span>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Dismiss install instructions"
+          className="shrink-0 p-2 -m-1 text-lg leading-none text-muted hover:text-foreground cursor-pointer"
+        >
+          ×
+        </button>
+      </p>
+    </div>
   );
 }

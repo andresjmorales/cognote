@@ -7,6 +7,7 @@ import { OptionalAiSettingsForm } from "@/components/teacher/settings/OptionalAi
 import { SpreadsheetImportSettings } from "@/components/teacher/settings/SpreadsheetImportSettings";
 import { DataTransferSettings } from "@/components/teacher/settings/DataTransferSettings";
 import { getPolicy } from "@/lib/server/scheduling";
+import { isPushConfigured } from "@/lib/server/push";
 import { maskSecret } from "@/lib/billing";
 import {
   getDeploymentMode,
@@ -164,6 +165,7 @@ export default async function AccountPage({
         <NotificationSettingsForm
           policy={clientPolicy}
           accountEmail={accountEmail}
+          pushConfigured={isPushConfigured()}
         />
         <OptionalAiSettingsForm
           policy={clientPolicy}

@@ -104,4 +104,53 @@ test.describe("mobile layout", () => {
       }
     }
   });
+
+  test("notifications panel stays inside the viewport on mobile", async ({
+    page,
+  }) => {
+    await signInAsTeacher(page);
+
+    for (const width of MOBILE_WIDTHS) {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/schedule");
+      await page.getByRole("button", { name: /^Notifications/ }).click();
+
+      const panel = page.getByRole("dialog", { name: "Notifications" });
+      await expect(panel).toBeVisible();
+
+      const box = await panel.boundingBox();
+      if (!box) throw new Error("notification panel has no layout box");
+      expect(box.x, `panel left edge at ${width}px`).toBeGreaterThanOrEqual(-1);
+      expect(
+        box.x + box.width,
+        `panel right edge at ${width}px`
+      ).toBeLessThanOrEqual(width + 1);
+      expect(
+        await overflowOf(page),
+        `overflow at ${width}px`
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("account menu has no blank band above Sign out", async ({ page }) => {
+    await page.setViewportSize({ width: 412, height: 915 });
+    await signInAsTeacher(page);
+    await page.goto("/dashboard");
+
+    await page.getByRole("button", { name: "Account menu" }).click();
+    const help = page.getByRole("menuitem", { name: "Help" });
+    const signOut = page.getByRole("menuitem", { name: "Sign out" });
+    await expect(help).toBeVisible();
+    await expect(signOut).toBeVisible();
+
+    const above = await help.boundingBox();
+    const below = await signOut.boundingBox();
+    if (!above || !below) throw new Error("account menu has no layout box");
+
+    // The iOS install hint is hidden on every other browser, but its wrapper kept
+    // its border and padding anyway, so an empty band sat between Help and Sign
+    // out with a divider on each side of it. One divider plus its margin is a few
+    // pixels; the blank band measured roughly thirty.
+    expect(below.y - (above.y + above.height)).toBeLessThanOrEqual(12);
+  });
 });

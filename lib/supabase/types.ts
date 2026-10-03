@@ -526,6 +526,34 @@ export interface Database {
           href?: string | null;
         };
       };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          created_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          created_at?: string;
+          last_seen_at?: string;
+        };
+        Update: {
+          p256dh?: string;
+          auth?: string;
+          user_agent?: string | null;
+          last_seen_at?: string;
+        };
+      };
       waitlist: {
         Row: {
           id: string;

@@ -148,3 +148,36 @@ test.describe("iOS install hint", () => {
     await expect(page.getByText(/Add to Home Screen/i)).toHaveCount(0);
   });
 });
+
+/** The worker's push handling is asserted against the SERVED file, which is
+ *  build-independent (public/sw.js is copied verbatim), so this one needs no
+ *  production build. The handlers are pinned the same way lib/push.test.ts pins
+ *  them, because a service worker is the only place they can live. */
+test("serves a push-capable service worker", async ({ request }) => {
+  const res = await request.get("/sw.js");
+  expect(res.ok()).toBeTruthy();
+  const body = await res.text();
+  expect(body).toContain('addEventListener("push"');
+  expect(body).toContain("showNotification(");
+  expect(body).toContain('addEventListener("notificationclick"');
+  expect(body).toContain("clients.openWindow");
+});
+
+/** Whether the push control renders depends on the server's VAPID configuration
+ *  (a server-gated flag) plus the public key the browser fetches from
+ *  /api/push/config at runtime. So this asserts the invariant that holds either
+ *  way: when the control renders it must be a usable button. It cannot assert
+ *  absence — the absent branch returns early. */
+test("renders a usable push control when the build has push enabled", async ({ page }) => {
+  test.skip(!prodBuild, prodOnly);
+  await signInAsTeacher(page);
+  await page.goto("/account");
+
+  const control = page.getByText(/Push notifications on this device/i);
+  if ((await control.count()) === 0) return; // built without a VAPID key
+
+  await expect(control).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Turn (on|off)/ })
+  ).toBeVisible();
+});
