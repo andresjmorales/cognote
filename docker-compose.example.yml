@@ -9,6 +9,9 @@
 #   sh docker/supabase/generate-secrets.sh   # paste the output into .env.local
 #   docker compose --env-file .env.local up -d --build
 #
+# Building the app image needs BuildKit (the Dockerfile uses RUN --mount=type=cache);
+# install the buildx plugin or `docker compose up --build` fails with a misleading error.
+#
 # Pass --env-file .env.local to EVERY compose command (ps, logs, stop, …).
 # ${...:?} is interpolated at parse time, so bare `docker compose ps` fails too.
 #

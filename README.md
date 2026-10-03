@@ -239,6 +239,8 @@ with migrations applied automatically. No cloud accounts needed.
    docker compose --env-file .env.local up -d --build
    ```
 
+   Building the app image needs BuildKit (the Dockerfile uses `RUN --mount=type=cache`); install the `buildx` plugin or `docker compose up --build` fails with a misleading error.
+
    Open <http://localhost:3000> and create the teacher account. New signups are
    auto-confirmed by default (`ENABLE_EMAIL_AUTOCONFIRM=true`) so no mail server
    is needed; the first signup becomes the studio owner.
