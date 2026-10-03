@@ -41,7 +41,7 @@ npm run test:e2e               # or npm run test:e2e:ui
 
 Override the app URL with `PLAYWRIGHT_BASE_URL` if needed. Not wired into CI yet (needs Docker + a running Next server).
 
-The four service-worker specs in `e2e/pwa.spec.ts` skip unless you set `PWA_E2E=1`, because the worker only registers in a production build. To run them:
+The specs in `e2e/pwa.spec.ts` that need a running production build — service-worker registration, offline, cache policy, and the Account-page push control — skip unless you set `PWA_E2E=1`, because the worker only registers in a production build. The specs that assert served static files (the manifest, `sw.js`, and the push-capable worker) run against any server. To run the gated ones:
 
 ```bash
 npm run build

@@ -6,6 +6,7 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { usePathname, useRouter } from "next/navigation";
 import { BRAND_ICON_SIZE } from "@/lib/ui-constants";
 import { createClient } from "@/lib/supabase/client";
+import { releasePushSubscription } from "@/lib/push-client";
 import { NotificationBell } from "@/components/teacher/NotificationBell";
 import { useTeacherTheme } from "@/components/teacher/TeacherThemeProvider";
 import { IosInstallHint } from "@/components/pwa/IosInstallHint";
@@ -96,6 +97,9 @@ function AccountMenu({
 
   async function handleSignOut() {
     setOpen(false);
+    // Release this device's subscription before the session ends: the DELETE is
+    // authenticated, and a subscription must not outlive the teacher who made it.
+    await releasePushSubscription();
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -194,9 +198,7 @@ function AccountMenu({
             Help
           </Link>
 
-          <div className="border-t border-border mt-1 pt-1 px-3 py-2">
-            <IosInstallHint />
-          </div>
+          <IosInstallHint />
 
           <div className="border-t border-border mt-1 pt-1">
             <button

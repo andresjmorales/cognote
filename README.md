@@ -188,6 +188,10 @@ Connect the GitHub repo and set:
 | `CRON_SECRET` | Recommended on hosted / if using cron | Bearer token for `/api/cron/*` (Vercel Cron sends it automatically when set). Event reminders run once daily. |
 | `NEXT_PUBLIC_BETA_ONLY` | Optional | `true` shows beta code + waitlist UI (redeploy after change) |
 | `BETA_ACCESS_CODE` | Optional | Server-only secret when beta is on. **Never** `NEXT_PUBLIC_*` |
+| `VAPID_PUBLIC_KEY` | Optional | Enables web push. Public key from `npx web-push generate-vapid-keys`. Read by the server at runtime and served to the browser on request — restart after changing, no rebuild |
+| `VAPID_PRIVATE_KEY` | Optional | Server-only pair for the key above. **Never** `NEXT_PUBLIC_*` |
+| `VAPID_SUBJECT` | Optional | `mailto:you@your-domain.com` — required by the Web Push spec; defaults to `mailto:noreply@example.com` |
+| `PUSH_ENDPOINT_HOSTS_EXTRA` | Optional | Comma-separated extra push-service hostnames if yours is not standard (FCM, WNS, Mozilla and Apple are allowed by default) |
 | `COGNOTE_DEPLOYMENT` | Official hosted only | Omit / `self_hosted` on your deploy. `hosted` only on cognote.studio for Free/Pro limits |
 | `HOSTED_*` / `HOSTED_STRIPE_*` / `STRIPE_PRICE_ID_PRO_MONTHLY` | Official hosted only | Platform Hosted Pro — intentionally omitted from `.env.example` (cognote.studio only) |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Absolute origin for cron-built links; see `.env.example` |
@@ -199,6 +203,24 @@ Use **cloud** Supabase keys on Vercel, not Docker local keys.
 1. **Outbound:** [Resend](https://resend.com), verify your domain, set `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS=notifications@your-domain.com`. From-name / reply-to are per-teacher.
 2. **Inbound (optional):** [Cloudflare Email Routing](https://developers.cloudflare.com/email-routing/) catch-all → your inbox. Keep records **DNS only** (grey cloud) if the site is on Vercel.
 3. **DMARC:** `TXT` at `_dmarc` with `v=DMARC1; p=none; …` is enough to start.
+
+### 5b. Web push (optional)
+
+Phone notifications for family cancellations, paid invoices and event RSVPs.
+Generate a keypair once and set the three `VAPID_*` variables above:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Push degrades cleanly: without the keys the Account-page control hides itself
+and nothing is sent, so the variables are safe to omit. `NEXT_PUBLIC_*` is baked
+in at build time, so changing the public key needs a redeploy. iOS delivers push
+only to an app added to the Home Screen, on iOS 16.4 or later.
+
+Stored push endpoints are restricted to known push services (FCM, WNS, Mozilla,
+Apple) because the server POSTs to the URL a browser hands it; set
+`PUSH_ENDPOINT_HOSTS_EXTRA` if your push service is not one of those.
 
 ### 6. Family tuition payments (optional)
 

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
 import { isUniqueViolation, WELCOME_NOTIFICATION } from "@/lib/onboarding";
 import { getPolicy } from "@/lib/server/scheduling";
+import { sendPushToTeacher } from "@/lib/server/push";
 import type { StudioPolicy } from "@/lib/schedule";
 
 export type NotificationType =
@@ -26,19 +27,45 @@ export async function createTeacherNotification(
 ): Promise<{ emailed: boolean; emailError?: string }> {
   const policy = args.policy ?? (await getPolicy(supabase, args.teacherId));
   const href = args.href ?? null;
+  // Both fields the push needs come from the same row: id tags the tray entry
+  // (a re-delivery replaces its own notification instead of stacking a
+  // duplicate), and created_at is the event time to stamp it with. Without a
+  // row (bell off) both stay null — a payload with no timestamp already means
+  // "now", so there is nothing to invent.
+  let insertedRow: { id: string; created_at: string } | null = null;
 
   if (policy.notify_in_app) {
-    const { error } = await supabase.from("notifications").insert({
-      teacher_id: args.teacherId,
-      type: args.type,
-      title: args.title,
-      body: args.body ?? "",
-      href,
-    });
+    const { data: inserted, error } = await supabase
+      .from("notifications")
+      .insert({
+        teacher_id: args.teacherId,
+        type: args.type,
+        title: args.title,
+        body: args.body ?? "",
+        href,
+      })
+      .select("id, created_at")
+      .single();
     if (error) {
       console.error("createTeacherNotification insert failed:", error.message);
     }
+    insertedRow = inserted ?? null;
   }
+
+  // Push is a second transport, not a function of the bell row, so it sits
+  // beside the insert rather than inside it: a teacher who turns the bell off
+  // should still get phone notifications. A brand-new teacher has no
+  // subscription yet, so the "welcome" type is a natural no-op. Awaited rather
+  // than fired and forgotten because on Vercel an unawaited promise can be
+  // killed the moment the response returns, which would silently drop the
+  // push; sendPushToTeacher never throws, so this cannot fail the caller.
+  await sendPushToTeacher(supabase, args.teacherId, {
+    id: insertedRow?.id ?? null,
+    createdAt: insertedRow?.created_at ?? null,
+    title: args.title,
+    body: args.body,
+    href,
+  });
 
   const wantEmail =
     args.type === "portal_cancel"

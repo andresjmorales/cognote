@@ -6,6 +6,7 @@ import { requiresBetaCode } from "@/lib/entitlements";
 import { stringFromUserMetadata } from "@/lib/onboarding";
 import { ensureTeacherForAuthUser } from "@/lib/server/ensure-teacher";
 import { OnboardingTour } from "@/components/teacher/OnboardingTour";
+import { PushOwnership } from "@/components/teacher/PushOwnership";
 import { TeacherNav } from "@/components/teacher/TeacherNav";
 import { TeacherThemeProvider } from "@/components/teacher/TeacherThemeProvider";
 
@@ -59,6 +60,7 @@ export default async function TeacherLayout({
 
   return (
     <TeacherThemeProvider>
+      <PushOwnership />
       <TeacherNav
         teacherName={teacher?.display_name ?? user.email ?? "Teacher"}
         avatarUrl={teacher?.avatar_url ?? null}

@@ -54,3 +54,53 @@ self.addEventListener("fetch", (event) => {
     )
   );
 });
+
+// Web push. The payload is the JSON written by lib/server/push.ts. A push MUST
+// always end in a shown notification: subscriptions are created with
+// userVisibleOnly, and Safari revokes a subscription that receives pushes
+// without displaying anything.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  // The payload's id (carried as `tag`) means a re-delivery of the same
+  // notification REPLACES its own tray entry instead of stacking a duplicate.
+  // Only set it when present: an explicit undefined tag is not the same as no
+  // tag on some clients.
+  const options = {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/badge-72.png",
+    data: { href: data.href || "/" },
+  };
+  if (data.tag) options.tag = data.tag;
+  // The event time, when the payload carries a usable one: the tray would
+  // otherwise show when the push ARRIVED, which misreports a delivery delayed
+  // up to the TTL. A non-finite/absent value is ignored, leaving the default.
+  if (Number.isFinite(data.timestamp)) options.timestamp = data.timestamp;
+  event.waitUntil(
+    self.registration.showNotification(data.title || "CogNote", options)
+  );
+});
+
+// Focus an existing tab already on the target route, otherwise open one.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const href = (event.notification.data && event.notification.data.href) || "/";
+  const target = new URL(href, self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of windows) {
+        if (client.url === target && "focus" in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })()
+  );
+});
