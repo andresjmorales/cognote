@@ -26,6 +26,7 @@
 #   migrate   one-shot: applies supabase/migrations/*.sql, tracked in a ledger
 #   app       CogNote itself
 #   cron      optional (profile "cron"): pings /api/cron/event-reminders daily
+#   backup    optional (profile "backup"): scheduled DB + storage/secret backups
 #
 # Services intentionally omitted vs. upstream Supabase: Studio, Realtime, Edge
 # Functions, Analytics, Supavisor and imgproxy — CogNote uses none of them.
@@ -279,6 +280,40 @@ services:
       - |
         echo "$$CRON_SCHEDULE wget -q -O- --header 'Authorization: Bearer $$CRON_SECRET' http://app:3000/api/cron/event-reminders >/proc/1/fd/1 2>&1" > /etc/crontabs/root
         exec crond -f -l 8
+
+  # Optional: scheduled backup of the DB, the storage volume and the env/secrets.
+  # Enable with: docker compose --env-file .env.local --profile backup up -d
+  # Self-contained: no host cron and no Docker socket. Runs one backup at start,
+  # then follows BACKUP_SCHEDULE. (Replaces the image's /etc/crontabs/root.)
+  backup:
+    image: supabase/postgres:17.6.1.136
+    profiles: ["backup"]
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    environment:
+      DB_HOST: db
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 3 * * *}
+      KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      SECRETS_KEEP_DAYS: ${BACKUP_SECRETS_KEEP_DAYS:-90}
+    volumes:
+      - ./docker/supabase/backup.sh:/backup.sh:ro
+      - storage-data:/var/lib/storage:ro
+      - ./.env.local:/secrets/.env.local:ro
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # PATH is pinned: crond runs jobs with a minimal PATH that omits the Nix bin
+        # dir where this image's pg_dump lives. crond has no catch-up, so run one
+        # backup now (backgrounded and non-fatal) before the first scheduled tick.
+        echo "$$BACKUP_SCHEDULE PATH=$$PATH /bin/bash /backup.sh > /proc/1/fd/1 2>&1" > /etc/crontabs/root
+        ( /bin/bash /backup.sh > /proc/1/fd/1 2>&1 || true ) &
+        exec crond -f
 
 volumes:
   db-data:
