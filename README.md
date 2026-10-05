@@ -261,6 +261,8 @@ with migrations applied automatically. No cloud accounts needed.
    docker compose --env-file .env.local up -d --build
    ```
 
+   Building the app image needs BuildKit (the Dockerfile uses `RUN --mount=type=cache`); install the `buildx` plugin or `docker compose up --build` fails with a misleading error.
+
    Open <http://localhost:3000> and create the teacher account. New signups are
    auto-confirmed by default (`ENABLE_EMAIL_AUTOCONFIRM=true`) so no mail server
    is needed; the first signup becomes the studio owner.
@@ -275,6 +277,45 @@ with migrations applied automatically. No cloud accounts needed.
 `--env-file` is required: Compose substitutes `${...}` build args from it, while `env_file:` only injects the container's runtime environment. Pass it to **every** compose command (`up`, `ps`, `logs`, `stop`, …) — `${VAR:?}` is interpolated at parse time, so bare `docker compose ps` fails without it. Secrets stay in `.env.local` and are never baked into image layers.
 
 `NEXT_PUBLIC_*` values are inlined into the client bundle at **build** time — changing them needs a rebuild (`up -d --build`), not just a restart. By default the app reaches Supabase at `http://supabase.localhost:8000`: browsers resolve `*.localhost` to loopback, and the app container is given an `extra_hosts` entry for the same name. For production, point `SUPABASE_PUBLIC_URL` at a real domain that resolves from both the browser and the server. Migrations run in the one-shot `migrate` service and are tracked in `public.cognote_migrations`, so upgrading is `up -d --build`. Full variable reference and further notes live in [docker-compose.example.yml](docker-compose.example.yml).
+
+### Backups and restore
+
+The stack ships an opt-in `backup` profile: a container that `pg_dump`s the
+database, tars the `storage-data` volume and copies `.env.local` into
+`./backups` on the host, then prunes old files (`BACKUP_KEEP_DAYS`, default 14;
+`BACKUP_SECRETS_KEEP_DAYS`, default 90). It runs one backup at start, then
+follows `BACKUP_SCHEDULE` (5-field cron, default `0 3 * * *`) on the container
+clock, which is UTC. No host cron and no Docker socket.
+
+```bash
+docker compose --env-file .env.local --profile backup up -d
+```
+
+Run one on demand — this execs into the running container, so nothing is
+recreated:
+
+```bash
+docker compose --env-file .env.local exec backup /bin/bash /backup.sh
+```
+
+**Restore drill** — rehearse it before you need it. Database:
+
+```bash
+gunzip -c backups/db-YYYY-MM-DD.sql.gz | docker compose --env-file .env.local exec -T db psql -U postgres -d postgres
+```
+
+Storage volume (stop `app` and `storage` first so nothing writes mid-restore):
+
+```bash
+docker run --rm -v cognote_storage-data:/v -v "$PWD/backups":/b alpine sh -c 'tar xzf /b/storage-YYYY-MM-DD.tar.gz -C /v'
+```
+
+Secrets: extract `.env.local` from `secrets-YYYY-MM-DD.tar.gz` and `chmod 600` it:
+
+```bash
+tar xzf backups/secrets-YYYY-MM-DD.tar.gz -C /tmp .env.local
+chmod 600 /tmp/.env.local   # then move it into place as .env.local
+```
 
 ### Behind a reverse proxy
 
