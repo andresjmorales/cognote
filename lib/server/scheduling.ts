@@ -6,6 +6,7 @@ import {
   type StudioPolicy,
   type SlotRow,
 } from "@/lib/schedule";
+import { rescheduleSkipKeys } from "@/lib/reschedule";
 
 /**
  * Server-side scheduling operations, shared by the teacher schedule page,
@@ -48,18 +49,28 @@ export async function materializeLessons(
   from: string,
   to: string
 ): Promise<void> {
-  const [policy, { data: slots }] = await Promise.all([
+  const [policy, { data: slots }, { data: moved }] = await Promise.all([
     getPolicy(supabase, teacherId),
     supabase
       .from("lesson_slots")
       .select("*")
       .eq("teacher_id", teacherId)
       .eq("active", true),
+    // Lessons the teacher moved away from their slot occurrence.
+    supabase
+      .from("lessons")
+      .select("slot_id, rescheduled_from_date")
+      .eq("teacher_id", teacherId)
+      .not("rescheduled_from_date", "is", null),
   ]);
 
-  const rows = ((slots ?? []) as SlotRow[]).flatMap((slot) =>
-    computeOccurrences(slot, from, to, policy.timezone)
+  const skip = rescheduleSkipKeys(
+    (moved ?? []) as { slot_id: string | null; rescheduled_from_date: string | null }[]
   );
+
+  const rows = ((slots ?? []) as SlotRow[])
+    .flatMap((slot) => computeOccurrences(slot, from, to, policy.timezone))
+    .filter((row) => !skip.has(`${row.slot_id}|${row.lesson_date}`));
   if (rows.length === 0) return;
 
   const { error } = await supabase.from("lessons").upsert(rows, {
