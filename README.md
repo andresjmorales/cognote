@@ -285,13 +285,13 @@ database, tars the `storage-data` volume and copies `.env.local` into
 `./backups` on the host, then prunes old files (`BACKUP_KEEP_DAYS`, default 14;
 `BACKUP_SECRETS_KEEP_DAYS`, default 90). It runs one backup at start, then
 follows `BACKUP_SCHEDULE` (5-field cron, default `0 3 * * *`) on the container
-clock, which is UTC. No host cron and no Docker socket.
+clock, which is UTC. Nothing here needs a host cron entry or a Docker socket.
 
 ```bash
 docker compose --env-file .env.local --profile backup up -d
 ```
 
-Run one on demand — this execs into the running container, so nothing is
+Run one on demand. It execs into the running container, so nothing is
 recreated:
 
 ```bash
@@ -301,7 +301,33 @@ docker compose --env-file .env.local exec backup /bin/bash /backup.sh
 **Restore drill** — rehearse it before you need it. Database:
 
 ```bash
-gunzip -c backups/db-YYYY-MM-DD.sql.gz | docker compose --env-file .env.local exec -T db psql -U postgres -d postgres
+# Bring the stack up first: `migrate` builds the app schema from
+# supabase/migrations, and `auth`, `storage` and `realtime` are created by their
+# own services on first boot.
+docker compose --env-file .env.local up -d --wait
+
+# Restore as `supabase_admin`: it is this stack's superuser and it owns those
+# schemas. `postgres` is neither, and a restore run as `postgres` silently
+# loses `auth.identities` and `storage.objects`.
+#
+# `session_replication_role = replica` for the session stops foreign keys being
+# enforced during the load, so table order stops mattering. Without it the
+# inserts collide with the keys those services installed and the rows are
+# dropped.
+{ echo 'SET session_replication_role = replica;'
+  gunzip -c backups/db-YYYY-MM-DD.sql.gz
+} | docker compose --env-file .env.local exec -T db psql -U supabase_admin -d postgres
+```
+
+**Verify with row counts, not with an error count.** This route prints a few
+hundred lines, none of which change the data: the dump replays `CREATE TABLE`,
+`GRANT` and `ALTER ... OWNER` for objects that already exist, and the
+`_realtime`, `supabase_functions` and `supabase_migrations` schemas are not part
+of this trimmed stack. Diff a table against the source instead:
+
+```bash
+docker compose --env-file .env.local exec -T db \
+  psql -U supabase_admin -d postgres -c 'select count(*) from public.students'
 ```
 
 Storage volume (stop `app` and `storage` first so nothing writes mid-restore):
@@ -316,6 +342,54 @@ Secrets: extract `.env.local` from `secrets-YYYY-MM-DD.tar.gz` and `chmod 600` i
 tar xzf backups/secrets-YYYY-MM-DD.tar.gz -C /tmp .env.local
 chmod 600 /tmp/.env.local   # then move it into place as .env.local
 ```
+
+### Migrating onto the bundled stack
+
+Moving an existing self-hosted Supabase install onto this stack is mostly a
+database job. The app is stateless, and the gateway keeps the same shape
+(`/auth/v1`, `/rest/v1`, `/storage/v1` behind one published port).
+
+```bash
+# On the OLD stack: a dump and the storage files.
+docker compose exec -T db pg_dump -U postgres -d postgres --no-owner | gzip > cognote.sql.gz
+tar czf cognote-storage.tgz -C <old stack dir> volumes/storage
+
+# On the NEW one: empty volumes, bring it up, restore, copy the files in.
+docker compose --env-file .env.local down -v
+docker compose --env-file .env.local up -d --wait
+{ echo 'SET session_replication_role = replica;'
+  gunzip -c cognote.sql.gz
+} | docker compose --env-file .env.local exec -T db psql -U supabase_admin -d postgres
+
+docker compose --env-file .env.local cp cognote-storage.tgz storage:/tmp/s.tgz
+docker compose --env-file .env.local exec -T storage \
+  sh -c 'tar xzf /tmp/s.tgz -C /var/lib/storage --strip-components=2'
+```
+
+A few things to watch out for:
+
+- `supabase/postgres` runs its init scripts only on a first boot with an empty
+  data directory, so start with `down -v`. Reuse a volume from an earlier attempt
+  and every service dies on `password authentication failed for
+  supabase_auth_admin` (and `authenticator`, `supabase_storage_admin`).
+- `postgres` is not a superuser here. `supabase_admin` is, and it owns the
+  `auth`, `storage` and `realtime` schemas. Restoring as `postgres` on a full dump
+  drops `auth.identities` and `storage.objects` and still exits 0, and losing
+  identities means nobody can sign in afterwards.
+- Wherever a table already exists, the insert collides with the foreign keys the
+  services installed, so rows are rejected one table at a time.
+  `session_replication_role = replica` turns that off for the load. A `COPY` that
+  aborts for any other reason also turns its data lines into SQL, so those
+  failures surface as `invalid command \.` and `invalid command \N` rather than a
+  clear message.
+- The old layout keeps objects under `<stack>/volumes/storage/...` while the
+  volume mounts at `/var/lib/storage`, hence `--strip-components=2`. Files are not
+  enough on their own: the library is driven by the matching `storage.objects`
+  rows, which is why the database restore has to bring them.
+
+Carry the secrets over byte-exact: `JWT_SECRET` (otherwise everyone is signed
+out) and `TOKEN_ENCRYPTION_KEY` (otherwise stored portal and practice tokens stop
+decrypting), plus the anon and service-role keys signed with that same secret.
 
 ### Behind a reverse proxy
 
