@@ -42,6 +42,7 @@ CogNote is a multi-tenant studio app: each teacher’s data is isolated, and fam
 ### Family portal & practice links
 
 - Each family has a **`portal_token`** (unguessable, revocable). The portal page resolves the token with the service-role client and only returns that family’s data.
+- Each teacher has a **`calendar_token`** for the read-only schedule `.ics` feed — separate from family portal tokens, resolved with the service-role client, and revoked by rotating it from Settings → Account.
 - Practice assignments use similar **token URLs**. Treat tokens like passwords: send over HTTPS, don’t put them in public pages or analytics, and rotate from the Families UI if a link leaks.
 - Portal actions (e.g. cancelling a lesson) re-check that the lesson belongs to a student of that guardian before writing.
 
@@ -77,6 +78,7 @@ Export/import of studio data can include payment keys — treat export files as 
 - [ ] Enable HTTPS and correct Auth redirect URLs
 - [ ] Review RLS on any custom migrations you add
 - [ ] Rotate family portal tokens if a link may have been shared too widely
+- [ ] Rotate a teacher's calendar feed token if the feed link may have been shared too widely
 - [ ] If using Stripe, use webhook signing secrets (Dashboard for production, CLI `whsec_` for local) and never commit keys
 - [ ] Restrict who can access your Supabase dashboard and Vercel/env stores
 

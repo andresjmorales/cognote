@@ -70,6 +70,7 @@ teachers
   ├── hosted_plan / trial_ends_at / gifted_until / stripe_*   (hosted CogNote sub; ignored unless COGNOTE_DEPLOYMENT=hosted)
   ├── avatar_url                   (public Storage URL; avatars bucket)
   ├── studio_policies              (timezone, cancellation, make-ups, billing, BYO Stripe, AI, streaks, …)
+  ├── calendar_token               (revocable token for the read-only teacher .ics feed)
   ├── guardians (families)         (name, email, revocable portal_token)
   ├── students                     (guardian_id FK; archived_at for free-tier counting)
   │     ├── lesson_slots           (recurring weekly schedule, local time + IANA tz)
@@ -110,6 +111,7 @@ Migrations live in `supabase/migrations/`.
 | GET/POST | `/api/guardians` | List / create families |
 | PUT/DELETE | `/api/guardians/[id]` | Update / remove family |
 | POST | `/api/guardians/[id]/rotate-token` | Revoke + reissue portal link |
+| POST | `/api/teacher/calendar-token` | Rotate the teacher calendar feed link |
 | GET/POST | `/api/lessons` | List / create lesson plans |
 | PUT/DELETE | `/api/lessons/[id]` | Update / remove plan |
 | POST | `/api/lessons/[id]/assign` | Assign plan; email or share URL |
@@ -137,6 +139,7 @@ Migrations live in `supabase/migrations/`.
 | PUT | `/api/practice/[token]/session/[id]/complete` | Complete session |
 | GET/PUT | `/api/practice/[token]/flashcards` | Flashcard state |
 | GET | `/api/portal/[token]/calendar` | Family .ics feed |
+| GET | `/api/feeds/[token]/calendar` | Teacher .ics feed (lessons + studio events) |
 
 ### Cron (Bearer `CRON_SECRET`)
 
