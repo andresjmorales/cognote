@@ -15,6 +15,7 @@ import {
   type StudentCancelNoticeChoice,
 } from "@/lib/schedule";
 import type { AttendanceStatus } from "@/lib/supabase/types";
+import { localTimeInput } from "@/lib/reschedule";
 
 export interface WeekLesson {
   id: string;
@@ -23,6 +24,7 @@ export interface WeekLesson {
   isAdHoc: boolean;
   isMakeup: boolean;
   isHomeVisit: boolean;
+  rescheduledFromDate: string | null;
   lessonDate: string;
   startsAt: string;
   durationMinutes: number;
@@ -296,6 +298,11 @@ export function WeekView({
                         {lesson.durationMinutes}m
                         {lesson.isHomeVisit ? " · home" : ""}
                       </div>
+                      {lesson.rescheduledFromDate && (
+                        <div className="text-[10px] text-primary mt-0.5">
+                          ↪ moved from {fmtDate(lesson.rescheduledFromDate)}
+                        </div>
+                      )}
                       {status && (
                         <div
                           className={`text-[10px] mt-1 inline-block px-1.5 py-0.5 rounded ${STATUS_STYLES[status]}`}
@@ -329,6 +336,19 @@ export function WeekView({
           currentStatus={effectiveStatus(openLesson)}
           timezone={timezone}
           cancellationWindowHours={cancellationWindowHours}
+          durationOptions={durationOptions}
+          weekStart={weekStart}
+          onMoved={(patch) => {
+            setOpenLesson(null);
+            if (
+              patch.lessonDate < weekStart ||
+              patch.lessonDate > addDays(weekStart, 6)
+            ) {
+              router.push(`/schedule?week=${patch.lessonDate}`);
+            } else {
+              router.refresh();
+            }
+          }}
           busy={busy}
           onClose={() => setOpenLesson(null)}
           onMark={(status, extra) => markAttendance(openLesson, status, extra)}
@@ -404,6 +424,9 @@ function LessonModal({
   currentStatus,
   timezone,
   cancellationWindowHours,
+  durationOptions,
+  weekStart,
+  onMoved,
   busy,
   onClose,
   onMark,
@@ -416,6 +439,14 @@ function LessonModal({
   currentStatus: AttendanceStatus | null;
   timezone: string;
   cancellationWindowHours: number;
+  durationOptions: number[];
+  weekStart: string;
+  onMoved: (patch: {
+    lessonDate: string;
+    startsAt: string;
+    durationMinutes: number;
+    rescheduledFromDate: string | null;
+  }) => void;
   busy: boolean;
   onClose: () => void;
   onMark: (
@@ -445,6 +476,47 @@ function LessonModal({
   const [customNotice, setCustomNotice] = useState("");
   const [cancelNote, setCancelNote] = useState("");
   const [notifyFamily, setNotifyFamily] = useState(true);
+  const [moveDate, setMoveDate] = useState(lesson.lessonDate);
+  const [moveTime, setMoveTime] = useState(
+    localTimeInput(lesson.startsAt, timezone)
+  );
+  const [moveDuration, setMoveDuration] = useState(lesson.durationMinutes);
+  const [moving, setMoving] = useState(false);
+
+  async function moveLesson() {
+    setMoving(true);
+    try {
+      const res = await fetch(`/api/schedule/lessons/${lesson.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: moveDate,
+          time: moveTime,
+          durationMinutes: moveDuration,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (Array.isArray(data.warnings) && data.warnings.length) {
+          notify(data.warnings.join(" · "), "info");
+        } else {
+          notify("Lesson moved");
+        }
+        onMoved({
+          lessonDate: data.lesson_date ?? moveDate,
+          startsAt: data.starts_at ?? lesson.startsAt,
+          durationMinutes: data.duration_minutes ?? moveDuration,
+          rescheduledFromDate: data.rescheduled_from_date ?? null,
+        });
+      } else {
+        notify(data.error ?? "Failed to move lesson", "error");
+      }
+    } catch {
+      notify("Failed to move lesson. Check your connection.", "error");
+    } finally {
+      setMoving(false);
+    }
+  }
 
   const hasAnyNote = Boolean(familyBody.trim() || privateBody.trim());
   const hadExistingNote = Boolean(
@@ -593,6 +665,12 @@ function LessonModal({
           {formatLessonDate(lesson.startsAt, timezone, "long")} at{" "}
           {formatLessonTime(lesson.startsAt, timezone)} · {lesson.durationMinutes} min
           {lesson.isMakeup && " · make-up lesson"}
+          {lesson.rescheduledFromDate && (
+            <span className="text-primary">
+              {" "}
+              · moved from {fmtDate(lesson.rescheduledFromDate)}
+            </span>
+          )}
         </p>
 
         <label className="flex items-center gap-2 text-sm cursor-pointer mb-4">
@@ -743,6 +821,66 @@ function LessonModal({
           >
             Clear attendance
           </button>
+        )}
+
+        {currentStatus === null && (
+          <div className="rounded-lg border border-border bg-surface-dim/40 p-3 mt-1 mb-3 space-y-3">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+              Reschedule
+            </p>
+            <label className="block text-sm">
+              <span className="block text-xs font-semibold text-muted mb-1">
+                Date
+              </span>
+              <input
+                type="date"
+                value={moveDate}
+                onChange={(e) => setMoveDate(e.target.value)}
+                className={inputClass}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm">
+                <span className="block text-xs font-semibold text-muted mb-1">
+                  Time
+                </span>
+                <input
+                  type="time"
+                  value={moveTime}
+                  onChange={(e) => setMoveTime(e.target.value)}
+                  className={inputClass}
+                />
+              </label>
+              <label className="text-sm">
+                <span className="block text-xs font-semibold text-muted mb-1">
+                  Duration
+                </span>
+                <select
+                  value={moveDuration}
+                  onChange={(e) => setMoveDuration(Number(e.target.value))}
+                  className={inputClass}
+                >
+                  {(durationOptions.includes(lesson.durationMinutes)
+                    ? durationOptions
+                    : [lesson.durationMinutes, ...durationOptions]
+                  ).map((m) => (
+                    <option key={m} value={m}>
+                      {m} min
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                disabled={busy || moving || !moveDate || !moveTime}
+                onClick={moveLesson}
+              >
+                {moving ? "Moving..." : "Move lesson"}
+              </Button>
+            </div>
+          </div>
         )}
 
         <hr className="border-border my-4" />
