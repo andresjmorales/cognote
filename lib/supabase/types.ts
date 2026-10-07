@@ -456,6 +456,7 @@ export interface Database {
           duration_minutes: number;
           makeup_for: string | null;
           is_home_visit: boolean;
+          rescheduled_from_date: string | null;
           created_at: string;
         };
         Insert: {
@@ -468,6 +469,7 @@ export interface Database {
           duration_minutes: number;
           makeup_for?: string | null;
           is_home_visit?: boolean;
+          rescheduled_from_date?: string | null;
         };
         Update: {
           lesson_date?: string;
@@ -475,6 +477,7 @@ export interface Database {
           duration_minutes?: number;
           makeup_for?: string | null;
           is_home_visit?: boolean;
+          rescheduled_from_date?: string | null;
         };
       };
       attendance: {

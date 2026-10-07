@@ -17,6 +17,7 @@ interface UpcomingLesson {
   starts_at: string;
   duration_minutes: number;
   is_home_visit: boolean;
+  rescheduled_from_date: string | null;
   // One-to-one embeds (UNIQUE lesson_id): PostgREST may return an object
   // or an array depending on relationship detection — go through oneToOne.
   attendance: { id: string } | { id: string }[] | null;
@@ -37,7 +38,7 @@ async function upcomingSlotLessons(
   const { data, error } = await supabase
     .from("lessons")
     .select(
-      "id, lesson_date, starts_at, duration_minutes, is_home_visit, attendance!lesson_id ( id ), lesson_notes ( id )"
+      "id, lesson_date, starts_at, duration_minutes, is_home_visit, rescheduled_from_date, attendance!lesson_id ( id ), lesson_notes ( id )"
     )
     .eq("slot_id", slotId)
     .gte("starts_at", new Date().toISOString());
@@ -71,7 +72,9 @@ async function syncUpcomingLessons(
   const lessons = await upcomingSlotLessons(supabase, slot.id);
   if (!lessons) return "Couldn't load upcoming lessons for this slot";
 
-  const unmarked = lessons.filter((l) => !isMarked(l));
+  const unmarked = lessons.filter(
+    (l) => !isMarked(l) && !l.rescheduled_from_date
+  );
   if (unmarked.length === 0) return null;
 
   const lastDate = unmarked.reduce(
@@ -282,7 +285,9 @@ export async function DELETE(
       { status: 500 }
     );
   }
-  const unmarked = lessons.filter((l) => !isMarked(l)).map((l) => l.id);
+  const unmarked = lessons
+    .filter((l) => !isMarked(l) && !l.rescheduled_from_date)
+    .map((l) => l.id);
   if (unmarked.length > 0) {
     const { error } = await supabase.from("lessons").delete().in("id", unmarked);
     if (error) {
