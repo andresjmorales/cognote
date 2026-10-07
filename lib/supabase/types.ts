@@ -48,6 +48,7 @@ export interface Database {
           stripe_cancel_at: string | null;
           founding_number: number | null;
           onboarding_tour_completed_at: string | null;
+          calendar_token: string;
         };
         Insert: {
           id: string;
@@ -63,6 +64,7 @@ export interface Database {
           stripe_cancel_at?: string | null;
           founding_number?: number | null;
           onboarding_tour_completed_at?: string | null;
+          calendar_token?: string;
         };
         Update: {
           id?: string;
@@ -77,6 +79,7 @@ export interface Database {
           stripe_cancel_at?: string | null;
           founding_number?: number | null;
           onboarding_tour_completed_at?: string | null;
+          calendar_token?: string;
         };
       };
       students: {

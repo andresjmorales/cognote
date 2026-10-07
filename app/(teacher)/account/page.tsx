@@ -6,6 +6,7 @@ import { NotificationSettingsForm } from "@/components/teacher/settings/Notifica
 import { OptionalAiSettingsForm } from "@/components/teacher/settings/OptionalAiSettingsForm";
 import { SpreadsheetImportSettings } from "@/components/teacher/settings/SpreadsheetImportSettings";
 import { DataTransferSettings } from "@/components/teacher/settings/DataTransferSettings";
+import { TeacherCalendarFeed } from "@/components/teacher/settings/TeacherCalendarFeed";
 import { getPolicy } from "@/lib/server/scheduling";
 import { isPushConfigured } from "@/lib/server/push";
 import { maskSecret } from "@/lib/billing";
@@ -44,7 +45,7 @@ export default async function AccountPage({
   const { data: teacher } = await supabase
     .from("teachers")
     .select(
-      "display_name, avatar_url, email, created_at, stripe_customer_id, stripe_cancel_at"
+      "display_name, avatar_url, email, created_at, stripe_customer_id, stripe_cancel_at, calendar_token"
     )
     .eq("id", user.id)
     .single();
@@ -161,6 +162,10 @@ export default async function AccountPage({
         >
           {hostingSection}
         </AccountSettings>
+
+        {teacher?.calendar_token && (
+          <TeacherCalendarFeed token={teacher.calendar_token} />
+        )}
 
         <NotificationSettingsForm
           policy={clientPolicy}
