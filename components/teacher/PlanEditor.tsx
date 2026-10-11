@@ -293,7 +293,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
 
           <div>
             <label className="block text-sm text-muted mb-1">Plan Type</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {PLAN_TYPE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
