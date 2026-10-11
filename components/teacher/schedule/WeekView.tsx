@@ -697,6 +697,7 @@ function LessonModal({
               <Button
                 key={status}
                 size="sm"
+                className="h-full"
                 variant={active || prompting ? "primary" : "secondary"}
                 disabled={busy}
                 onClick={() => handleStatusClick(status)}
