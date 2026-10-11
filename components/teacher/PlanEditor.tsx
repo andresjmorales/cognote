@@ -380,7 +380,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                   }
                 }}
                 placeholder="Add custom label"
-                className="flex-1 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
+                className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
               />
               <Button
                 type="button"
