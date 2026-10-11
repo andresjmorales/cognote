@@ -153,4 +153,111 @@ test.describe("mobile layout", () => {
     // pixels; the blank band measured roughly thirty.
     expect(below.y - (above.y + above.height)).toBeLessThanOrEqual(12);
   });
+
+  test("create new lesson page has no horizontal overflow on mobile", async ({
+    page,
+  }) => {
+    await signInAsTeacher(page);
+
+    for (const width of MOBILE_WIDTHS) {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/lessons/new");
+      await expect(
+        page.getByRole("heading", { name: "Create New Lesson" })
+      ).toBeVisible();
+
+      const overflow = await overflowOf(page);
+      expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(
+        1
+      );
+    }
+  });
+
+  test("attendance buttons share one size in the lesson modal", async ({
+    page,
+  }) => {
+    const name = `AttendanceSize${Date.now()}`;
+    let studentId: string | null = null;
+    await page.setViewportSize({ width: 360, height: 812 });
+    await signInAsTeacher(page);
+
+    try {
+      await page.goto("/students");
+      await page.getByPlaceholder("Student name").fill(name);
+      await page.getByRole("button", { name: "Add Student" }).click();
+      const studentLink = page.getByRole("link", {
+        name: new RegExp(`^${name}\\b`),
+      });
+      await expect(studentLink).toBeVisible();
+      studentId =
+        (await studentLink.getAttribute("href"))
+          ?.split("/")
+          .filter(Boolean)
+          .pop() ?? null;
+
+      // Match the studio's weekday, not the browser's: the slot's start_date
+      // is the studio-timezone today, so a wrong weekday can schedule the
+      // lesson next week and the card never appears.
+      const policy = await (
+        await page.request.get("/api/settings/policy")
+      ).json();
+      const todayLabel = new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        timeZone: policy.timezone ?? "America/Chicago",
+      }).format(new Date());
+
+      await page.goto("/schedule");
+      await page.getByRole("button", { name: "Add Slot" }).click();
+      const form = page
+        .locator("form")
+        .filter({ has: page.getByRole("button", { name: "Add Slot" }) });
+      await form.locator("select").nth(0).selectOption({ label: name });
+      await form.locator("select").nth(1).selectOption({ label: todayLabel });
+      await page.getByRole("button", { name: "Add Slot" }).last().click();
+
+      const lessonButton = page
+        .getByRole("button", { name: new RegExp(name) })
+        .first();
+      await expect(lessonButton).toBeVisible();
+      await lessonButton.click();
+
+      const modal = page
+        .locator("div.fixed.inset-0")
+        .filter({ has: page.getByText("Attendance", { exact: true }) });
+
+      // "Attended" and "No-show" are single-line; the two "cancelled" labels
+      // wrap to two lines. The grid gave the four buttons equal widths, but the
+      // shared Button's self-start stopped them stretching to a common height.
+      const sizes: { width: number; height: number }[] = [];
+      for (const label of [
+        "Attended",
+        "Teacher cancelled",
+        "Student cancelled",
+        "No-show",
+      ]) {
+        const box = await modal
+          .getByRole("button", { name: label, exact: true })
+          .boundingBox();
+        if (!box) throw new Error(`attendance button "${label}" has no box`);
+        sizes.push({ width: box.width, height: box.height });
+      }
+
+      const heights = sizes.map((s) => s.height);
+      const widths = sizes.map((s) => s.width);
+      expect(
+        Math.max(...heights) - Math.min(...heights),
+        `heights ${heights.join(", ")}`
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.max(...widths) - Math.min(...widths),
+        `widths ${widths.join(", ")}`
+      ).toBeLessThanOrEqual(1);
+    } finally {
+      if (studentId) {
+        await page.request
+          .delete(`/api/students/${studentId}`)
+          .catch(() => undefined);
+      }
+    }
+  });
 });

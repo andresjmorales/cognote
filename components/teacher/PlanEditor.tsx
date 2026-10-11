@@ -293,7 +293,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
 
           <div>
             <label className="block text-sm text-muted mb-1">Plan Type</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {PLAN_TYPE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -380,7 +380,7 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                   }
                 }}
                 placeholder="Add custom label"
-                className="flex-1 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
+                className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
               />
               <Button
                 type="button"
