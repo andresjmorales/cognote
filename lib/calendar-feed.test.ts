@@ -8,21 +8,31 @@ function durationMinutes(e: EventAttributes): number | undefined {
   return "duration" in e ? e.duration?.minutes : undefined;
 }
 
+const ANN = {
+  id: "abc",
+  starts_at: "2026-07-14T06:00:00.000Z",
+  duration_minutes: 30,
+  studentName: "Ann",
+};
+
 describe("lessonEvent", () => {
   it("uses a stable per-lesson UID and a student-labelled summary", () => {
-    const e = lessonEvent(
-      {
-        id: "abc",
-        starts_at: "2026-07-14T06:00:00.000Z",
-        duration_minutes: 30,
-        studentName: "Ann",
-      },
-      "Piano Lessons"
-    );
+    const e = lessonEvent(ANN, "Piano Lessons");
     expect(e.uid).toBe("abc@cognote.studio");
-    expect(e.title).toBe("Piano lesson — Ann");
     expect(durationMinutes(e)).toBe(30);
     expect(e.start).toEqual([2026, 7, 14, 6, 0]);
+  });
+
+  it("names the studio's subject when it sets a lesson label", () => {
+    expect(lessonEvent(ANN, "Lessons", "Piano").title).toBe("Piano lesson — Ann");
+    expect(lessonEvent(ANN, "Lessons", "  Violin  ").title).toBe(
+      "Violin lesson — Ann"
+    );
+  });
+
+  it("falls back to a neutral title when no label is set", () => {
+    expect(lessonEvent(ANN, "Lessons").title).toBe("Lesson — Ann");
+    expect(lessonEvent(ANN, "Lessons", "   ").title).toBe("Lesson — Ann");
   });
 });
 
@@ -66,17 +76,7 @@ describe("buildIcs", () => {
   });
 
   it("emits UID and SUMMARY lines for an event", () => {
-    const ics = buildIcs([
-      lessonEvent(
-        {
-          id: "abc",
-          starts_at: "2026-07-14T06:00:00.000Z",
-          duration_minutes: 30,
-          studentName: "Ann",
-        },
-        "Piano Lessons"
-      ),
-    ])!;
+    const ics = buildIcs([lessonEvent(ANN, "Lessons", "Piano")])!;
     expect(ics).toContain("UID:abc@cognote.studio");
     expect(ics).toContain("SUMMARY:Piano lesson — Ann");
     expect(ics).toContain("DURATION:PT30M");
