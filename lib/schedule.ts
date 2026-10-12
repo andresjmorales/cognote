@@ -17,6 +17,8 @@ export interface StudioPolicy {
   studio_website: string;
   studio_contact: string;
   studio_info: string;
+  /** Subject/instrument for calendar feed titles; empty = neutral "Lesson". */
+  lesson_label: string;
   timezone: string;
   lesson_duration_options: number[];
   cancellation_window_hours: number;
@@ -76,6 +78,7 @@ export const DEFAULT_POLICY: StudioPolicy = {
   studio_website: "",
   studio_contact: "",
   studio_info: "",
+  lesson_label: "",
   timezone: "America/Chicago",
   lesson_duration_options: [30, 45, 60],
   cancellation_window_hours: 24,

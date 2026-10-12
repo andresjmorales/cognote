@@ -75,7 +75,8 @@ export async function GET(
           duration_minutes: l.duration_minutes,
           studentName: nameById.get(l.student_id) ?? "Student",
         },
-        "Piano Lessons"
+        policy.studio_name || "Lessons",
+        policy.lesson_label
       )
     );
 

@@ -69,7 +69,7 @@ export async function GET(
       .order("starts_at"),
   ]);
 
-  const calName = policy.studio_name || "Piano Lessons";
+  const calName = policy.studio_name || "Lessons";
 
   const lessonEvents: EventAttributes[] = (lessonsRes.data ?? [])
     .filter((l) => {
@@ -87,7 +87,8 @@ export async function GET(
           studentName:
             oneToOne(l.students as { name: string }[] | null)?.name ?? "Student",
         },
-        calName
+        calName,
+        policy.lesson_label
       )
     );
 

@@ -204,6 +204,9 @@ export async function PUT(req: NextRequest) {
     ...(body.studioInfo !== undefined && {
       studio_info: String(body.studioInfo).trim().slice(0, 5000),
     }),
+    ...(body.lessonLabel !== undefined && {
+      lesson_label: String(body.lessonLabel).trim().slice(0, 60),
+    }),
     ...(durationOptions !== undefined && {
       lesson_duration_options: durationOptions,
     }),

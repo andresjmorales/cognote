@@ -17,6 +17,7 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
   const [message, setMessage] = useState<string | null>(null);
 
   const [studioName, setStudioName] = useState(policy.studio_name);
+  const [lessonLabel, setLessonLabel] = useState(policy.lesson_label);
   const [studioWebsite, setStudioWebsite] = useState(policy.studio_website);
   const [studioContact, setStudioContact] = useState(policy.studio_contact);
   const [studioInfo, setStudioInfo] = useState(policy.studio_info);
@@ -61,6 +62,7 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         studioName,
+        lessonLabel,
         studioWebsite,
         studioContact,
         studioInfo,
@@ -96,6 +98,24 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
           />
           <span className="block text-xs text-muted mt-1">
             Shown to families on their portal and in emailed lesson notes.
+          </span>
+        </label>
+
+        <label className="text-sm">
+          <span className="block text-xs font-semibold text-muted mb-1">
+            Lesson label
+          </span>
+          <input
+            type="text"
+            value={lessonLabel}
+            onChange={(e) => setLessonLabel(e.target.value)}
+            placeholder="e.g. Piano"
+            maxLength={60}
+            className={`${inputClass} w-full`}
+          />
+          <span className="block text-xs text-muted mt-1">
+            Names your lessons in the calendar feeds — &quot;Piano&quot; shows
+            &quot;Piano lesson&quot;. Leave blank for a neutral &quot;Lesson&quot;.
           </span>
         </label>
 

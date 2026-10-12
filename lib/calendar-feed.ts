@@ -34,15 +34,25 @@ function utcParts(iso: string): [number, number, number, number, number] {
   ];
 }
 
-/** One lesson -> one event. UID is stable per lesson id so clients update. */
-export function lessonEvent(l: FeedLesson, calName: string): EventAttributes {
+/**
+ * One lesson -> one event. UID is stable per lesson id so clients update.
+ * `lessonLabel` is the studio's subject ("Piano", "Violin"); an empty label
+ * keeps the neutral "Lesson" wording, since no studio is assumed to teach
+ * piano.
+ */
+export function lessonEvent(
+  l: FeedLesson,
+  calName: string,
+  lessonLabel = ""
+): EventAttributes {
+  const label = lessonLabel.trim();
   return {
     uid: `${l.id}@cognote.studio`,
     start: utcParts(l.starts_at),
     startInputType: "utc",
     startOutputType: "utc",
     duration: { minutes: l.duration_minutes },
-    title: `Piano lesson — ${l.studentName}`,
+    title: label ? `${label} lesson — ${l.studentName}` : `Lesson — ${l.studentName}`,
     calName,
   };
 }
