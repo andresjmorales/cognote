@@ -26,7 +26,8 @@
 #   storage   Storage API — the private sheet-music bucket (files on a volume)
 #   gateway   nginx reverse proxy fronting auth/rest/storage at /auth/v1,
 #             /rest/v1, /storage/v1 and terminating CORS
-#   migrate   one-shot: applies supabase/migrations/*.sql, tracked in a ledger
+#   migrate   one-shot: applies supabase/migrations/*.sql, tracked in the
+#             same ledger as `supabase db push`
 #   app       CogNote itself
 #   cron      optional (profile "cron"): pings /api/cron/event-reminders daily
 #   backup    optional (profile "backup"): scheduled DB + storage/secret backups
@@ -84,7 +85,7 @@ services:
 
   auth:
     logging: *logging
-    image: supabase/gotrue:v2.196.0
+    image: supabase/gotrue:v2.197.0
     restart: unless-stopped
     depends_on:
       db:
@@ -153,7 +154,7 @@ services:
 
   storage:
     logging: *logging
-    image: supabase/storage-api:v1.74.0
+    image: supabase/storage-api:v1.79.31
     restart: unless-stopped
     depends_on:
       db:
@@ -251,6 +252,13 @@ services:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?}
       NEXT_PUBLIC_SITE_URL: ${APP_URL:-http://localhost:3000}
+      # .env.local also holds the stack's own secrets; the app needs none of
+      # them, so keep the database password and JWT secret out of it.
+      POSTGRES_PASSWORD: ""
+      JWT_SECRET: ""
+      S3_PROTOCOL_ACCESS_KEY_ID: ""
+      S3_PROTOCOL_ACCESS_KEY_SECRET: ""
+      AUTH_SMTP_PASS: ""
     ports:
       - "${APP_PORT:-3000}:3000"
     extra_hosts:
