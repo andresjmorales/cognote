@@ -214,8 +214,8 @@ npx web-push generate-vapid-keys
 ```
 
 Push degrades cleanly: without the keys the Account-page control hides itself
-and nothing is sent, so the variables are safe to omit. `NEXT_PUBLIC_*` is baked
-in at build time, so changing the public key needs a redeploy. iOS delivers push
+and nothing is sent, so the variables are safe to omit. The keys are read at
+runtime, so changing them needs a restart or redeploy, not a rebuild. iOS delivers push
 only to an app added to the Home Screen, on iOS 16.4 or later.
 
 Stored push endpoints are restricted to known push services (FCM, WNS, Mozilla,
@@ -255,17 +255,25 @@ with migrations applied automatically. No cloud accounts needed.
    sh docker/supabase/generate-secrets.sh   # paste output into .env.local
    ```
 
-2. Build and start:
+2. Pull the prebuilt image and start:
 
    ```bash
-   docker compose --env-file .env.local up -d --build
+   docker compose --env-file .env.local pull
+   docker compose --env-file .env.local up -d
    ```
 
-   Building the app image needs BuildKit (the Dockerfile uses `RUN --mount=type=cache`); install the `buildx` plugin or `docker compose up --build` fails with a misleading error.
+   Images are published to `ghcr.io/andresjmorales/cognote` for each release
+   (amd64 and arm64). Set `COGNOTE_VERSION` in `.env.local` to the release you
+   have checked out, so the app matches the migrations in your checkout. To build
+   from source instead, run `up -d --build`; that needs BuildKit (the Dockerfile
+   uses `RUN --mount=type=cache`), so install the `buildx` plugin or it fails
+   with a misleading error.
 
-   Open <http://localhost:3000> and create the teacher account. New signups are
+   Open <http://localhost:3000> and create your teacher account. New signups are
    auto-confirmed by default (`ENABLE_EMAIL_AUTOCONFIRM=true`) so no mail server
-   is needed; the first signup becomes the studio owner.
+   is needed. Signup stays open to anyone who can reach the app: on a publicly
+   reachable instance, set `DISABLE_SIGNUP=true` once your account exists (or
+   use the beta gate).
 
 3. Reminder emails (optional): the stack ships a `cron` profile that hits
    `/api/cron/event-reminders` daily, standing in for Vercel Cron:
@@ -274,9 +282,9 @@ with migrations applied automatically. No cloud accounts needed.
    docker compose --env-file .env.local --profile cron up -d
    ```
 
-`--env-file` is required: Compose substitutes `${...}` build args from it, while `env_file:` only injects the container's runtime environment. Pass it to **every** compose command (`up`, `ps`, `logs`, `stop`, …) — `${VAR:?}` is interpolated at parse time, so bare `docker compose ps` fails without it. Secrets stay in `.env.local` and are never baked into image layers.
+`--env-file` is required: Compose substitutes `${...}` values from it, while `env_file:` only injects the container's runtime environment. Pass it to **every** compose command (`up`, `ps`, `logs`, `stop`, …) — `${VAR:?}` is interpolated at parse time, so bare `docker compose ps` fails without it. Secrets stay in `.env.local` and are never baked into image layers.
 
-`NEXT_PUBLIC_*` values are inlined into the client bundle at **build** time — changing them needs a rebuild (`up -d --build`), not just a restart. By default the app reaches Supabase at `http://supabase.localhost:8000`: browsers resolve `*.localhost` to loopback, and the app container is given an `extra_hosts` entry for the same name. For production, point `SUPABASE_PUBLIC_URL` at a real domain that resolves from both the browser and the server. Migrations run in the one-shot `migrate` service and are tracked in `supabase_migrations.schema_migrations` (the ledger `supabase db push` keeps), so upgrading is `up -d --build`. Full variable reference and further notes live in [docker-compose.example.yml](docker-compose.example.yml).
+The Supabase URL and keys are read at **runtime** (the browser gets them from `/runtime-config.js`), so the published image works against any Supabase and changing them needs only `up -d`, not a rebuild. By default the app reaches Supabase at `http://supabase.localhost:8000`: browsers resolve `*.localhost` to loopback, and the app container is given an `extra_hosts` entry for the same name. For production, point `SUPABASE_PUBLIC_URL` at a real domain that resolves from both the browser and the server. Migrations run in the one-shot `migrate` service and are tracked in `supabase_migrations.schema_migrations` (the ledger `supabase db push` keeps), so upgrading is: check out the new release, bump `COGNOTE_VERSION`, then `pull` and `up -d`. Full variable reference and further notes live in [docker-compose.example.yml](docker-compose.example.yml).
 
 ### Backups and restore
 

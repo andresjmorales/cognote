@@ -80,24 +80,22 @@ function parsePublicFlag(raw: string | undefined): boolean | undefined {
  * Orthogonal to `COGNOTE_DEPLOYMENT` — self-host can use a beta code; hosted can
  * open signup while keeping soft limits.
  *
- * Optional `env` is for unit tests. Call with no args in app code so Next can
- * inline `NEXT_PUBLIC_BETA_ONLY` (dynamic `process.env[name]` breaks on client).
+ * Server-only. Reads the env object rather than literal `process.env.NEXT_PUBLIC_*`
+ * expressions, so the flag comes from the running environment instead of being
+ * inlined at build time (a prebuilt Docker image must honour the operator's
+ * setting). Optional `env` is for unit tests.
  */
 export function requiresBetaCode(
-  env?: Record<string, string | undefined>
+  env: Record<string, string | undefined> = process.env
 ): boolean {
-  const betaOnlyRaw = env
-    ? env.NEXT_PUBLIC_BETA_ONLY
-    : process.env.NEXT_PUBLIC_BETA_ONLY;
-  const explicit = parsePublicFlag(betaOnlyRaw);
+  const explicit = parsePublicFlag(env.NEXT_PUBLIC_BETA_ONLY);
   if (explicit !== undefined) return explicit;
-  const code = env ? env.BETA_ACCESS_CODE : process.env.BETA_ACCESS_CODE;
-  return Boolean(code?.trim());
+  return Boolean(env.BETA_ACCESS_CODE?.trim());
 }
 
 /** @deprecated Prefer `requiresBetaCode` — same behavior. */
 export function isBetaGateEnabled(
-  env?: Record<string, string | undefined>
+  env: Record<string, string | undefined> = process.env
 ): boolean {
   return requiresBetaCode(env);
 }

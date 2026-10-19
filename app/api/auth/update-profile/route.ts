@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { serverPublicConfig } from "@/lib/runtime-config";
 
 export async function PUT(req: NextRequest) {
   const supabase = await createClient();
@@ -43,7 +44,7 @@ export async function PUT(req: NextRequest) {
     if (typeof avatarUrl === "string") {
       // Only this teacher's own object in the public avatars bucket is
       // accepted; arbitrary URLs would be rendered as <img src> in the nav.
-      const allowedPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${user.id}/`;
+      const allowedPrefix = `${serverPublicConfig().supabaseUrl}/storage/v1/object/public/avatars/${user.id}/`;
       if (avatarUrl.length > 2048 || !avatarUrl.startsWith(allowedPrefix)) {
         return NextResponse.json(
           { error: "Invalid avatar URL" },

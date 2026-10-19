@@ -10,24 +10,14 @@ RUN --mount=type=cache,target=/root/.npm npm ci
 
 # ---------------------------------------------------------------------------
 # builder: compile the Next.js app.
-# NEXT_PUBLIC_* vars are declared as ARGs and re-exported as ENV because Next
-# inlines them into the client bundle at build time — the Docker build must
-# receive them as --build-arg for the values to exist during `next build`.
+# No Supabase values are needed here: the app reads NEXT_PUBLIC_SUPABASE_* at
+# RUNTIME (lib/runtime-config.ts), so one image works against any Supabase and
+# can be published to a registry.
 # ---------------------------------------------------------------------------
 FROM node:24-bookworm-slim AS builder
 WORKDIR /app
 
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
-    NEXT_TELEMETRY_DISABLED=1
-
-# Compose uses ${VAR:?} fail-fast, but a bare `docker build .` with no
-# --build-arg would otherwise succeed and bake an empty URL into the bundle.
-RUN test -n "$NEXT_PUBLIC_SUPABASE_URL" \
-    && test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-    || { echo "error: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY build-args are required" >&2; exit 1; }
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

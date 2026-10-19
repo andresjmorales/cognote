@@ -3,13 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requestOrigin } from "@/lib/server/http";
 import { AUTH_REQUEST_TIMEOUT_MS, withTimeout } from "@/lib/auth-errors";
 import { resolveSessionGate } from "@/lib/auth-session";
+import { serverPublicConfig } from "@/lib/runtime-config";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+  const { supabaseUrl, supabaseAnonKey } = serverPublicConfig();
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {

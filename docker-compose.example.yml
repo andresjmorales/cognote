@@ -7,6 +7,10 @@
 #   cp docker-compose.example.yml docker-compose.yml
 #   cp .env.example .env.local
 #   sh docker/supabase/generate-secrets.sh   # paste the output into .env.local
+#   docker compose --env-file .env.local pull       # prebuilt image from GHCR
+#   docker compose --env-file .env.local up -d
+#
+# Or build the app from this checkout instead of pulling:
 #   docker compose --env-file .env.local up -d --build
 #
 # Building the app image needs BuildKit (the Dockerfile uses RUN --mount=type=cache);
@@ -230,13 +234,16 @@ services:
 
   app:
     logging: *logging
+    # Prebuilt image, published on each release. `docker compose pull` fetches
+    # it; `up -d --build` builds from this checkout instead and tags the result
+    # with the same name. Pin COGNOTE_VERSION to the release you have checked
+    # out (e.g. 1.2.0): the migrate service applies THIS checkout's
+    # supabase/migrations, so app and schema should come from the same release.
+    image: ghcr.io/andresjmorales/cognote:${COGNOTE_VERSION:-latest}
+    # No build args: Supabase URL and keys are read at runtime from the
+    # environment below, so changing them needs only a restart.
     build:
       context: .
-      # NEXT_PUBLIC_* are inlined into the client bundle during `next build`,
-      # so they must be present as BUILD args. Changing them needs a rebuild.
-      args:
-        NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_PUBLIC_URL:?}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?}
     restart: unless-stopped
     depends_on:
       migrate:
@@ -289,6 +296,12 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        # Without a secret every call would be rejected and reminders would
+        # silently never send. Fail loudly instead.
+        if [ -z "$$CRON_SECRET" ]; then
+          echo "cron: CRON_SECRET is empty; set it in .env.local" >&2
+          exit 1
+        fi
         echo "$$CRON_SCHEDULE wget -q -O- --header 'Authorization: Bearer $$CRON_SECRET' http://app:3000/api/cron/event-reminders >/proc/1/fd/1 2>&1" > /etc/crontabs/root
         exec crond -f -l 8
 

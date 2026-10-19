@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter, Nunito } from "next/font/google";
 import { PWA } from "@/lib/pwa";
 import { ToastProvider } from "@/components/ui/toast";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { TouchHoverGuard } from "@/components/ui/touch-hover-guard";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
+import { RUNTIME_CONFIG_PATH } from "@/lib/runtime-config";
 import "./globals.css";
 
 const inter = Inter({
@@ -45,6 +47,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="can-hover">
       <body className={`${inter.variable} ${nunito.variable} antialiased`}>
+        {/* Supabase URL + anon key from the running server's env, set before
+            hydration so a prebuilt image works against any Supabase. Loaded as
+            a file (not inlined) so static pages stay static. See lib/runtime-config. */}
+        <Script src={RUNTIME_CONFIG_PATH} strategy="beforeInteractive" />
         <ServiceWorkerRegistrar />
         <TouchHoverGuard />
         <ToastProvider>

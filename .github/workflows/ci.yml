@@ -80,9 +80,8 @@ jobs:
         with:
           context: .
           push: false
-          build-args: |
-            NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy
+          # Deliberately no build args: the image must build without any
+          # Supabase values, since they are read at runtime.
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

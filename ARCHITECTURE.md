@@ -160,7 +160,9 @@ Lesson tuition Stripe (BYO per teacher) uses `/api/webhooks/stripe/[teacherId]` 
 
 ### Self-hosting topology
 
-`docker-compose.example.yml` runs a trimmed Supabase stack alongside the app: Postgres, GoTrue (Auth), PostgREST, Storage API and an nginx gateway that fronts `/auth/v1`, `/rest/v1` and `/storage/v1` (supabase-js uses one base URL, so those paths must share an origin). Studio, Realtime, Edge Functions, Analytics, Supavisor and imgproxy are omitted — the app uses none of them. `supabase_migrations.schema_migrations` (the same ledger `supabase db push` keeps) records applied files; the `migrate` service is idempotent, so the stack upgrades with `up -d --build`. A `cron` profile replaces Vercel Cron for `/api/cron/event-reminders`.
+`docker-compose.example.yml` runs a trimmed Supabase stack alongside the app: Postgres, GoTrue (Auth), PostgREST, Storage API and an nginx gateway that fronts `/auth/v1`, `/rest/v1` and `/storage/v1` (supabase-js uses one base URL, so those paths must share an origin). Studio, Realtime, Edge Functions, Analytics, Supavisor and imgproxy are omitted — the app uses none of them. `supabase_migrations.schema_migrations` (the same ledger `supabase db push` keeps) records applied files; the `migrate` service is idempotent, so upgrading is pull + `up -d`. A `cron` profile replaces Vercel Cron for `/api/cron/event-reminders`.
+
+The app image carries no Supabase values, so one published image (`ghcr.io/andresjmorales/cognote`, built by `.github/workflows/release-image.yml` on `v*` tags) serves every deployment. `lib/runtime-config.ts` reads `NEXT_PUBLIC_SUPABASE_*` from the running environment on the server; the browser gets them from `/runtime-config.js`, loaded `beforeInteractive` from the root layout, with the build-time value as fallback (so Vercel is unaffected). Server code that needs a value per deployment must not use a literal `process.env.NEXT_PUBLIC_*` expression, which Next inlines at build time.
 
 ## Spaced repetition
 
