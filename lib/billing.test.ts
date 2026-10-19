@@ -367,6 +367,57 @@ describe("deriveInvoiceItems", () => {
     expect(items.every((i) => !i.description.includes("Travel fee"))).toBe(true);
   });
 
+  it("tags lesson and travel lines with their kind", () => {
+    const items = deriveInvoiceItems(
+      [
+        {
+          ...baseLesson,
+          isHomeVisit: true,
+          travel: { studentTravelFeeCents: 500, studioTravelFeeCents: null },
+        },
+      ],
+      DEFAULT_POLICY
+    );
+    expect(items.map((i) => i.kind)).toEqual(["lesson", "travel"]);
+  });
+
+  it("skips the lesson line for credited lessons but keeps travel", () => {
+    const items = deriveInvoiceItems(
+      [
+        {
+          ...baseLesson,
+          isHomeVisit: true,
+          travel: { studentTravelFeeCents: 500, studioTravelFeeCents: null },
+        },
+        { ...baseLesson, lessonId: "lesson-2" },
+      ],
+      DEFAULT_POLICY,
+      { creditedLessonIds: new Set(["lesson-1"]) }
+    );
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({
+      kind: "travel",
+      lessonId: "lesson-1",
+      amountCents: 500,
+    });
+    expect(items[1]).toMatchObject({ kind: "lesson", lessonId: "lesson-2" });
+  });
+
+  it("doesn't bill a travel fee twice", () => {
+    const items = deriveInvoiceItems(
+      [
+        {
+          ...baseLesson,
+          isHomeVisit: true,
+          travel: { studentTravelFeeCents: 500, studioTravelFeeCents: null },
+        },
+      ],
+      DEFAULT_POLICY,
+      { travelInvoicedLessonIds: new Set(["lesson-1"]) }
+    );
+    expect(items.map((i) => i.kind)).toEqual(["lesson"]);
+  });
+
   it("flags missing rates but still emits a $0 line", () => {
     const items = deriveInvoiceItems(
       [

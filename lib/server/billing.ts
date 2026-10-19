@@ -1,9 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   deriveInvoiceItems,
+  isBillable,
   type BillableLessonInput,
   type InvoiceItemDraft,
 } from "@/lib/billing";
+import {
+  allocateCredits,
+  type CreditCandidate,
+  type CreditPackageInput,
+} from "@/lib/credits";
 import type { StudioPolicy } from "@/lib/schedule";
 import { oneToOne } from "@/lib/schedule";
 import type { AttendanceStatus } from "@/lib/supabase/types";
@@ -51,21 +57,44 @@ export interface DerivePeriodOptions {
    * Pass an empty set to include everything (e.g. regenerate owning those lessons).
    */
   excludeLessonIds?: Set<string>;
+  /** Lessons whose travel fee is already on a non-void invoice. */
+  travelInvoicedLessonIds?: Set<string>;
+  /**
+   * Prepaid credits (lib/server/credits.ts loadCreditInputs). Lessons already
+   * redeemed skip their lesson line; billable lessons a package covers get a
+   * new credit, returned in `newRedemptions` for the caller to record.
+   */
+  credits?: {
+    packages: CreditPackageInput[];
+    redeemedLessonIds: Set<string>;
+  };
+}
+
+export interface DerivedPeriod {
+  items: InvoiceItemDraft[];
+  skippedAlreadyInvoiced: number;
+  /** lessonId → packageId for lessons newly covered by a credit. */
+  newRedemptions: Map<string, string>;
+  /** Lessons newly covered by a credit, per guardian. */
+  creditedByGuardian: Map<string, number>;
 }
 
 /**
  * Lesson IDs that already appear on a draft/sent/paid invoice for this teacher.
  * Void invoices do not reserve lessons. Optionally ignore one invoice (regenerate).
+ * `kind` picks the line: "lesson" (default) for the lesson charge, "travel"
+ * for its travel fee. They differ when a prepaid credit paid the lesson.
  */
 export async function getInvoicedLessonIds(
   supabase: SupabaseClient,
   teacherId: string,
-  opts?: { exceptInvoiceId?: string }
+  opts?: { exceptInvoiceId?: string; kind?: "lesson" | "travel" }
 ): Promise<Set<string>> {
   const { data, error } = await supabase
     .from("invoice_items")
     .select("lesson_id, invoices!inner ( id, teacher_id, status )")
     .not("lesson_id", "is", null)
+    .eq("kind", opts?.kind ?? "lesson")
     .eq("invoices.teacher_id", teacherId)
     .in("invoices.status", ["draft", "sent", "paid"]);
 
@@ -88,7 +117,7 @@ export async function getInvoicedLessonIds(
 
 /**
  * Load marked lessons in [periodStart, periodEnd] and derive draft invoice
- * items under the teacher's billing policy.
+ * items under the teacher's billing policy, applying prepaid credits.
  */
 export async function derivePeriodItems(
   supabase: SupabaseClient,
@@ -97,7 +126,7 @@ export async function derivePeriodItems(
   periodEnd: string,
   policy: StudioPolicy,
   options: DerivePeriodOptions = {}
-): Promise<{ items: InvoiceItemDraft[]; skippedAlreadyInvoiced: number }> {
+): Promise<DerivedPeriod> {
   const { data: lessons, error } = await supabase
     .from("lessons")
     .select(
@@ -163,8 +192,41 @@ export async function derivePeriodItems(
     });
   }
 
+  const redeemed = options.credits?.redeemedLessonIds ?? new Set<string>();
+  const billable = inputs.filter(
+    (lesson) => lesson.guardianId && isBillable(lesson, policy)
+  );
+  const candidates: CreditCandidate[] = billable
+    .filter((lesson) => !redeemed.has(lesson.lessonId))
+    .map((lesson) => ({
+      lessonId: lesson.lessonId,
+      studentId: lesson.studentId,
+      lessonDate: lesson.lessonDate,
+      startsAt: lesson.startsAt,
+      durationMinutes: lesson.durationMinutes,
+    }));
+  const newRedemptions = options.credits
+    ? allocateCredits(candidates, options.credits.packages)
+    : new Map<string, string>();
+
+  const creditedLessonIds = new Set([...redeemed, ...newRedemptions.keys()]);
+  const creditedByGuardian = new Map<string, number>();
+  for (const lesson of billable) {
+    if (!newRedemptions.has(lesson.lessonId)) continue;
+    const guardianId = lesson.guardianId!;
+    creditedByGuardian.set(
+      guardianId,
+      (creditedByGuardian.get(guardianId) ?? 0) + 1
+    );
+  }
+
   return {
-    items: deriveInvoiceItems(inputs, policy),
+    items: deriveInvoiceItems(inputs, policy, {
+      creditedLessonIds,
+      travelInvoicedLessonIds: options.travelInvoicedLessonIds,
+    }),
     skippedAlreadyInvoiced,
+    newRedemptions,
+    creditedByGuardian,
   };
 }

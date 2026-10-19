@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -44,6 +45,7 @@ export function InvoiceDetailClient({
   paymentInstructions,
   paymentQrCode,
   payments = [],
+  creditPackage = null,
 }: {
   invoiceId: string;
   status: string;
@@ -66,6 +68,8 @@ export function InvoiceDetailClient({
     note: string;
     recordedAt: string;
   }[];
+  /** Set when this invoice sells prepaid credits; its line is fixed. */
+  creditPackage?: { studentId: string; studentName: string; label: string } | null;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -77,6 +81,7 @@ export function InvoiceDetailClient({
     tone: "ok" | "error" | "warn";
   } | null>(null);
   const isDraft = status === "draft";
+  const itemsEditable = isDraft && !creditPackage;
   const { paidCents, balanceCents } = summarizePayments(subtotalCents, payments);
   const partiallyPaid = status === "sent" && paidCents > 0 && balanceCents > 0;
   const [paymentForm, setPaymentForm] = useState<{
@@ -350,14 +355,16 @@ export function InvoiceDetailClient({
         <div className="flex flex-wrap gap-2">
           {isDraft && (
             <>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={regenerate}
-                disabled={busy}
-              >
-                Regenerate
-              </Button>
+              {!creditPackage && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={regenerate}
+                  disabled={busy}
+                >
+                  Regenerate
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="secondary"
@@ -522,6 +529,26 @@ export function InvoiceDetailClient({
         </Card>
       )}
 
+      {creditPackage && (
+        <Card padding="sm">
+          <p className="text-sm text-muted">
+            Sells {creditPackage.label} for{" "}
+            <Link
+              href={`/students/${creditPackage.studentId}`}
+              className="text-primary hover:underline"
+            >
+              {creditPackage.studentName}
+            </Link>
+            .{" "}
+            {isDraft
+              ? "The credits can be used once this invoice is sent or marked paid."
+              : status === "void"
+                ? "This invoice is void, so the credits can't be used."
+                : "Lessons of that length use these credits instead of being invoiced."}
+          </p>
+        </Card>
+      )}
+
       <Card padding="sm">
         <h2 className="font-semibold mb-3">Line items</h2>
         <div className="space-y-3">
@@ -530,7 +557,7 @@ export function InvoiceDetailClient({
               key={item.id ?? index}
               className="flex flex-col gap-2 sm:flex-row sm:items-center border-b border-border last:border-0 pb-3 last:pb-0"
             >
-              {isDraft ? (
+              {itemsEditable ? (
                 <>
                   <input
                     value={item.description}
@@ -576,7 +603,7 @@ export function InvoiceDetailClient({
             </div>
           ))}
         </div>
-        {isDraft && (
+        {itemsEditable && (
           <button
             type="button"
             onClick={() =>

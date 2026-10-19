@@ -5,6 +5,7 @@ import {
   derivePeriodItems,
   getInvoicedLessonIds,
 } from "@/lib/server/billing";
+import { loadCreditInputs, recordRedemptions } from "@/lib/server/credits";
 import {
   groupItemsByGuardian,
   sumAmountCents,
@@ -18,6 +19,8 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  *
  * Lessons already on a draft/sent/paid invoice are skipped (no double-billing).
  * Voided invoices free their lessons for a new generate.
+ * Billable lessons a prepaid package covers use a credit instead of a line;
+ * on commit those credits are recorded even for families with no invoice.
  */
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -46,25 +49,29 @@ export async function POST(req: NextRequest) {
   }
 
   const policy = await getPolicy(supabase, user.id);
-  let items;
-  let skippedAlreadyInvoiced = 0;
+  let result;
   try {
-    const excludeLessonIds = await getInvoicedLessonIds(supabase, user.id);
-    const result = await derivePeriodItems(
+    const [excludeLessonIds, travelInvoicedLessonIds, credits] =
+      await Promise.all([
+        getInvoicedLessonIds(supabase, user.id),
+        getInvoicedLessonIds(supabase, user.id, { kind: "travel" }),
+        loadCreditInputs(supabase, user.id),
+      ]);
+    result = await derivePeriodItems(
       supabase,
       user.id,
       periodStart,
       periodEnd,
       policy,
-      { excludeLessonIds }
+      { excludeLessonIds, travelInvoicedLessonIds, credits }
     );
-    items = result.items;
-    skippedAlreadyInvoiced = result.skippedAlreadyInvoiced;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
+  const { items, skippedAlreadyInvoiced, newRedemptions, creditedByGuardian } =
+    result;
   const groups = groupItemsByGuardian(items);
   const guardianIds = [...groups.keys()];
 
@@ -93,6 +100,7 @@ export async function POST(req: NextRequest) {
       currency: policy.currency,
       subtotalCents: sumAmountCents(lineItems),
       missingRateCount: lineItems.filter((i) => i.missingRate).length,
+      creditedLessonCount: creditedByGuardian.get(guardianId) ?? 0,
       items: lineItems,
     };
   });
@@ -105,6 +113,27 @@ export async function POST(req: NextRequest) {
       totalFamilies: drafts.length,
       totalCents: drafts.reduce((s, d) => s + d.subtotalCents, 0),
       skippedAlreadyInvoiced,
+      creditsToUse: newRedemptions.size,
+    });
+  }
+
+  // Record credits before writing lesson lines: the database refuses a
+  // redemption for a lesson that is already invoiced, and vice versa.
+  const redemptionError = await recordRedemptions(
+    supabase,
+    user.id,
+    newRedemptions
+  );
+  if (redemptionError) {
+    return NextResponse.json({ error: redemptionError }, { status: 500 });
+  }
+
+  if (drafts.length === 0 && newRedemptions.size > 0) {
+    return NextResponse.json({
+      created: [],
+      count: 0,
+      skippedAlreadyInvoiced,
+      creditsUsed: newRedemptions.size,
     });
   }
 
@@ -146,6 +175,7 @@ export async function POST(req: NextRequest) {
     const rows = draft.items.map((item, idx) => ({
       invoice_id: invoice.id,
       lesson_id: item.lessonId,
+      kind: item.kind,
       description: item.description,
       quantity: item.quantity,
       unit_cents: item.unitCents,
@@ -168,5 +198,6 @@ export async function POST(req: NextRequest) {
     created,
     count: created.length,
     skippedAlreadyInvoiced,
+    creditsUsed: newRedemptions.size,
   });
 }

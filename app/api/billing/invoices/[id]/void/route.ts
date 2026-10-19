@@ -35,6 +35,22 @@ export async function POST(
     return NextResponse.json({ ok: true });
   }
 
+  // The database refuses this too; check first for a friendlier message.
+  const { data: creditPackage } = await supabase
+    .from("credit_packages")
+    .select("id, credit_redemptions ( id )")
+    .eq("invoice_id", id)
+    .maybeSingle();
+  if ((creditPackage?.credit_redemptions as unknown[] | null)?.length) {
+    return NextResponse.json(
+      {
+        error:
+          "Some of these prepaid credits are already used. Return them from the student's page before voiding.",
+      },
+      { status: 400 }
+    );
+  }
+
   const { error } = await supabase
     .from("invoices")
     .update({ status: "void" })

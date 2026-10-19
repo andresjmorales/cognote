@@ -15,6 +15,7 @@ interface PreviewDraft {
   familyName: string;
   subtotalCents: number;
   missingRateCount: number;
+  creditedLessonCount: number;
   items: { description: string; amountCents: number; missingRate: boolean }[];
 }
 
@@ -38,6 +39,7 @@ export function GenerateInvoicesModal({
     drafts: PreviewDraft[];
     totalCents: number;
     skippedAlreadyInvoiced: number;
+    creditsToUse: number;
   } | null>(null);
 
   async function runPreview() {
@@ -63,6 +65,7 @@ export function GenerateInvoicesModal({
       drafts: data.drafts,
       totalCents: data.totalCents,
       skippedAlreadyInvoiced: data.skippedAlreadyInvoiced ?? 0,
+      creditsToUse: data.creditsToUse ?? 0,
     });
   }
 
@@ -140,7 +143,23 @@ export function GenerateInvoicesModal({
                 free its lessons, or use Regenerate on a draft to refresh it.
               </p>
             )}
-            {preview.drafts.length === 0 ? (
+            {preview.creditsToUse > 0 && (
+              <p className="text-xs text-muted bg-surface-dim rounded-lg px-3 py-2">
+                {preview.creditsToUse} lesson
+                {preview.creditsToUse === 1 ? "" : "s"} will use prepaid
+                credits instead of being invoiced.
+              </p>
+            )}
+            {preview.drafts.length === 0 && preview.creditsToUse > 0 ? (
+              <>
+                <p className="text-sm text-muted">
+                  Nothing new to invoice. Save to record the credits used.
+                </p>
+                <Button size="sm" onClick={commit} disabled={busy}>
+                  {busy ? "Saving..." : "Use credits"}
+                </Button>
+              </>
+            ) : preview.drafts.length === 0 ? (
               <p className="text-sm text-muted">
                 {preview.skippedAlreadyInvoiced > 0
                   ? "Nothing new to invoice. Everything billable in this period is already covered."
@@ -162,6 +181,13 @@ export function GenerateInvoicesModal({
                       <span>{d.familyName}</span>
                       <span>{formatMoney(d.subtotalCents, currency)}</span>
                     </div>
+                    {d.creditedLessonCount > 0 && (
+                      <p className="text-xs text-muted mb-1">
+                        {d.creditedLessonCount} lesson
+                        {d.creditedLessonCount === 1 ? "" : "s"} paid by
+                        prepaid credits
+                      </p>
+                    )}
                     {d.missingRateCount > 0 && (
                       <p className="text-xs text-error mb-1">
                         {d.missingRateCount} line
