@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPolicy } from "@/lib/server/scheduling";
 import { toLocalDateString } from "@/lib/schedule";
-import { defaultInvoicePeriod, stripeStatusFromPolicy } from "@/lib/billing";
+import {
+  defaultInvoicePeriod,
+  stripeStatusFromPolicy,
+  sumAmountCents,
+} from "@/lib/billing";
 import { familyDisplayName } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
 import { Card } from "@/components/ui/card";
@@ -26,7 +30,7 @@ export default async function BillingPage() {
   const { data: invoices } = await supabase
     .from("invoices")
     .select(
-      "id, period_start, period_end, status, subtotal_cents, currency, created_at, guardians ( name, family_name )"
+      "id, period_start, period_end, status, subtotal_cents, currency, created_at, guardians ( name, family_name ), payments ( amount_cents )"
     )
     .eq("teacher_id", user.id)
     .order("created_at", { ascending: false });
@@ -45,6 +49,11 @@ export default async function BillingPage() {
       periodEnd: inv.period_end,
       status: inv.status,
       subtotalCents: inv.subtotal_cents,
+      paidCents: sumAmountCents(
+        ((inv.payments as { amount_cents: number }[] | null) ?? []).map(
+          (p) => ({ amountCents: p.amount_cents })
+        )
+      ),
       currency: inv.currency,
     };
   });

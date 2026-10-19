@@ -79,6 +79,22 @@ export async function createCheckoutSession(
   return { sessionId: session.id, url: session.url };
 }
 
+/**
+ * Expire an open Checkout Session so its link can no longer be paid (e.g.
+ * after a manual payment changed what is owed). Already completed or
+ * expired sessions are left alone.
+ */
+export async function expireCheckoutSession(
+  secretKey: string,
+  sessionId: string
+): Promise<void> {
+  const stripe = createStripeClient(secretKey);
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (session.status === "open") {
+    await stripe.checkout.sessions.expire(sessionId);
+  }
+}
+
 export function constructWebhookEvent(
   payload: string | Buffer,
   signature: string,

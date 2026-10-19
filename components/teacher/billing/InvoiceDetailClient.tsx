@@ -9,6 +9,7 @@ import {
   centsToDollarsInput,
   dollarsToCents,
   formatMoney,
+  summarizePayments,
 } from "@/lib/billing";
 import { InvoiceStatusBadge } from "@/components/teacher/billing/BillingList";
 
@@ -76,6 +77,12 @@ export function InvoiceDetailClient({
     tone: "ok" | "error" | "warn";
   } | null>(null);
   const isDraft = status === "draft";
+  const { paidCents, balanceCents } = summarizePayments(subtotalCents, payments);
+  const partiallyPaid = status === "sent" && paidCents > 0 && balanceCents > 0;
+  const [paymentForm, setPaymentForm] = useState<{
+    amount: string;
+    note: string;
+  } | null>(null);
 
   // Re-sync local edits when the server payload changes (router.refresh after
   // save/send) — the sanctioned adjust-state-during-render pattern.
@@ -202,11 +209,85 @@ export function InvoiceDetailClient({
     }
   }
 
+  async function recordPayment() {
+    if (!paymentForm) return;
+    const amountCents = dollarsToCents(paymentForm.amount);
+    if (amountCents === null || amountCents <= 0) {
+      setFlash({ text: "Enter an amount greater than zero", tone: "error" });
+      return;
+    }
+    if (amountCents > balanceCents) {
+      setFlash({
+        text: `Amount is more than the ${formatMoney(balanceCents, currency)} due`,
+        tone: "error",
+      });
+      return;
+    }
+    setBusy(true);
+    setFlash(null);
+    const res = await fetch(`/api/billing/invoices/${invoiceId}/mark-paid`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amountCents, note: paymentForm.note }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setFlash({ text: data.error ?? "Failed", tone: "error" });
+      return;
+    }
+    setPaymentForm(null);
+    setFlash({
+      text: data.paid
+        ? "Payment recorded; invoice paid in full"
+        : `Payment recorded; ${formatMoney(data.balanceCents ?? 0, currency)} still due`,
+      tone: "ok",
+    });
+    router.refresh();
+  }
+
+  async function removePayment(payment: { id: string; amountCents: number }) {
+    const reopens = status === "paid";
+    const ok = await confirm({
+      title: "Remove payment?",
+      message: `Remove the ${formatMoney(payment.amountCents, currency)} payment from this invoice?${
+        reopens
+          ? " The invoice will go back to unpaid with the remaining balance due, and the family portal will show it as owed again."
+          : ""
+      } Use this to fix a payment recorded by mistake; nothing is sent to the family.`,
+      confirmLabel: "Remove payment",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setBusy(true);
+    setFlash(null);
+    const res = await fetch(
+      `/api/billing/invoices/${invoiceId}/payments/${payment.id}`,
+      { method: "DELETE" }
+    );
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setFlash({ text: data.error ?? "Failed", tone: "error" });
+      return;
+    }
+    setFlash({
+      text:
+        reopens && data.status === "sent"
+          ? "Payment removed; invoice reopened"
+          : "Payment removed",
+      tone: "ok",
+    });
+    router.refresh();
+  }
+
   async function voidInvoice() {
     const ok = await confirm({
       title: "Void invoice?",
       message:
-        "Voiding cancels the charge, so the family should not pay it. Paid invoices cannot be voided (use a refund outside CogNote if needed).",
+        paidCents > 0
+          ? "Voiding cancels the charge, so the family should not pay the rest. Payments already recorded stay on the voided invoice and can no longer be removed."
+          : "Voiding cancels the charge, so the family should not pay it.",
       confirmLabel: "Void",
       variant: "danger",
     });
@@ -250,11 +331,20 @@ export function InvoiceDetailClient({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold">{familyName}</h1>
-            <InvoiceStatusBadge status={status} />
+            <InvoiceStatusBadge status={status} partiallyPaid={partiallyPaid} />
           </div>
           <p className="text-sm text-muted">
             {periodStart} → {periodEnd} ·{" "}
             {formatMoney(isDraft ? liveTotal : subtotalCents, currency)}
+            {partiallyPaid && (
+              <>
+                {" "}
+                · {formatMoney(paidCents, currency)} paid ·{" "}
+                <span className="font-semibold text-foreground">
+                  {formatMoney(balanceCents, currency)} due
+                </span>
+              </>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -281,7 +371,7 @@ export function InvoiceDetailClient({
               </Button>
             </>
           )}
-          {(status === "sent" || status === "draft") && (
+          {status === "draft" && (
             <Button
               size="sm"
               variant="secondary"
@@ -289,6 +379,21 @@ export function InvoiceDetailClient({
               disabled={busy}
             >
               Mark paid
+            </Button>
+          )}
+          {status === "sent" && balanceCents > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                setPaymentForm({
+                  amount: centsToDollarsInput(balanceCents),
+                  note: "",
+                })
+              }
+              disabled={busy || paymentForm !== null}
+            >
+              Record payment
             </Button>
           )}
           {initialItems.length > 0 && (
@@ -332,6 +437,73 @@ export function InvoiceDetailClient({
         >
           {flash.text}
         </p>
+      )}
+
+      {paymentForm && (
+        <Card padding="sm">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              recordPayment();
+            }}
+            className="space-y-3"
+          >
+            <div>
+              <h2 className="font-semibold">Record payment</h2>
+              <p className="text-xs text-muted">
+                {formatMoney(balanceCents, currency)} due. Enter less for a
+                partial payment; the invoice is marked paid once payments
+                cover the total.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-xs font-semibold text-muted">Amount</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-muted">$</span>
+                  <input
+                    value={paymentForm.amount}
+                    onChange={(e) =>
+                      setPaymentForm({ ...paymentForm, amount: e.target.value })
+                    }
+                    inputMode="decimal"
+                    className={amountInputClass}
+                    aria-label="Payment amount"
+                    autoFocus
+                  />
+                </span>
+              </label>
+              <label className="flex flex-col gap-1 text-sm flex-1 min-w-[10rem]">
+                <span className="text-xs font-semibold text-muted">
+                  Note (optional)
+                </span>
+                <input
+                  value={paymentForm.note}
+                  onChange={(e) =>
+                    setPaymentForm({ ...paymentForm, note: e.target.value })
+                  }
+                  maxLength={500}
+                  placeholder="e.g. Check #1042"
+                  className={inputClass}
+                />
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" type="submit" disabled={busy}>
+                Save payment
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                type="button"
+                onClick={() => setPaymentForm(null)}
+                disabled={busy}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
       {checkoutUrl && status === "sent" && (
@@ -466,12 +638,32 @@ export function InvoiceDetailClient({
                     {new Date(p.recordedAt).toLocaleString()}
                   </div>
                 </div>
-                <span className="font-semibold tabular-nums">
-                  {formatMoney(p.amountCents, currency)}
+                <span className="flex items-baseline gap-3">
+                  {p.method === "manual" && status !== "void" && (
+                    <button
+                      type="button"
+                      onClick={() => removePayment(p)}
+                      disabled={busy}
+                      className="text-xs text-error hover:underline cursor-pointer disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  )}
+                  <span className="font-semibold tabular-nums">
+                    {formatMoney(p.amountCents, currency)}
+                  </span>
                 </span>
               </li>
             ))}
           </ul>
+          {payments.length > 1 && (
+            <div className="mt-3 pt-2 border-t border-border flex justify-between text-sm font-semibold">
+              <span>Total paid</span>
+              <span className="tabular-nums">
+                {formatMoney(paidCents, currency)}
+              </span>
+            </div>
+          )}
         </Card>
       )}
 

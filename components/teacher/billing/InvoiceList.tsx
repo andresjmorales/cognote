@@ -15,6 +15,8 @@ export interface InvoiceListRow {
   periodEnd: string;
   status: string;
   subtotalCents: number;
+  /** Sum of recorded payments. */
+  paidCents: number;
   currency: string;
 }
 
@@ -215,9 +217,23 @@ export function InvoiceList({ invoices }: { invoices: InvoiceListRow[] }) {
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <InvoiceStatusBadge status={inv.status} />
-                <span className="text-sm font-semibold tabular-nums">
+                <InvoiceStatusBadge
+                  status={inv.status}
+                  partiallyPaid={inv.paidCents > 0}
+                />
+                <span className="text-sm font-semibold tabular-nums text-right">
                   {formatMoney(inv.subtotalCents, inv.currency)}
+                  {inv.status === "sent" &&
+                    inv.paidCents > 0 &&
+                    inv.paidCents < inv.subtotalCents && (
+                      <span className="block text-xs font-normal text-muted">
+                        {formatMoney(
+                          inv.subtotalCents - inv.paidCents,
+                          inv.currency
+                        )}{" "}
+                        due
+                      </span>
+                    )}
                 </span>
               </div>
             </Link>
