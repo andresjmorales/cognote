@@ -14,6 +14,8 @@ import {
   defaultInvoicePeriod,
   maskSecret,
   validateLiveStripeKeys,
+  summarizePayments,
+  resolveManualPaymentAmount,
   type BillableLessonInput,
 } from "@/lib/billing";
 import { DEFAULT_POLICY, type StudioPolicy } from "@/lib/schedule";
@@ -529,5 +531,67 @@ describe("validateLiveStripeKeys", () => {
     expect(validateLiveStripeKeys({ publishableKey: "pk_abc" })).toMatch(
       /pk_live_/
     );
+  });
+});
+
+describe("summarizePayments", () => {
+  it("reports a partial payment with the balance still owed", () => {
+    expect(summarizePayments(31500, [{ amountCents: 28000 }])).toEqual({
+      paidCents: 28000,
+      balanceCents: 3500,
+      settled: false,
+    });
+  });
+
+  it("settles once payments add up to the subtotal", () => {
+    expect(
+      summarizePayments(31500, [{ amountCents: 28000 }, { amountCents: 3500 }])
+    ).toEqual({ paidCents: 31500, balanceCents: 0, settled: true });
+  });
+
+  it("never reports a negative balance on overpayment", () => {
+    expect(summarizePayments(1000, [{ amountCents: 1500 }]).balanceCents).toBe(0);
+  });
+
+  it("treats no payments as fully owed", () => {
+    expect(summarizePayments(4500, [])).toEqual({
+      paidCents: 0,
+      balanceCents: 4500,
+      settled: false,
+    });
+  });
+});
+
+describe("resolveManualPaymentAmount", () => {
+  it("defaults to the full balance", () => {
+    expect(resolveManualPaymentAmount(undefined, 3500)).toEqual({
+      ok: true,
+      amountCents: 3500,
+    });
+    expect(resolveManualPaymentAmount(null, 3500)).toEqual({
+      ok: true,
+      amountCents: 3500,
+    });
+  });
+
+  it("accepts a partial amount", () => {
+    expect(resolveManualPaymentAmount(28000, 31500)).toEqual({
+      ok: true,
+      amountCents: 28000,
+    });
+  });
+
+  it("rejects more than the balance", () => {
+    expect(resolveManualPaymentAmount(31501, 31500).ok).toBe(false);
+  });
+
+  it("rejects zero, negative, and fractional cents", () => {
+    expect(resolveManualPaymentAmount(0, 31500).ok).toBe(false);
+    expect(resolveManualPaymentAmount(-100, 31500).ok).toBe(false);
+    expect(resolveManualPaymentAmount(10.5, 31500).ok).toBe(false);
+  });
+
+  it("rejects any payment when nothing is owed", () => {
+    expect(resolveManualPaymentAmount(undefined, 0).ok).toBe(false);
   });
 });

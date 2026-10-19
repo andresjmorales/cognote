@@ -327,6 +327,56 @@ export function sumAmountCents(items: { amountCents: number }[]): number {
   return items.reduce((sum, i) => sum + i.amountCents, 0);
 }
 
+export interface PaymentSummary {
+  paidCents: number;
+  /** What the family still owes; never negative (overpayment shows as 0). */
+  balanceCents: number;
+  /** Payments cover the invoice, so it should read as paid. */
+  settled: boolean;
+}
+
+/**
+ * Paid / owed for an invoice. Status is derived from this: an invoice is
+ * paid once its payments cover the subtotal, and a paid invoice whose
+ * payments no longer cover it (a mistaken payment was removed) reopens.
+ */
+export function summarizePayments(
+  subtotalCents: number,
+  payments: { amountCents: number }[]
+): PaymentSummary {
+  const paidCents = sumAmountCents(payments);
+  return {
+    paidCents,
+    balanceCents: Math.max(0, subtotalCents - paidCents),
+    settled: paidCents >= subtotalCents,
+  };
+}
+
+/**
+ * Validate a manually recorded payment. `requested` null/undefined means
+ * "pay the rest". Partial amounts are allowed; more than the balance is not,
+ * so a typo can't silently overpay.
+ */
+export function resolveManualPaymentAmount(
+  requested: number | null | undefined,
+  balanceCents: number
+): { ok: true; amountCents: number } | { ok: false; error: string } {
+  if (balanceCents <= 0) {
+    return { ok: false, error: "Nothing is owed on this invoice" };
+  }
+  if (requested == null) return { ok: true, amountCents: balanceCents };
+  if (!Number.isInteger(requested) || requested <= 0) {
+    return { ok: false, error: "Enter an amount greater than zero" };
+  }
+  if (requested > balanceCents) {
+    return {
+      ok: false,
+      error: "Amount is more than the balance due",
+    };
+  }
+  return { ok: true, amountCents: requested };
+}
+
 /** e.g. formatMoney(4500, "USD") → "$45.00" */
 export function formatMoney(cents: number, currency = "USD"): string {
   return new Intl.NumberFormat("en-US", {

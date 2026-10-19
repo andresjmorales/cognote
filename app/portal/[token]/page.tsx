@@ -16,7 +16,7 @@ import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
-import { formatMoney } from "@/lib/billing";
+import { formatMoney, summarizePayments } from "@/lib/billing";
 import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { formatEventWhen } from "@/lib/events";
 import { PortalCancelButton } from "@/components/portal/PortalCancelButton";
@@ -149,6 +149,7 @@ export default async function PortalPage({
     subtotal_cents: number;
     currency: string;
     stripe_checkout_url: string | null;
+    payments: { amount_cents: number }[] | null;
   }[] = [];
   let portalEvents: {
     id: string;
@@ -170,7 +171,7 @@ export default async function PortalPage({
   const invoicesRes = await supabase
     .from("invoices")
     .select(
-      "id, period_start, period_end, status, subtotal_cents, currency, stripe_checkout_url"
+      "id, period_start, period_end, status, subtotal_cents, currency, stripe_checkout_url, payments ( amount_cents )"
     )
     .eq("guardian_id", guardian.id)
     .in("status", ["sent", "paid"])
@@ -686,6 +687,22 @@ export default async function PortalPage({
                       <div className="text-xs text-muted capitalize">
                         {inv.status} · {formatMoney(inv.subtotal_cents, inv.currency)}
                       </div>
+                      {(() => {
+                        if (inv.status !== "sent") return null;
+                        const { paidCents, balanceCents } = summarizePayments(
+                          inv.subtotal_cents,
+                          (inv.payments ?? []).map((p) => ({
+                            amountCents: p.amount_cents,
+                          }))
+                        );
+                        if (paidCents <= 0 || balanceCents <= 0) return null;
+                        return (
+                          <div className="text-xs font-semibold">
+                            {formatMoney(paidCents, inv.currency)} paid ·{" "}
+                            {formatMoney(balanceCents, inv.currency)} due
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       {inv.status === "sent" && inv.stripe_checkout_url && (

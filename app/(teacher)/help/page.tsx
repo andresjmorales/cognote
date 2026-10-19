@@ -169,6 +169,15 @@ export default function HelpPage() {
             webhook is missing or misconfigured, the payment still succeeds in
             Stripe; mark the invoice paid manually on the Billing tab.
           </p>
+          <p className="text-muted">
+            For a payment received outside Stripe, open the invoice and use
+            Record payment. Enter less than the balance for a partial payment;
+            the invoice shows what is still due and turns paid once payments
+            cover the total. Recorded a payment by mistake? Remove it from the
+            invoice&apos;s Payments list and a paid invoice reopens with the
+            balance due. Stripe payments can&apos;t be removed in CogNote;
+            refund those in your Stripe dashboard.
+          </p>
         </div>
       </Card>
 

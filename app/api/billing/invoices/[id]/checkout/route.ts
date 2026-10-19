@@ -5,6 +5,7 @@ import { createCheckoutSession } from "@/lib/payments";
 import { requestOrigin } from "@/lib/server/http";
 import { familyDisplayName, stripeCheckoutPrefillEmail } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
+import { summarizePayments } from "@/lib/billing";
 
 export async function POST(
   req: NextRequest,
@@ -35,7 +36,8 @@ export async function POST(
       *,
       guardians (
         id, name, family_name, email, secondary_email, email_recipients
-      )
+      ),
+      payments ( amount_cents )
     `
     )
     .eq("id", id)
@@ -54,6 +56,19 @@ export async function POST(
   if (invoice.subtotal_cents <= 0) {
     return NextResponse.json(
       { error: "Invoice total must be greater than zero" },
+      { status: 400 }
+    );
+  }
+  // Charge what is still owed after any partial payments.
+  const { balanceCents } = summarizePayments(
+    invoice.subtotal_cents,
+    ((invoice.payments as { amount_cents: number }[] | null) ?? []).map(
+      (p) => ({ amountCents: p.amount_cents })
+    )
+  );
+  if (balanceCents <= 0) {
+    return NextResponse.json(
+      { error: "Nothing is owed on this invoice" },
       { status: 400 }
     );
   }
@@ -95,7 +110,7 @@ export async function POST(
       secretKey: policy.stripe_secret_key,
       invoiceId: id,
       teacherId: user.id,
-      amountCents: invoice.subtotal_cents,
+      amountCents: balanceCents,
       currency: invoice.currency,
       familyName: familyDisplayName(family),
       studioName: policy.studio_name,

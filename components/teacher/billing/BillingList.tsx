@@ -233,20 +233,29 @@ export function BillingListActions({
   );
 }
 
-export function InvoiceStatusBadge({ status }: { status: string }) {
+export function InvoiceStatusBadge({
+  status,
+  partiallyPaid = false,
+}: {
+  status: string;
+  /** Sent invoice with some, but not all, of its total paid. */
+  partiallyPaid?: boolean;
+}) {
   const styles: Record<string, string> = {
     draft: "bg-surface-dim text-muted",
     sent: "bg-primary/10 text-primary",
+    partial: "bg-warning/25 text-foreground",
     paid: "bg-success/15 text-success",
     void: "bg-surface-dim text-error line-through",
   };
+  const partial = partiallyPaid && status === "sent";
   return (
     <span
       className={`inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize ${
-        styles[status] ?? styles.draft
+        styles[partial ? "partial" : status] ?? styles.draft
       }`}
     >
-      {status}
+      {partial ? "Partly paid" : status}
     </span>
   );
 }
