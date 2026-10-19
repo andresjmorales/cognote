@@ -22,10 +22,12 @@ import { getOrSeedDimensions } from "@/lib/server/skills";
 import { getPolicy } from "@/lib/server/scheduling";
 import { loadStudentStreakSummary } from "@/lib/server/streaks";
 import { StudentStreakCard } from "@/components/teacher/StudentStreakCard";
+import { CreditPackagesCard } from "@/components/teacher/billing/CreditPackagesCard";
+import { loadCreditBalances } from "@/lib/server/credits";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
 import { formatLabel, isActiveSheetMusicAssignment } from "@/lib/sheet-music";
-import { oneToOne } from "@/lib/schedule";
+import { oneToOne, toLocalDateString } from "@/lib/schedule";
 import type { MusicFormat } from "@/lib/supabase/types";
 
 interface StudentPlanSessionRow {
@@ -273,7 +275,25 @@ export default async function StudentDetailPage({
   const noteItems = allItems.filter((i) => isMusicalNote(i.note));
   const conceptItems = allItems.filter((i) => !isMusicalNote(i.note));
 
-  const streakSummary = await loadStudentStreakSummary(supabase, id, policy);
+  const [streakSummary, creditPackages, { data: activeSlot }] =
+    await Promise.all([
+      loadStudentStreakSummary(supabase, id, policy),
+      loadCreditBalances(
+        supabase,
+        user.id,
+        policy,
+        [id],
+        toLocalDateString(new Date(), policy.timezone)
+      ),
+      supabase
+        .from("lesson_slots")
+        .select("duration_minutes, rate_cents")
+        .eq("student_id", id)
+        .eq("active", true)
+        .order("start_date", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   return (
     <div>
@@ -349,6 +369,34 @@ export default async function StudentDetailPage({
         createdAt={student.created_at}
         initialDefaultRateCents={student.default_rate_cents ?? null}
         initialTravelFeeCents={student.travel_fee_cents ?? null}
+      />
+
+      <CreditPackagesCard
+        studentId={id}
+        hasFamily={Boolean(student.guardian_id)}
+        currency={policy.currency}
+        packages={creditPackages.map((pkg) => ({
+          id: pkg.id,
+          invoiceId: pkg.invoiceId,
+          credits: pkg.credits,
+          durationMinutes: pkg.durationMinutes,
+          priceCents: pkg.priceCents,
+          startsOn: pkg.startsOn,
+          expiresOn: pkg.expiresOn,
+          usedCredits: pkg.balance.usedCredits,
+          pendingCredits: pkg.balance.pendingCredits,
+          remainingCredits: pkg.balance.remainingCredits,
+          state: pkg.balance.state,
+          redemptions: pkg.redemptions,
+        }))}
+        defaultDurationMinutes={activeSlot?.duration_minutes ?? 30}
+        rate={{
+          slotRateCents: activeSlot?.rate_cents ?? null,
+          studentDefaultRateCents: student.default_rate_cents ?? null,
+          studioDefaultRateCents: policy.default_rate_cents,
+        }}
+        durationRates={policy.duration_rate_cents}
+        rateBasis={policy.rate_basis}
       />
 
       {/* Private meta-notes about the student */}

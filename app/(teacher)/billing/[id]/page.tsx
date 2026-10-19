@@ -6,8 +6,16 @@ import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { familyDisplayName } from "@/lib/guardians";
 import { oneToOne } from "@/lib/schedule";
 import { InvoiceDetailClient } from "@/components/teacher/billing/InvoiceDetailClient";
+import { describeCreditPackage } from "@/lib/credits";
 
 export const metadata = { title: "Invoice" };
+
+interface PackageRow {
+  student_id: string;
+  credits: number;
+  duration_minutes: number;
+  students: { name: string } | { name: string }[] | null;
+}
 
 export default async function InvoiceDetailPage({
   params,
@@ -31,7 +39,8 @@ export default async function InvoiceDetailPage({
         *,
         guardians ( name, family_name ),
         invoice_items ( * ),
-        payments ( id, amount_cents, method, note, recorded_at )
+        payments ( id, amount_cents, method, note, recorded_at ),
+        credit_packages ( student_id, credits, duration_minutes, students ( name ) )
       `
       )
       .eq("id", id)
@@ -47,6 +56,20 @@ export default async function InvoiceDetailPage({
       | { name: string; family_name: string | null }[]
       | null
   );
+
+  const pkg = oneToOne(
+    invoice.credit_packages as
+      | PackageRow
+      | PackageRow[]
+      | null
+  );
+  const creditPackage = pkg
+    ? {
+        studentId: pkg.student_id,
+        studentName: oneToOne(pkg.students)?.name ?? "Student",
+        label: describeCreditPackage(pkg.credits, pkg.duration_minutes),
+      }
+    : null;
 
   const items = (
     (invoice.invoice_items as {
@@ -119,6 +142,7 @@ export default async function InvoiceDetailPage({
             : null
         }
         payments={payments}
+        creditPackage={creditPackage}
       />
     </div>
   );

@@ -16,6 +16,7 @@ export type AttendanceStatus =
 export type EmailRecipients = "primary" | "secondary" | "both";
 export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
 export type PaymentMethod = "manual" | "stripe";
+export type InvoiceItemKind = "lesson" | "travel" | "credit_package";
 export type InvoiceCadence = "monthly" | "manual";
 export type PaymentProvider = "manual" | "stripe";
 export type RateBasis = "per_lesson" | "per_hour";
@@ -397,6 +398,7 @@ export interface Database {
           id: string;
           invoice_id: string;
           lesson_id: string | null;
+          kind: InvoiceItemKind;
           description: string;
           quantity: number;
           unit_cents: number;
@@ -407,6 +409,7 @@ export interface Database {
           id?: string;
           invoice_id: string;
           lesson_id?: string | null;
+          kind?: InvoiceItemKind;
           description: string;
           quantity?: number;
           unit_cents: number;
@@ -421,6 +424,50 @@ export interface Database {
           amount_cents?: number;
           sort_order?: number;
         };
+      };
+      credit_packages: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          student_id: string;
+          invoice_id: string;
+          credits: number;
+          duration_minutes: number;
+          price_cents: number;
+          starts_on: string;
+          expires_on: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          student_id: string;
+          invoice_id: string;
+          credits: number;
+          duration_minutes: number;
+          price_cents: number;
+          starts_on: string;
+          expires_on?: string | null;
+        };
+        Update: {
+          expires_on?: string | null;
+        };
+      };
+      credit_redemptions: {
+        Row: {
+          id: string;
+          teacher_id: string;
+          package_id: string;
+          lesson_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          teacher_id: string;
+          package_id: string;
+          lesson_id: string;
+        };
+        Update: Record<string, never>;
       };
       payments: {
         Row: {

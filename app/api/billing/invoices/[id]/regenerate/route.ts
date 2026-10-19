@@ -6,11 +6,13 @@ import {
   getInvoicedLessonIds,
 } from "@/lib/server/billing";
 import { sumAmountCents } from "@/lib/billing";
+import { loadCreditInputs, recordRedemptions } from "@/lib/server/credits";
 
 /**
  * Re-derive line items for a draft invoice from current attendance × policy.
  * Replaces existing items. Lessons already on *other* invoices stay excluded;
- * lessons currently on this draft are included again.
+ * lessons currently on this draft are included again. Lessons a prepaid
+ * package now covers use a credit instead of a line.
  */
 export async function POST(
   _req: NextRequest,
@@ -43,13 +45,31 @@ export async function POST(
     );
   }
 
+  const { data: creditPackage } = await supabase
+    .from("credit_packages")
+    .select("id")
+    .eq("invoice_id", id)
+    .maybeSingle();
+  if (creditPackage) {
+    return NextResponse.json(
+      { error: "Prepaid credit invoices have no lessons to regenerate" },
+      { status: 400 }
+    );
+  }
+
   const policy = await getPolicy(supabase, user.id);
 
   try {
-    const excludeLessonIds = await getInvoicedLessonIds(supabase, user.id, {
-      exceptInvoiceId: id,
-    });
-    const { items } = await derivePeriodItems(
+    const [excludeLessonIds, travelInvoicedLessonIds, credits] =
+      await Promise.all([
+        getInvoicedLessonIds(supabase, user.id, { exceptInvoiceId: id }),
+        getInvoicedLessonIds(supabase, user.id, {
+          exceptInvoiceId: id,
+          kind: "travel",
+        }),
+        loadCreditInputs(supabase, user.id),
+      ]);
+    const { items, newRedemptions } = await derivePeriodItems(
       supabase,
       user.id,
       invoice.period_start,
@@ -58,16 +78,29 @@ export async function POST(
       {
         guardianId: invoice.guardian_id,
         excludeLessonIds,
+        travelInvoicedLessonIds,
+        credits,
       }
     );
 
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
+
+    // After clearing this draft's lines, so lessons it held can take a credit.
+    const redemptionError = await recordRedemptions(
+      supabase,
+      user.id,
+      newRedemptions
+    );
+    if (redemptionError) {
+      return NextResponse.json({ error: redemptionError }, { status: 500 });
+    }
 
     if (items.length > 0) {
       const { error: itemsError } = await supabase.from("invoice_items").insert(
         items.map((item, idx) => ({
           invoice_id: id,
           lesson_id: item.lessonId,
+          kind: item.kind,
           description: item.description,
           quantity: item.quantity,
           unit_cents: item.unitCents,

@@ -1,4 +1,7 @@
-import type { AttendanceStatus } from "@/lib/supabase/types";
+import type {
+  AttendanceStatus,
+  InvoiceItemKind,
+} from "@/lib/supabase/types";
 import type { StudioPolicy } from "@/lib/schedule";
 
 /**
@@ -7,7 +10,9 @@ import type { StudioPolicy } from "@/lib/schedule";
  * Attendance → invoice items is a pure function of (attendance, policy, rates).
  * Policy is an input, never baked into attendance rows. Make-up lessons that
  * redeem a credit (makeup_for set) are non-billable by default so the
- * original cancellation and the make-up never both bill.
+ * original cancellation and the make-up never both bill. Lessons covered by
+ * a prepaid credit (lib/credits.ts) skip the lesson line but still bill any
+ * travel fee.
  */
 
 export interface RateSources {
@@ -40,6 +45,7 @@ export interface BillableLessonInput {
 }
 
 export interface InvoiceItemDraft {
+  kind: Exclude<InvoiceItemKind, "credit_package">;
   lessonId: string;
   studentId: string;
   guardianId: string;
@@ -218,7 +224,8 @@ function statusLabel(status: AttendanceStatus): string {
   }
 }
 
-function formatShortDate(dateStr: string): string {
+/** "2026-06-15" → "Jun 15, 2026" (a calendar date, no timezone shift). */
+export function formatCalendarDate(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", {
     month: "short",
@@ -248,52 +255,39 @@ export function lessonAmountCents(
  * Lessons without a guardian are skipped (nothing to invoice).
  * Billable lessons with no rate still produce a $0 line with missingRate.
  * Home visits may add a separate travel-fee line when a fee is configured.
+ * Lessons in `creditedLessonIds` are paid by a prepaid credit: no lesson
+ * line, but the travel fee still bills unless it is in
+ * `travelInvoicedLessonIds` (already on an invoice).
  */
 export function deriveInvoiceItems(
   lessons: BillableLessonInput[],
-  policy: StudioPolicy
+  policy: StudioPolicy,
+  options: {
+    creditedLessonIds?: ReadonlySet<string>;
+    travelInvoicedLessonIds?: ReadonlySet<string>;
+  } = {}
 ): InvoiceItemDraft[] {
   const items: InvoiceItemDraft[] = [];
+  const credited = options.creditedLessonIds ?? new Set<string>();
+  const travelInvoiced = options.travelInvoicedLessonIds ?? new Set<string>();
 
   for (const lesson of lessons) {
     if (!lesson.guardianId) continue;
     if (!isBillable(lesson, policy)) continue;
+    const when = formatCalendarDate(lesson.lessonDate);
+    if (!credited.has(lesson.lessonId)) {
+      items.push(lessonItem(lesson, lesson.guardianId, when, policy));
+    }
 
-    const durationFlat =
-      lesson.rate.durationRateCents ??
-      policy.duration_rate_cents[lesson.durationMinutes] ??
-      null;
-    const charge = resolveLessonCharge(
-      { ...lesson.rate, durationRateCents: durationFlat },
-      lesson.durationMinutes,
-      policy.rate_basis
-    );
-    const when = formatShortDate(lesson.lessonDate);
-    const label = statusLabel(lesson.attendanceStatus);
-    const makeup = lesson.makeupFor ? " (make-up)" : "";
-    const rateNote =
-      !charge.missingRate &&
-      !charge.usedDurationFlat &&
-      policy.rate_basis === "per_hour" &&
-      charge.unitRateCents != null
-        ? ` @ ${formatMoney(charge.unitRateCents, policy.currency)}/hr`
-        : "";
-
-    items.push({
-      lessonId: lesson.lessonId,
-      studentId: lesson.studentId,
-      guardianId: lesson.guardianId,
-      description: `${label}${makeup} - ${lesson.studentName}, ${when} (${lesson.durationMinutes} min${rateNote})`,
-      quantity: 1,
-      unitCents: charge.amountCents,
-      amountCents: charge.amountCents,
-      missingRate: charge.missingRate,
-    });
-
-    if (lesson.isHomeVisit && lesson.travel) {
+    if (
+      lesson.isHomeVisit &&
+      lesson.travel &&
+      !travelInvoiced.has(lesson.lessonId)
+    ) {
       const travelFee = resolveTravelFeeCents(lesson.travel);
       if (travelFee != null && travelFee > 0) {
         items.push({
+          kind: "travel",
           lessonId: lesson.lessonId,
           studentId: lesson.studentId,
           guardianId: lesson.guardianId,
@@ -308,6 +302,44 @@ export function deriveInvoiceItems(
   }
 
   return items;
+}
+
+function lessonItem(
+  lesson: BillableLessonInput,
+  guardianId: string,
+  when: string,
+  policy: StudioPolicy
+): InvoiceItemDraft {
+  const durationFlat =
+    lesson.rate.durationRateCents ??
+    policy.duration_rate_cents[lesson.durationMinutes] ??
+    null;
+  const charge = resolveLessonCharge(
+    { ...lesson.rate, durationRateCents: durationFlat },
+    lesson.durationMinutes,
+    policy.rate_basis
+  );
+  const label = statusLabel(lesson.attendanceStatus);
+  const makeup = lesson.makeupFor ? " (make-up)" : "";
+  const rateNote =
+    !charge.missingRate &&
+    !charge.usedDurationFlat &&
+    policy.rate_basis === "per_hour" &&
+    charge.unitRateCents != null
+      ? ` @ ${formatMoney(charge.unitRateCents, policy.currency)}/hr`
+      : "";
+
+  return {
+    kind: "lesson",
+    lessonId: lesson.lessonId,
+    studentId: lesson.studentId,
+    guardianId,
+    description: `${label}${makeup} - ${lesson.studentName}, ${when} (${lesson.durationMinutes} min${rateNote})`,
+    quantity: 1,
+    unitCents: charge.amountCents,
+    amountCents: charge.amountCents,
+    missingRate: charge.missingRate,
+  };
 }
 
 /** Group draft items by guardian for one invoice per family. */

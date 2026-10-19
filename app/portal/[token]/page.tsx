@@ -16,7 +16,16 @@ import { Card } from "@/components/ui/card";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { familyDisplayName } from "@/lib/guardians";
 import { isActiveStudentPlan } from "@/lib/student-plans";
-import { formatMoney, summarizePayments } from "@/lib/billing";
+import {
+  formatCalendarDate,
+  formatMoney,
+  summarizePayments,
+} from "@/lib/billing";
+import { describeCreditPackage } from "@/lib/credits";
+import {
+  loadCreditBalances,
+  type CreditPackageWithBalance,
+} from "@/lib/server/credits";
 import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { formatEventWhen } from "@/lib/events";
 import { PortalCancelButton } from "@/components/portal/PortalCancelButton";
@@ -167,6 +176,7 @@ export default async function PortalPage({
     } | null;
   }[] = [];
   const streakByStudent = new Map<string, number>();
+  let creditPackages: CreditPackageWithBalance[] = [];
 
   const invoicesRes = await supabase
     .from("invoices")
@@ -306,6 +316,17 @@ export default async function PortalPage({
         };
       })
       .filter((e) => e.performers.length > 0);
+
+    // Only packages the family can still use; used-up and expired ones drop off.
+    creditPackages = (
+      await loadCreditBalances(
+        supabase,
+        guardian.teacher_id,
+        policy,
+        studentIds,
+        today
+      )
+    ).filter((pkg) => pkg.balance.state === "active");
 
     if (policy.streaks_enabled) {
       await Promise.all(
@@ -669,6 +690,45 @@ export default async function PortalPage({
             </div>
           )}
         </section>
+
+        {creditPackages.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-3">Prepaid Lessons</h2>
+            <div className="space-y-2">
+              {creditPackages.map((pkg) => (
+                <Card key={pkg.id} padding="sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-medium">
+                        {students.length > 1 &&
+                          `${nameById.get(pkg.studentId) ?? "Student"} · `}
+                        {describeCreditPackage(pkg.credits, pkg.durationMinutes)}
+                      </div>
+                      <div className="text-xs text-muted">
+                        {pkg.expiresOn
+                          ? `Use by ${formatCalendarDate(pkg.expiresOn)}`
+                          : "No expiry"}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold tabular-nums">
+                        {pkg.balance.remainingCredits}
+                        <span className="text-sm font-normal text-muted">
+                          {" "}
+                          / {pkg.credits} left
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            <p className="text-xs text-muted mt-2">
+              Each lesson of that length uses one credit. Once they run out,
+              lessons are invoiced as usual.
+            </p>
+          </section>
+        )}
 
         {/* Invoices */}
         <section>

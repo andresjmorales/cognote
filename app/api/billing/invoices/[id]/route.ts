@@ -70,7 +70,15 @@ export async function PUT(
 
   const body = await req.json();
 
-  if (Array.isArray(body.items)) {
+  // A prepaid-credits invoice's single line is set by the package; only its
+  // notes are editable.
+  const { data: creditPackage } = await supabase
+    .from("credit_packages")
+    .select("id")
+    .eq("invoice_id", id)
+    .maybeSingle();
+
+  if (Array.isArray(body.items) && !creditPackage) {
     const items = body.items as {
       id?: string;
       lessonId?: string | null;
@@ -80,6 +88,16 @@ export async function PUT(
       amountCents: number;
     }[];
 
+    // Items are replaced wholesale; keep each existing line's kind so travel
+    // fees stay travel fees (a redeemed lesson may still owe one).
+    const { data: existingItems } = await supabase
+      .from("invoice_items")
+      .select("id, kind")
+      .eq("invoice_id", id);
+    const kindById = new Map(
+      (existingItems ?? []).map((i) => [i.id as string, i.kind as string])
+    );
+
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
 
     if (items.length > 0) {
@@ -87,6 +105,8 @@ export async function PUT(
         items.map((item, idx) => ({
           invoice_id: id,
           lesson_id: item.lessonId ?? null,
+          kind:
+            item.id && kindById.get(item.id) === "travel" ? "travel" : "lesson",
           description: String(item.description).slice(0, 500),
           quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
           unit_cents: Math.max(0, Math.round(Number(item.unitCents) || 0)),

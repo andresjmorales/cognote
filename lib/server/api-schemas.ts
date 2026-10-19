@@ -144,3 +144,19 @@ export const flashcardReviewSchema = z
   .refine((v) => Boolean(v.itemId ?? v.note), {
     message: "itemId is required",
   });
+
+// ── Prepaid credits ─────────────────────────────────────────────────────────
+// Value rules (ranges, expiry after start) live in lib/credits.ts.
+
+export const creditPackageCreateSchema = z.object({
+  studentId: z.guid(),
+  credits: z.number().int(),
+  durationMinutes: z.number().int(),
+  priceCents: z.number().int(),
+  startsOn: dateString.optional(),
+  expiresOn: optionalDate,
+});
+
+export const creditPackageUpdateSchema = z.object({
+  expiresOn: z.union([dateString, z.literal(""), z.null()]),
+});

@@ -34,6 +34,8 @@ export type StudioDataExport = {
     events?: Record<string, unknown>[];
     event_students?: Record<string, unknown>[];
     event_rsvps?: Record<string, unknown>[];
+    credit_packages?: Record<string, unknown>[];
+    credit_redemptions?: Record<string, unknown>[];
   };
 };
 
@@ -81,6 +83,8 @@ export async function buildStudioExport(
     musicRes,
     eventsRes,
     profileRes,
+    creditPackagesRes,
+    creditRedemptionsRes,
   ] = await Promise.all([
     supabase.from("studio_policies").select("*").eq("teacher_id", teacherId).maybeSingle(),
     supabase.from("guardians").select("*").eq("teacher_id", teacherId),
@@ -93,6 +97,8 @@ export async function buildStudioExport(
     supabase.from("music_library_items").select("*").eq("teacher_id", teacherId),
     supabase.from("events").select("*").eq("teacher_id", teacherId),
     supabase.from("teachers").select("display_name").eq("id", teacherId).maybeSingle(),
+    supabase.from("credit_packages").select("*").eq("teacher_id", teacherId),
+    supabase.from("credit_redemptions").select("*").eq("teacher_id", teacherId),
   ]);
 
   const students = asRows(studentsRes.data);
@@ -203,6 +209,8 @@ export async function buildStudioExport(
       events: asRows(eventsRes.data),
       event_students: asRows(eventStudentsRes.data),
       event_rsvps: asRows(eventRsvpsRes.data),
+      credit_packages: asRows(creditPackagesRes.data),
+      credit_redemptions: asRows(creditRedemptionsRes.data),
     },
   };
 }
@@ -288,6 +296,15 @@ export async function importStudioExport(
     { name: "events", rows: withTeacherId(t.events ?? [], teacherId) },
     { name: "event_students", rows: t.event_students ?? [] },
     { name: "event_rsvps", rows: t.event_rsvps ?? [] },
+    // Prepaid credits; after invoices and lessons, which they reference.
+    {
+      name: "credit_packages",
+      rows: withTeacherId(t.credit_packages ?? [], teacherId),
+    },
+    {
+      name: "credit_redemptions",
+      rows: withTeacherId(t.credit_redemptions ?? [], teacherId),
+    },
   ];
 
   for (const step of steps) {

@@ -84,6 +84,8 @@ teachers
   │     ├── practice_sessions → note_attempts
   │     └── flashcard_progress
   ├── invoices / invoice_items / payments
+  │     └── credit_packages     (prepaid lesson credits, sold through an invoice)
+  │           └── credit_redemptions  (ledger: lesson paid by a credit, never also invoiced)
   ├── music_library_items / sheet_music_assignments
   └── events / event_students / event_rsvps
         (send_reminder + reminder_sent_at for day-before emails)
@@ -125,6 +127,9 @@ Migrations live in `supabase/migrations/`.
 | GET/POST | `/api/skills/dimensions` | List / create skill dimensions |
 | PUT/DELETE | `/api/skills/dimensions/[id]` | Rename / delete dimension |
 | GET | `/api/dashboard/summary` | Dashboard metrics |
+| POST | `/api/billing/credit-packages` | Sell prepaid lesson credits (creates a draft invoice) |
+| PATCH | `/api/billing/credit-packages/[id]` | Change a package's expiry date |
+| DELETE | `/api/billing/credit-redemptions/[id]` | Return a used credit to its package |
 | POST | `/api/hosted-billing/checkout` | CogNote Hosted Pro Checkout (platform Stripe) |
 | POST | `/api/hosted-billing/portal` | Stripe Customer Portal (cancel / payment method) |
 | POST | `/api/hosted-billing/webhook` | Platform subscription webhooks |
