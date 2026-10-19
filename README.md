@@ -1,6 +1,44 @@
-# CogNote
+<p align="center">
+  <a href="https://cognote.studio">
+    <img src="./public/icons/icon-512.png" alt="CogNote logo" width="128" height="128">
+  </a>
+</p>
 
-**Open-source studio management for private music teachers, with a practice and learning platform built in.**
+<h1 align="center">CogNote</h1>
+
+<p align="center">
+  Open-source studio management for private music teachers, with a practice and learning platform built in.
+</p>
+
+<p align="center">
+  <a href="https://github.com/andresjmorales/cognote/actions/workflows/ci.yml"><img src="https://github.com/andresjmorales/cognote/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/andresjmorales/cognote/actions/workflows/e2e.yml"><img src="https://github.com/andresjmorales/cognote/actions/workflows/e2e.yml/badge.svg?branch=main" alt="E2E"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/andresjmorales/cognote?color=blue" alt="License: MIT"></a>
+  <a href="https://github.com/andresjmorales/cognote/commits/main"><img src="https://img.shields.io/github/last-commit/andresjmorales/cognote" alt="Last commit"></a>
+  <a href="https://github.com/andresjmorales/cognote/stargazers"><img src="https://img.shields.io/github/stars/andresjmorales/cognote?style=flat" alt="GitHub stars"></a>
+  <a href="https://cognote.studio"><img src="https://img.shields.io/website?url=https%3A%2F%2Fcognote.studio&label=cognote.studio" alt="cognote.studio status"></a>
+  <br>
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white" alt="Supabase">
+  <img src="https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
+  <img src="https://img.shields.io/badge/VexFlow-5-8B5CF6" alt="VexFlow 5">
+  <a href="#deploy-with-docker"><img src="https://img.shields.io/badge/Docker-self--host-2496ED?logo=docker&logoColor=white" alt="Docker self-host"></a>
+  <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white" alt="Installable PWA">
+  <a href="https://buymeacoffee.com/andresjmorales"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee"></a>
+</p>
+
+<p align="center">
+  <a href="https://cognote.studio"><b>Try it</b></a> ·
+  <a href="#getting-started"><b>Get started</b></a> ·
+  <a href="#deploy-with-docker"><b>Self-host</b></a> ·
+  <a href="./ARCHITECTURE.md"><b>Architecture</b></a> ·
+  <a href="./CONTRIBUTING.md"><b>Contributing</b></a>
+</p>
+
+<p align="center">
+  <img src="./public/screenshots/dashboard-wide.png" alt="CogNote teacher dashboard with student count, next lesson, follow-ups and recent practice activity" width="900">
+</p>
 
 CogNote runs a private music studio end to end: students and families, recurring lesson scheduling, attendance and make-up credits, lesson notes emailed home, and skill tracking. On top of the back office it adds what pure admin tools lack: quizzes, flashcards, and spaced repetition that students use between lessons. It is free to self-host (MIT) and is built by a working piano studio for its own daily use.
 
