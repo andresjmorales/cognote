@@ -176,6 +176,7 @@ export interface Database {
           studio_contact: string;
           studio_info: string;
           lesson_label: string;
+          note_naming_system: "us" | "uk";
           timezone: string;
           lesson_duration_options: number[];
           cancellation_window_hours: number;
@@ -222,6 +223,7 @@ export interface Database {
           studio_contact?: string;
           studio_info?: string;
           lesson_label?: string;
+          note_naming_system?: "us" | "uk";
           timezone?: string;
           lesson_duration_options?: number[];
           cancellation_window_hours?: number;
@@ -266,6 +268,7 @@ export interface Database {
           studio_contact?: string;
           studio_info?: string;
           lesson_label?: string;
+          note_naming_system?: "us" | "uk";
           timezone?: string;
           lesson_duration_options?: number[];
           cancellation_window_hours?: number;

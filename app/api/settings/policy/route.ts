@@ -10,6 +10,7 @@ import {
   type RateBasis,
 } from "@/lib/schedule";
 import type { AiProviderId } from "@/lib/ai/provider";
+import { isNamingSystem } from "@/lib/symbols";
 import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 
 /**
@@ -190,6 +191,16 @@ export async function PUT(req: NextRequest) {
     bccEmail = trimmed || null;
   }
 
+  if (
+    body.noteNamingSystem !== undefined &&
+    !isNamingSystem(body.noteNamingSystem)
+  ) {
+    return NextResponse.json(
+      { error: "Note naming system must be US or UK" },
+      { status: 400 }
+    );
+  }
+
   const upsert: Record<string, unknown> = {
     teacher_id: user.id,
     ...(body.studioName !== undefined && {
@@ -206,6 +217,9 @@ export async function PUT(req: NextRequest) {
     }),
     ...(body.lessonLabel !== undefined && {
       lesson_label: String(body.lessonLabel).trim().slice(0, 60),
+    }),
+    ...(body.noteNamingSystem !== undefined && {
+      note_naming_system: body.noteNamingSystem,
     }),
     ...(durationOptions !== undefined && {
       lesson_duration_options: durationOptions,
