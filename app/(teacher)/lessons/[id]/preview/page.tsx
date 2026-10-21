@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getPolicy } from "@/lib/server/scheduling";
+import { localizeSymbols, type MusicalSymbol } from "@/lib/symbols";
 import {
   PlanPreviewPlayer,
   type PlanData,
@@ -51,5 +53,13 @@ export default async function LessonPreviewPage({
 
   if (!plan) notFound();
 
-  return <PlanPreviewPlayer plan={plan as PlanData} />;
+  const policy = await getPolicy(supabase, user.id);
+  const symbols = localizeSymbols(
+    (plan.symbols ?? []) as MusicalSymbol[],
+    policy.note_naming_system
+  );
+
+  return (
+    <PlanPreviewPlayer plan={{ ...plan, symbols } as PlanData} />
+  );
 }

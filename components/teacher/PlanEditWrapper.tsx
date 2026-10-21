@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlanEditor } from "./PlanEditor";
 import type { KeySigScaleMode } from "@/lib/music";
-import type { MusicalSymbol } from "@/lib/symbols";
+import type { MusicalSymbol, NamingSystem } from "@/lib/symbols";
 
 interface PlanEditWrapperProps {
   planId: string;
@@ -28,6 +28,7 @@ interface PlanEditWrapperProps {
     key_signatures?: string[];
     time_limit_seconds?: number;
   };
+  noteNamingSystem?: NamingSystem;
   actionSlot?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -35,6 +36,7 @@ interface PlanEditWrapperProps {
 export function PlanEditWrapper({
   planId,
   initialData,
+  noteNamingSystem,
   actionSlot,
   children,
 }: PlanEditWrapperProps) {
@@ -49,7 +51,12 @@ export function PlanEditWrapper({
             Cancel
           </Button>
         </div>
-        <PlanEditor mode="edit" planId={planId} initialData={initialData} />
+        <PlanEditor
+          mode="edit"
+          planId={planId}
+          initialData={initialData}
+          noteNamingSystem={noteNamingSystem}
+        />
       </div>
     );
   }

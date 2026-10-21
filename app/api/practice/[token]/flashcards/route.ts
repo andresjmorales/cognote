@@ -5,6 +5,7 @@ import {
   recordTokenLookupFailure,
 } from "@/lib/server/token-guard";
 import { parseBody, flashcardReviewSchema } from "@/lib/server/api-schemas";
+import { withStudioNoteNames } from "@/lib/server/practice-plan";
 
 export async function GET(
   req: NextRequest,
@@ -19,7 +20,7 @@ export async function GET(
 
   const { data: sp } = await supabase
     .from("student_plans")
-    .select("id, unassigned_at, plans ( notes, clef, plan_type, symbols, key_signature, key_signatures, include_sharps, include_flats )")
+    .select("id, unassigned_at, plans ( teacher_id, notes, clef, plan_type, symbols, key_signature, key_signatures, include_sharps, include_flats )")
     .eq("token", token)
     .single();
 
@@ -35,7 +36,7 @@ export async function GET(
 
   return NextResponse.json({
     studentPlanId: sp.id,
-    plan: sp.plans,
+    plan: await withStudioNoteNames(supabase, sp.plans),
     progress: progress ?? [],
   });
 }
