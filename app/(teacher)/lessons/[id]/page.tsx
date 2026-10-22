@@ -9,8 +9,9 @@ import { LaunchPlanButton } from "@/components/teacher/LaunchPlanButton";
 import { UnassignLessonButton } from "@/components/teacher/UnassignLessonButton";
 import { PlanEditWrapper } from "@/components/teacher/PlanEditWrapper";
 import { oneToOne } from "@/lib/schedule";
+import { getPolicy } from "@/lib/server/scheduling";
 import { isActiveStudentPlan } from "@/lib/student-plans";
-import type { MusicalSymbol } from "@/lib/symbols";
+import { symbolTerm, type MusicalSymbol } from "@/lib/symbols";
 
 export async function generateMetadata({
   params,
@@ -39,6 +40,8 @@ export default async function PlanDetailPage({
   } = await supabase.auth.getUser();
 
   if (!user) return null;
+
+  const policy = await getPolicy(supabase, user.id);
 
   const { data: plan } = await supabase
     .from("plans")
@@ -87,6 +90,7 @@ export default async function PlanDetailPage({
   return (
     <PlanEditWrapper
       planId={id}
+      noteNamingSystem={policy.note_naming_system}
       initialData={{
         name: plan.name,
         is_template: plan.is_template,
@@ -228,7 +232,7 @@ export default async function PlanDetailPage({
                         className="px-2.5 py-1 bg-accent/10 text-accent rounded-lg text-sm font-medium"
                         title={sym.definition}
                       >
-                        {sym.term}
+                        {symbolTerm(sym, policy.note_naming_system)}
                       </span>
                     ))}
                   </div>

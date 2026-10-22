@@ -5,6 +5,7 @@ import {
   rejectIfTokenLookupsBlocked,
   recordTokenLookupFailure,
 } from "@/lib/server/token-guard";
+import { withStudioNoteNames } from "@/lib/server/practice-plan";
 
 export async function GET(
   req: NextRequest,
@@ -30,7 +31,7 @@ export async function GET(
         due_date,
         students ( name ),
         plans (
-          name, clef, key_signature, include_sharps, include_flats,
+          teacher_id, name, clef, key_signature, include_sharps, include_flats,
           measures_shown, questions_per_lesson, answer_choices, notes,
           plan_type, symbols, show_hints, key_sig_scale_mode, key_signatures,
           time_limit_seconds
@@ -49,7 +50,7 @@ export async function GET(
         studentPlanId: directMatch.id,
         studentName:
           (directMatch.students as { name?: string } | null)?.name ?? "Student",
-        plan: directMatch.plans,
+        plan: await withStudioNoteNames(supabase, directMatch.plans),
       });
     }
 
@@ -64,7 +65,7 @@ export async function GET(
           unassigned_at,
           students ( name ),
           plans (
-            name, clef, key_signature, include_sharps, include_flats,
+            teacher_id, name, clef, key_signature, include_sharps, include_flats,
             measures_shown, questions_per_lesson, answer_choices, notes,
             plan_type, symbols, show_hints, key_sig_scale_mode, key_signatures,
             time_limit_seconds
@@ -83,7 +84,7 @@ export async function GET(
         return NextResponse.json({
           studentPlanId: sp.id,
           studentName: (sp.students as { name?: string } | null)?.name ?? "Student",
-          plan: sp.plans,
+          plan: await withStudioNoteNames(supabase, sp.plans),
         });
       }
     } catch {

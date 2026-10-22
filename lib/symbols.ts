@@ -7,6 +7,11 @@ export interface MusicalSymbol {
   category: string;
   symbol: string;
   term: string;
+  /**
+   * British (ABRSM) name for a note value, where it differs from `term`.
+   * Absent for symbols whose name is the same in both systems.
+   */
+  termUk?: string;
   definition: string;
 }
 
@@ -51,14 +56,14 @@ export const MUSICAL_SYMBOLS: MusicalSymbol[] = [
   { id: "tenuto", category: "Articulation", symbol: "— (line above note)", term: "Tenuto", definition: "Hold the note for its full value" },
 
   // Notes & Rests
-  { id: "whole-note", category: "Notes & Rests", symbol: "𝅝", term: "Whole Note", definition: "4 beats" },
-  { id: "half-note", category: "Notes & Rests", symbol: "𝅗𝅥", term: "Half Note", definition: "2 beats" },
-  { id: "quarter-note", category: "Notes & Rests", symbol: "♩", term: "Quarter Note", definition: "1 beat" },
-  { id: "eighth-note", category: "Notes & Rests", symbol: "♪", term: "Eighth Note", definition: "½ beat" },
-  { id: "dotted-half", category: "Notes & Rests", symbol: "𝅗𝅥.", term: "Dotted Half Note", definition: "3 beats" },
-  { id: "whole-rest", category: "Notes & Rests", symbol: "▬ (hangs from line)", term: "Whole Rest", definition: "4 beats of silence" },
-  { id: "half-rest", category: "Notes & Rests", symbol: "▬ (sits on line)", term: "Half Rest", definition: "2 beats of silence" },
-  { id: "quarter-rest", category: "Notes & Rests", symbol: "𝄾", term: "Quarter Rest", definition: "1 beat of silence" },
+  { id: "whole-note", category: "Notes & Rests", symbol: "𝅝", term: "Whole Note", termUk: "Semibreve", definition: "4 beats" },
+  { id: "half-note", category: "Notes & Rests", symbol: "𝅗𝅥", term: "Half Note", termUk: "Minim", definition: "2 beats" },
+  { id: "quarter-note", category: "Notes & Rests", symbol: "♩", term: "Quarter Note", termUk: "Crotchet", definition: "1 beat" },
+  { id: "eighth-note", category: "Notes & Rests", symbol: "♪", term: "Eighth Note", termUk: "Quaver", definition: "½ beat" },
+  { id: "dotted-half", category: "Notes & Rests", symbol: "𝅗𝅥.", term: "Dotted Half Note", termUk: "Dotted Minim", definition: "3 beats" },
+  { id: "whole-rest", category: "Notes & Rests", symbol: "▬ (hangs from line)", term: "Whole Rest", termUk: "Semibreve Rest", definition: "4 beats of silence" },
+  { id: "half-rest", category: "Notes & Rests", symbol: "▬ (sits on line)", term: "Half Rest", termUk: "Minim Rest", definition: "2 beats of silence" },
+  { id: "quarter-rest", category: "Notes & Rests", symbol: "𝄾", term: "Quarter Rest", termUk: "Crotchet Rest", definition: "1 beat of silence" },
 
   // Accidentals
   { id: "sharp", category: "Accidentals", symbol: "♯", term: "Sharp", definition: "Raise the pitch by a half step" },
@@ -94,4 +99,44 @@ export function symbolsByCategory(): Record<string, MusicalSymbol[]> {
 /** Get a symbol by ID */
 export function getSymbolById(id: string): MusicalSymbol | undefined {
   return MUSICAL_SYMBOLS.find((s) => s.id === id);
+}
+
+/**
+ * Which note-name vocabulary the studio teaches.
+ *
+ * `us` is the American fraction system (whole, half, quarter note); `uk` is the
+ * British/ABRSM one (semibreve, minim, crotchet). Only note values differ, so a
+ * studio that teaches with `uk` still sees "Forte" and "Treble Clef".
+ */
+export const NAMING_SYSTEMS = ["us", "uk"] as const;
+export type NamingSystem = (typeof NAMING_SYSTEMS)[number];
+
+export function isNamingSystem(value: unknown): value is NamingSystem {
+  return NAMING_SYSTEMS.includes(value as NamingSystem);
+}
+
+const SYMBOL_BY_ID = new Map(MUSICAL_SYMBOLS.map((sym) => [sym.id, sym]));
+
+/**
+ * Display name for `sym` in `system`.
+ *
+ * Resolves by id against the canonical catalogue rather than trusting the
+ * object's own `term`, because lesson plans store a snapshot of the symbol
+ * (taken when the plan was written, always American). Looking up the id means
+ * that snapshot follows the studio's current setting, and needs no backfill.
+ */
+export function symbolTerm(
+  sym: { id: string; term: string },
+  system: NamingSystem = "us"
+): string {
+  if (system !== "uk") return sym.term;
+  return SYMBOL_BY_ID.get(sym.id)?.termUk ?? sym.term;
+}
+
+/** Copy of `symbols` with `term` in `system`; other fields untouched. */
+export function localizeSymbols<T extends { id: string; term: string }>(
+  symbols: readonly T[],
+  system: NamingSystem = "us"
+): T[] {
+  return symbols.map((sym) => ({ ...sym, term: symbolTerm(sym, system) }));
 }

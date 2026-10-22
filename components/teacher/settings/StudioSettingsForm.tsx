@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { StudioPolicy } from "@/lib/schedule";
+import type { NamingSystem } from "@/lib/symbols";
 
 const inputClass =
   "px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm";
@@ -18,6 +19,9 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
 
   const [studioName, setStudioName] = useState(policy.studio_name);
   const [lessonLabel, setLessonLabel] = useState(policy.lesson_label);
+  const [noteNaming, setNoteNaming] = useState<NamingSystem>(
+    policy.note_naming_system
+  );
   const [studioWebsite, setStudioWebsite] = useState(policy.studio_website);
   const [studioContact, setStudioContact] = useState(policy.studio_contact);
   const [studioInfo, setStudioInfo] = useState(policy.studio_info);
@@ -63,6 +67,11 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
       body: JSON.stringify({
         studioName,
         lessonLabel,
+        // Only when it changed: an unmigrated database would reject the
+        // whole policy upsert over an untouched new column.
+        ...(noteNaming !== policy.note_naming_system && {
+          noteNamingSystem: noteNaming,
+        }),
         studioWebsite,
         studioContact,
         studioInfo,
@@ -118,6 +127,52 @@ export function StudioSettingsForm({ policy }: { policy: StudioPolicy }) {
             &quot;Piano lesson&quot;. Leave blank for a neutral &quot;Lesson&quot;.
           </span>
         </label>
+
+        <fieldset className="text-sm">
+          <legend className="block text-xs font-semibold text-muted mb-1.5">
+            Note names
+          </legend>
+          <div className="flex flex-col gap-2">
+            {(
+              [
+                {
+                  value: "us",
+                  label: "American",
+                  hint: "Whole note, half note, quarter note",
+                },
+                {
+                  value: "uk",
+                  label: "British",
+                  hint: "Semibreve, minim, crotchet",
+                },
+              ] as const
+            ).map((option) => (
+              <label
+                key={option.value}
+                className="flex items-start gap-2 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="noteNamingSystem"
+                  className="mt-0.5"
+                  value={option.value}
+                  checked={noteNaming === option.value}
+                  onChange={() => setNoteNaming(option.value)}
+                />
+                <span className="min-w-0">
+                  <span className="font-medium">{option.label}</span>
+                  <span className="block text-xs text-muted">
+                    {option.hint}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <span className="block text-xs text-muted mt-1.5">
+            Used wherever note values are named — lesson plans, quizzes, and
+            flashcards, including the links your students practise from.
+          </span>
+        </fieldset>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="text-sm">

@@ -1,4 +1,5 @@
 import type { AttendanceStatus } from "@/lib/supabase/types";
+import type { NamingSystem } from "@/lib/symbols";
 
 /**
  * Scheduling helpers.
@@ -19,6 +20,8 @@ export interface StudioPolicy {
   studio_info: string;
   /** Subject/instrument for calendar feed titles; empty = neutral "Lesson". */
   lesson_label: string;
+  /** Note-value vocabulary used in symbols, quizzes, and flashcards. */
+  note_naming_system: NamingSystem;
   timezone: string;
   lesson_duration_options: number[];
   cancellation_window_hours: number;
@@ -79,6 +82,7 @@ export const DEFAULT_POLICY: StudioPolicy = {
   studio_contact: "",
   studio_info: "",
   lesson_label: "",
+  note_naming_system: "us",
   timezone: "America/Chicago",
   lesson_duration_options: [30, 45, 60],
   cancellation_window_hours: 24,

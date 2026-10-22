@@ -17,7 +17,9 @@ import {
 import {
   MUSICAL_SYMBOLS,
   symbolsByCategory,
+  symbolTerm,
   type MusicalSymbol,
+  type NamingSystem,
 } from "@/lib/symbols";
 import { DEFAULT_PLAN_LABELS, normalizePlanLabels } from "@/lib/plans";
 
@@ -63,9 +65,16 @@ interface PlanEditorProps {
     key_signatures?: string[];
     time_limit_seconds?: number;
   };
+  /** Studio's note-value vocabulary; labels the symbol picker. */
+  noteNamingSystem?: NamingSystem;
 }
 
-export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
+export function PlanEditor({
+  mode,
+  planId,
+  initialData,
+  noteNamingSystem = "us",
+}: PlanEditorProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -676,7 +685,8 @@ export function PlanEditor({ mode, planId, initialData }: PlanEditorProps) {
                             : "bg-surface-dim text-muted hover:bg-border"
                         }`}
                       >
-                        <span className="mr-1">{sym.symbol}</span> {sym.term}
+                        <span className="mr-1">{sym.symbol}</span>{" "}
+                        {symbolTerm(sym, noteNamingSystem)}
                       </button>
                     ))}
                   </div>
