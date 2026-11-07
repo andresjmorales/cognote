@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getPolicy } from "@/lib/server/scheduling";
-import { expireCheckoutSession } from "@/lib/payments";
+import {
+  CLEARED_CHECKOUT_LINK,
+  expireStaleCheckoutLink,
+} from "@/lib/server/checkout-link";
 import { resolveManualPaymentAmount, summarizePayments } from "@/lib/billing";
 
 /**
@@ -87,20 +89,12 @@ export async function POST(
   // pay the wrong amount. The teacher can create a fresh link for the rest.
   let checkoutCleared = false;
   if (invoice.stripe_checkout_session_id) {
-    const policy = await getPolicy(supabase, user.id);
-    if (policy.stripe_secret_key) {
-      try {
-        await expireCheckoutSession(
-          policy.stripe_secret_key,
-          invoice.stripe_checkout_session_id
-        );
-      } catch (err) {
-        console.error(
-          "Expire Stripe checkout after manual payment failed:",
-          err instanceof Error ? err.message : String(err)
-        );
-      }
-    }
+    await expireStaleCheckoutLink(
+      supabase,
+      user.id,
+      invoice.stripe_checkout_session_id,
+      "manual payment"
+    );
     checkoutCleared = true;
   }
 
@@ -113,10 +107,7 @@ export async function POST(
           paid_at: new Date().toISOString(),
           payment_method: "manual",
         }),
-        ...(checkoutCleared && {
-          stripe_checkout_session_id: null,
-          stripe_checkout_url: null,
-        }),
+        ...(checkoutCleared && CLEARED_CHECKOUT_LINK),
       })
       .eq("id", id)
       .eq("teacher_id", user.id);

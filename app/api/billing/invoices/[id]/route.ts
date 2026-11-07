@@ -5,6 +5,10 @@ import {
   invoiceDeleteError,
   sumAmountCents,
 } from "@/lib/billing";
+import {
+  CLEARED_CHECKOUT_LINK,
+  expireStaleCheckoutLink,
+} from "@/lib/server/checkout-link";
 
 export async function GET(
   _req: NextRequest,
@@ -57,7 +61,9 @@ export async function PUT(
 
   const { data: existing } = await supabase
     .from("invoices")
-    .select("id, status, currency, payments ( amount_cents )")
+    .select(
+      "id, status, currency, subtotal_cents, stripe_checkout_session_id, stripe_checkout_url, payments ( amount_cents )"
+    )
     .eq("id", id)
     .eq("teacher_id", user.id)
     .single();
@@ -142,10 +148,25 @@ export async function PUT(
       }
     }
 
+    // A pay link made before this edit charges the old total; retire it so
+    // sending (which reuses a saved link) makes a fresh one.
+    const retireLink =
+      subtotal !== existing.subtotal_cents &&
+      Boolean(existing.stripe_checkout_session_id || existing.stripe_checkout_url);
+    if (retireLink && existing.stripe_checkout_session_id) {
+      await expireStaleCheckoutLink(
+        supabase,
+        user.id,
+        existing.stripe_checkout_session_id,
+        "draft total change"
+      );
+    }
+
     const { error } = await supabase
       .from("invoices")
       .update({
         subtotal_cents: subtotal,
+        ...(retireLink && CLEARED_CHECKOUT_LINK),
         ...(body.notes !== undefined && {
           notes: String(body.notes).slice(0, 2000),
         }),

@@ -4,8 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Remove a manual payment recorded by mistake. If the invoice was paid and
  * is now underpaid, the database reopens it in the same statement: to sent
- * if the family was sent it, otherwise back to draft (out of the portal). Stripe payments and payments on void invoices are refused
- * here and by the payments_rules trigger.
+ * if the family was sent it, otherwise back to draft (out of the portal).
+ * Stripe payments and payments on void invoices are refused here and by the
+ * payments_rules trigger.
  */
 export async function DELETE(
   _req: NextRequest,

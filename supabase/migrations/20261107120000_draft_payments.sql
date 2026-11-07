@@ -106,6 +106,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- A payment and a draft edit can run at the same time: the app checks each
+-- against the other's last committed state, so a payment could land on a
+-- draft whose total is being lowered below it. Lock the invoice row before
+-- inserting a payment; the invoice UPDATE takes the same row lock, so the two
+-- serialize and each check sees the other's result. Only drafts need the
+-- total check (other totals are frozen); the lock is cheap for all.
+CREATE OR REPLACE FUNCTION enforce_payment_insert()
+RETURNS trigger AS $$
+DECLARE
+  inv        invoices%ROWTYPE;
+  paid_cents bigint;
+BEGIN
+  SELECT * INTO inv FROM invoices WHERE id = NEW.invoice_id FOR UPDATE;
+  IF NOT FOUND OR inv.status <> 'draft' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT COALESCE(SUM(amount_cents), 0) INTO paid_cents
+    FROM payments WHERE invoice_id = NEW.invoice_id;
+  IF paid_cents + NEW.amount_cents > inv.subtotal_cents THEN
+    RAISE EXCEPTION 'Invoice % total is % cents; this payment would exceed it', inv.id, inv.subtotal_cents;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS payments_insert_rules ON payments;
+CREATE TRIGGER payments_insert_rules
+  BEFORE INSERT ON payments
+  FOR EACH ROW EXECUTE FUNCTION enforce_payment_insert();
+
 -- Backfill: the old reopen trigger moved never-sent invoices to 'sent'
 -- (sent_at stays NULL; only the send path sets it), which put them in the
 -- family portal as owed without the family ever being sent them. Return them

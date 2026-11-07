@@ -7,6 +7,10 @@ import {
 } from "@/lib/server/billing";
 import { draftTotalBelowPaidError, sumAmountCents } from "@/lib/billing";
 import { loadCreditInputs, recordRedemptions } from "@/lib/server/credits";
+import {
+  CLEARED_CHECKOUT_LINK,
+  expireStaleCheckoutLink,
+} from "@/lib/server/checkout-link";
 
 /**
  * Re-derive line items for a draft invoice from current attendance × policy.
@@ -31,7 +35,7 @@ export async function POST(
   const { data: invoice } = await supabase
     .from("invoices")
     .select(
-      "id, status, guardian_id, period_start, period_end, currency, payments ( amount_cents )"
+      "id, status, guardian_id, period_start, period_end, currency, subtotal_cents, stripe_checkout_session_id, stripe_checkout_url, payments ( amount_cents )"
     )
     .eq("id", id)
     .eq("teacher_id", user.id)
@@ -131,9 +135,25 @@ export async function POST(
     }
 
     const subtotal = sumAmountCents(items);
+    // A pay link made before regenerating charges the old total; retire it.
+    const retireLink =
+      subtotal !== invoice.subtotal_cents &&
+      Boolean(invoice.stripe_checkout_session_id || invoice.stripe_checkout_url);
+    if (retireLink && invoice.stripe_checkout_session_id) {
+      await expireStaleCheckoutLink(
+        supabase,
+        user.id,
+        invoice.stripe_checkout_session_id,
+        "draft regenerate"
+      );
+    }
+
     const { error } = await supabase
       .from("invoices")
-      .update({ subtotal_cents: subtotal })
+      .update({
+        subtotal_cents: subtotal,
+        ...(retireLink && CLEARED_CHECKOUT_LINK),
+      })
       .eq("id", id)
       .eq("teacher_id", user.id);
 
