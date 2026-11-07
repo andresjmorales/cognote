@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
 import { loadInvoicePdf } from "@/lib/server/invoice-pdf-data";
 import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
-import { formatMoney } from "@/lib/billing";
+import { formatMoney, summarizePayments } from "@/lib/billing";
 import { createCheckoutSession } from "@/lib/payments";
 import {
   familyEmailRecipients,
@@ -65,6 +65,12 @@ export async function sendInvoice(
 
   const { invoice, family, policy, pdfBytes } = loaded.data;
   const familyName = familyDisplayName(family);
+  // A draft may already carry payments (issue #141): charge and show only
+  // what is still owed.
+  const { paidCents, balanceCents } = summarizePayments(
+    invoice.subtotal_cents,
+    (invoice.payments ?? []).map((p) => ({ amountCents: p.amount_cents }))
+  );
 
   let checkoutUrl: string | null = invoice.stripe_checkout_url;
   let checkoutError: string | undefined;
@@ -72,7 +78,7 @@ export async function sendInvoice(
   if (
     policy.payment_provider === "stripe" &&
     policy.stripe_secret_key &&
-    invoice.subtotal_cents > 0 &&
+    balanceCents > 0 &&
     !checkoutUrl
   ) {
     try {
@@ -80,7 +86,7 @@ export async function sendInvoice(
         secretKey: policy.stripe_secret_key,
         invoiceId: id,
         teacherId,
-        amountCents: invoice.subtotal_cents,
+        amountCents: balanceCents,
         currency: invoice.currency,
         familyName,
         studioName: policy.studio_name,
@@ -131,6 +137,10 @@ export async function sendInvoice(
     const periodLabel = `${invoice.period_start} to ${invoice.period_end}`;
     const studio = policy.studio_name || "your studio";
     const total = formatMoney(invoice.subtotal_cents, invoice.currency);
+    const amountLine =
+      paidCents > 0
+        ? `Total: ${total} · Paid: ${formatMoney(paidCents, invoice.currency)} · Balance due: ${formatMoney(balanceCents, invoice.currency)}`
+        : `Total due: ${total}`;
     const greeting = familyGreetingNames(family);
 
     const qrNote =
@@ -152,12 +162,12 @@ export async function sendInvoice(
         ? `<p><strong>Payment instructions</strong></p><p style="white-space:pre-wrap;">${escapeHtml(policy.payment_instructions.trim())}</p>${qrNote ? `<p>${qrNote}</p>` : ""}`
         : `<p>${qrNote || "See your family portal for payment details."}</p>`;
 
-    const text = `Hi ${greeting},\n\nPlease find attached your invoice for ${periodLabel}.\n\nTotal due: ${total}\n\n${payText}\n\n— ${studio} (sent via CogNote Studio)`;
+    const text = `Hi ${greeting},\n\nPlease find attached your invoice for ${periodLabel}.\n\n${amountLine}\n\n${payText}\n\n— ${studio} (sent via CogNote Studio)`;
 
     const html = `<div style="font-family:sans-serif;font-size:14px;line-height:1.5;color:#222;">
 <p>Hi ${escapeHtml(greeting)},</p>
 <p>Please find attached your invoice for ${escapeHtml(periodLabel)}.</p>
-<p><strong>Total due: ${escapeHtml(total)}</strong></p>
+<p><strong>${escapeHtml(amountLine)}</strong></p>
 ${payHtml}
 <p>— ${escapeHtml(studio)} (sent via CogNote Studio)</p>
 </div>`;

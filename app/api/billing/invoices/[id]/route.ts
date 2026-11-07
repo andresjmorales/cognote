@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sumAmountCents } from "@/lib/billing";
+import {
+  draftTotalBelowPaidError,
+  invoiceDeleteError,
+  sumAmountCents,
+} from "@/lib/billing";
 
 export async function GET(
   _req: NextRequest,
@@ -53,7 +57,7 @@ export async function PUT(
 
   const { data: existing } = await supabase
     .from("invoices")
-    .select("id, status")
+    .select("id, status, currency, payments ( amount_cents )")
     .eq("id", id)
     .eq("teacher_id", user.id)
     .single();
@@ -98,6 +102,25 @@ export async function PUT(
       (existingItems ?? []).map((i) => [i.id as string, i.kind as string])
     );
 
+    const subtotal = sumAmountCents(
+      items.map((i) => ({
+        amountCents: Math.max(0, Math.round(Number(i.amountCents) || 0)),
+      }))
+    );
+    // Checked before touching the lines, so a rejected save changes nothing.
+    const belowPaid = draftTotalBelowPaidError(
+      subtotal,
+      sumAmountCents(
+        ((existing.payments as { amount_cents: number }[] | null) ?? []).map(
+          (p) => ({ amountCents: p.amount_cents })
+        )
+      ),
+      existing.currency
+    );
+    if (belowPaid) {
+      return NextResponse.json({ error: belowPaid }, { status: 400 });
+    }
+
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
 
     if (items.length > 0) {
@@ -118,12 +141,6 @@ export async function PUT(
         return NextResponse.json({ error: itemsError.message }, { status: 500 });
       }
     }
-
-    const subtotal = sumAmountCents(
-      items.map((i) => ({
-        amountCents: Math.max(0, Math.round(Number(i.amountCents) || 0)),
-      }))
-    );
 
     const { error } = await supabase
       .from("invoices")
@@ -169,7 +186,7 @@ export async function DELETE(
 
   const { data: existing } = await supabase
     .from("invoices")
-    .select("id, status")
+    .select("id, status, payments ( id )")
     .eq("id", id)
     .eq("teacher_id", user.id)
     .single();
@@ -177,11 +194,9 @@ export async function DELETE(
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (existing.status !== "draft" && existing.status !== "void") {
-    return NextResponse.json(
-      { error: "Only draft or void invoices can be deleted" },
-      { status: 400 }
-    );
+  const deleteError = invoiceDeleteError(existing);
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError }, { status: 400 });
   }
 
   const { error } = await supabase

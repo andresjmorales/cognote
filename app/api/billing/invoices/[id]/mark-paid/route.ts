@@ -8,6 +8,7 @@ import { resolveManualPaymentAmount, summarizePayments } from "@/lib/billing";
  * Record a manual payment. Body: { amountCents?, note? }. Without an amount
  * this pays the remaining balance (the original one-click "Mark paid").
  * The invoice flips to paid only once its payments cover the subtotal.
+ * Works on drafts as well as sent invoices; it never emails the family.
  */
 export async function POST(
   req: NextRequest,
@@ -58,14 +59,9 @@ export async function POST(
       ? null
       : Number(body.amountCents);
 
-  // Draft totals can still change, so only a full payment is allowed there.
-  if (invoice.status === "draft" && requested !== null) {
-    return NextResponse.json(
-      { error: "Send the invoice before recording a partial payment" },
-      { status: 400 }
-    );
-  }
-
+  // Drafts take payments too (issue #141); a draft's total can still change
+  // but never below what is paid (the save/regenerate routes and the
+  // database enforce that), so a partial payment is safe here.
   const amount = resolveManualPaymentAmount(requested, before.balanceCents);
   if (!amount.ok) {
     return NextResponse.json({ error: amount.error }, { status: 400 });

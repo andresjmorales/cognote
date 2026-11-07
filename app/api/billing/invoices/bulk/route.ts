@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requestOrigin } from "@/lib/server/http";
 import { sendInvoice } from "@/lib/server/invoice-send";
+import { invoiceDeleteError } from "@/lib/billing";
 
 const ACTIONS = ["send", "delete", "void"] as const;
 type BulkAction = (typeof ACTIONS)[number];
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     const { data: invoice } = await supabase
       .from("invoices")
-      .select("id, status")
+      .select("id, status, payments ( id )")
       .eq("id", id)
       .eq("teacher_id", user.id)
       .single();
@@ -79,12 +80,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "delete") {
-      if (invoice.status !== "draft" && invoice.status !== "void") {
-        results.push({
-          id,
-          ok: false,
-          error: "Only draft or void invoices can be deleted",
-        });
+      const deleteError = invoiceDeleteError(invoice);
+      if (deleteError) {
+        results.push({ id, ok: false, error: deleteError });
         continue;
       }
       const { error } = await supabase

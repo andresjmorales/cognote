@@ -43,6 +43,23 @@ describe("buildInvoicePdf", () => {
     expect(String.fromCharCode(...bytes.slice(0, 4))).toBe("%PDF");
   });
 
+  it("builds with paid and balance-due lines for a partly paid invoice", async () => {
+    const bytes = await buildInvoicePdf({
+      studioName: "Studio",
+      familyName: "Lim family",
+      periodStart: "2026-09-01",
+      periodEnd: "2026-09-30",
+      currency: "USD",
+      items: [
+        { description: "Lesson", quantity: 1, unitCents: 6000, amountCents: 6000 },
+      ],
+      subtotalCents: 6000,
+      paidCents: 2500,
+      paymentInstructions: "Pay by check",
+    });
+    expect(String.fromCharCode(...bytes.slice(0, 4))).toBe("%PDF");
+  });
+
   it("embeds a payment QR code, moving it to a new page when space runs out", async () => {
     const qr =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";

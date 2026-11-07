@@ -5,7 +5,7 @@ import {
   derivePeriodItems,
   getInvoicedLessonIds,
 } from "@/lib/server/billing";
-import { sumAmountCents } from "@/lib/billing";
+import { draftTotalBelowPaidError, sumAmountCents } from "@/lib/billing";
 import { loadCreditInputs, recordRedemptions } from "@/lib/server/credits";
 
 /**
@@ -30,7 +30,9 @@ export async function POST(
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("id, status, guardian_id, period_start, period_end, currency")
+    .select(
+      "id, status, guardian_id, period_start, period_end, currency, payments ( amount_cents )"
+    )
     .eq("id", id)
     .eq("teacher_id", user.id)
     .single();
@@ -82,6 +84,21 @@ export async function POST(
         credits,
       }
     );
+
+    // A draft can carry payments; don't regenerate it below them. Checked
+    // before clearing the lines, so a refusal leaves the draft as it was.
+    const belowPaid = draftTotalBelowPaidError(
+      sumAmountCents(items),
+      sumAmountCents(
+        ((invoice.payments as { amount_cents: number }[] | null) ?? []).map(
+          (p) => ({ amountCents: p.amount_cents })
+        )
+      ),
+      invoice.currency
+    );
+    if (belowPaid) {
+      return NextResponse.json({ error: belowPaid }, { status: 400 });
+    }
 
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
 

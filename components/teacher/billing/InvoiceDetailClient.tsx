@@ -32,6 +32,7 @@ interface LineItem {
 export function InvoiceDetailClient({
   invoiceId,
   status,
+  sentAt = null,
   currency,
   initialItems,
   initialNotes,
@@ -49,6 +50,8 @@ export function InvoiceDetailClient({
 }: {
   invoiceId: string;
   status: string;
+  /** Set once the family was sent the invoice; null if it never was. */
+  sentAt?: string | null;
   currency: string;
   initialItems: LineItem[];
   initialNotes: string;
@@ -82,8 +85,13 @@ export function InvoiceDetailClient({
   } | null>(null);
   const isDraft = status === "draft";
   const itemsEditable = isDraft && !creditPackage;
-  const { paidCents, balanceCents } = summarizePayments(subtotalCents, payments);
-  const partiallyPaid = status === "sent" && paidCents > 0 && balanceCents > 0;
+  // A draft's total is what's on screen; it is saved before any payment.
+  const liveTotal = items.reduce((s, i) => s + i.amountCents, 0);
+  const totalCents = isDraft ? liveTotal : subtotalCents;
+  const { paidCents, balanceCents } = summarizePayments(totalCents, payments);
+  const partiallyPaid =
+    (status === "sent" || isDraft) && paidCents > 0 && balanceCents > 0;
+  const canTakePayment = (status === "sent" || isDraft) && balanceCents > 0;
   const [paymentForm, setPaymentForm] = useState<{
     amount: string;
     note: string;
@@ -168,12 +176,9 @@ export function InvoiceDetailClient({
     if (!ok) return;
     setBusy(true);
     setFlash(null);
-    if (isDraft) {
-      await fetch(`/api/billing/invoices/${invoiceId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, notes }),
-      });
+    if (isDraft && !(await persistDraft())) {
+      setBusy(false);
+      return;
     }
     const res = await fetch(`/api/billing/invoices/${invoiceId}/send`, {
       method: "POST",
@@ -199,8 +204,38 @@ export function InvoiceDetailClient({
     router.refresh();
   }
 
+  /**
+   * Save on-screen draft edits before sending or recording a payment, so the
+   * server works from the total the teacher sees rather than the last saved
+   * one. Flashes and returns false on failure.
+   */
+  async function persistDraft(): Promise<boolean> {
+    const res = await fetch(`/api/billing/invoices/${invoiceId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items, notes }),
+    });
+    if (res.ok) return true;
+    const data = await res.json().catch(() => ({}));
+    setFlash({ text: data.error ?? "Save failed", tone: "error" });
+    return false;
+  }
+
   async function markPaid() {
+    const ok = await confirm({
+      title: "Mark invoice paid?",
+      message: `Records a payment of ${formatMoney(balanceCents, currency)}${
+        paidCents > 0 ? " (the remaining balance)" : ""
+      } and freezes the line items. The family is not emailed; the invoice appears as paid in their portal.`,
+      confirmLabel: "Mark paid",
+    });
+    if (!ok) return;
     setBusy(true);
+    setFlash(null);
+    if (!(await persistDraft())) {
+      setBusy(false);
+      return;
+    }
     const res = await fetch(`/api/billing/invoices/${invoiceId}/mark-paid`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -230,6 +265,11 @@ export function InvoiceDetailClient({
     }
     setBusy(true);
     setFlash(null);
+    // The server checks the amount against the saved total.
+    if (isDraft && !(await persistDraft())) {
+      setBusy(false);
+      return;
+    }
     const res = await fetch(`/api/billing/invoices/${invoiceId}/mark-paid`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -253,12 +293,16 @@ export function InvoiceDetailClient({
 
   async function removePayment(payment: { id: string; amountCents: number }) {
     const reopens = status === "paid";
+    // Never sent: it goes back to draft and leaves the portal (issue #141).
+    const reopensToDraft = reopens && !sentAt;
     const ok = await confirm({
       title: "Remove payment?",
       message: `Remove the ${formatMoney(payment.amountCents, currency)} payment from this invoice?${
-        reopens
-          ? " The invoice will go back to unpaid with the remaining balance due, and the family portal will show it as owed again."
-          : ""
+        reopensToDraft
+          ? " It was never sent, so it goes back to a draft: hidden from the family portal and editable again."
+          : reopens
+            ? " The invoice will go back to unpaid with the remaining balance due, and the family portal will show it as owed again."
+            : ""
       } Use this to fix a payment recorded by mistake; nothing is sent to the family.`,
       confirmLabel: "Remove payment",
       variant: "danger",
@@ -278,9 +322,11 @@ export function InvoiceDetailClient({
     }
     setFlash({
       text:
-        reopens && data.status === "sent"
-          ? "Payment removed; invoice reopened"
-          : "Payment removed",
+        reopens && data.status === "draft"
+          ? "Payment removed; invoice is a draft again"
+          : reopens && data.status === "sent"
+            ? "Payment removed; invoice reopened"
+            : "Payment removed",
       tone: "ok",
     });
     router.refresh();
@@ -328,8 +374,6 @@ export function InvoiceDetailClient({
     }
   }
 
-  const liveTotal = items.reduce((s, i) => s + i.amountCents, 0);
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -340,7 +384,7 @@ export function InvoiceDetailClient({
           </div>
           <p className="text-sm text-muted">
             {periodStart} → {periodEnd} ·{" "}
-            {formatMoney(isDraft ? liveTotal : subtotalCents, currency)}
+            {formatMoney(totalCents, currency)}
             {partiallyPaid && (
               <>
                 {" "}
@@ -378,7 +422,7 @@ export function InvoiceDetailClient({
               </Button>
             </>
           )}
-          {status === "draft" && (
+          {isDraft && canTakePayment && (
             <Button
               size="sm"
               variant="secondary"
@@ -388,7 +432,7 @@ export function InvoiceDetailClient({
               Mark paid
             </Button>
           )}
-          {status === "sent" && balanceCents > 0 && (
+          {canTakePayment && (
             <Button
               size="sm"
               variant="secondary"
@@ -461,6 +505,8 @@ export function InvoiceDetailClient({
                 {formatMoney(balanceCents, currency)} due. Enter less for a
                 partial payment; the invoice is marked paid once payments
                 cover the total.
+                {isDraft &&
+                  " The family isn't emailed, and the draft stays out of their portal until you send it or it's paid in full."}
               </p>
             </div>
             <div className="flex flex-wrap items-end gap-3">

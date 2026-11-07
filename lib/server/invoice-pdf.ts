@@ -17,6 +17,8 @@ export interface InvoicePdfInput {
   currency: string;
   items: InvoicePdfItem[];
   subtotalCents: number;
+  /** Payments recorded so far; when > 0 the PDF adds Paid and Balance due. */
+  paidCents?: number;
   paymentInstructions: string;
   /** Optional payment QR (data:image/png|jpeg;base64 URL). */
   paymentQrCode?: string | null;
@@ -161,6 +163,19 @@ export async function buildInvoicePdf(
     size: 12,
     x: 480,
   });
+
+  const paidCents = input.paidCents ?? 0;
+  if (paidCents > 0) {
+    y -= 16;
+    draw("Paid", { size: 11 });
+    draw(`-${formatMoney(paidCents, input.currency)}`, { size: 11, x: 480 });
+    y -= 18;
+    draw("Balance due", { font: bold, size: 12 });
+    draw(
+      formatMoney(Math.max(0, input.subtotalCents - paidCents), input.currency),
+      { font: bold, size: 12, x: 480 }
+    );
+  }
 
   const qr = decodePaymentQrDataUrl(input.paymentQrCode);
   const qrImage = qr

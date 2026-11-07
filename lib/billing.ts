@@ -385,6 +385,38 @@ export function summarizePayments(
 }
 
 /**
+ * A draft can carry payments (issue #141), so its total can still change,
+ * but never below what has already been paid. Returns the error to show, or
+ * null when the new total is fine. The database enforces the same rule.
+ */
+export function draftTotalBelowPaidError(
+  newSubtotalCents: number,
+  paidCents: number,
+  currency = "USD"
+): string | null {
+  if (newSubtotalCents >= paidCents) return null;
+  return `${formatMoney(paidCents, currency)} is already paid on this invoice, so its total can't go below that. Remove a payment first.`;
+}
+
+/**
+ * Why an invoice can't be deleted, or null when it can. Sent/paid history is
+ * kept; a draft holding payments would take those payment records with it,
+ * so they must be removed (or the invoice voided) first.
+ */
+export function invoiceDeleteError(invoice: {
+  status: string;
+  payments?: unknown[] | null;
+}): string | null {
+  if (invoice.status !== "draft" && invoice.status !== "void") {
+    return "Only draft or void invoices can be deleted";
+  }
+  if (invoice.status === "draft" && (invoice.payments?.length ?? 0) > 0) {
+    return "This draft has payments recorded. Remove them before deleting it.";
+  }
+  return null;
+}
+
+/**
  * Validate a manually recorded payment. `requested` null/undefined means
  * "pay the rest". Partial amounts are allowed; more than the balance is not,
  * so a typo can't silently overpay.
