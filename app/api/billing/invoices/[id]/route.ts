@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sumAmountCents } from "@/lib/billing";
+import {
+  draftTotalBelowPaidError,
+  invoiceDeleteError,
+  sumAmountCents,
+} from "@/lib/billing";
+import {
+  CLEARED_CHECKOUT_LINK,
+  expireStaleCheckoutLink,
+} from "@/lib/server/checkout-link";
 
 export async function GET(
   _req: NextRequest,
@@ -53,7 +61,9 @@ export async function PUT(
 
   const { data: existing } = await supabase
     .from("invoices")
-    .select("id, status")
+    .select(
+      "id, status, currency, subtotal_cents, stripe_checkout_session_id, stripe_checkout_url, payments ( amount_cents )"
+    )
     .eq("id", id)
     .eq("teacher_id", user.id)
     .single();
@@ -98,6 +108,25 @@ export async function PUT(
       (existingItems ?? []).map((i) => [i.id as string, i.kind as string])
     );
 
+    const subtotal = sumAmountCents(
+      items.map((i) => ({
+        amountCents: Math.max(0, Math.round(Number(i.amountCents) || 0)),
+      }))
+    );
+    // Checked before touching the lines, so a rejected save changes nothing.
+    const belowPaid = draftTotalBelowPaidError(
+      subtotal,
+      sumAmountCents(
+        ((existing.payments as { amount_cents: number }[] | null) ?? []).map(
+          (p) => ({ amountCents: p.amount_cents })
+        )
+      ),
+      existing.currency
+    );
+    if (belowPaid) {
+      return NextResponse.json({ error: belowPaid }, { status: 400 });
+    }
+
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
 
     if (items.length > 0) {
@@ -119,16 +148,25 @@ export async function PUT(
       }
     }
 
-    const subtotal = sumAmountCents(
-      items.map((i) => ({
-        amountCents: Math.max(0, Math.round(Number(i.amountCents) || 0)),
-      }))
-    );
+    // A pay link made before this edit charges the old total; retire it so
+    // sending (which reuses a saved link) makes a fresh one.
+    const retireLink =
+      subtotal !== existing.subtotal_cents &&
+      Boolean(existing.stripe_checkout_session_id || existing.stripe_checkout_url);
+    if (retireLink && existing.stripe_checkout_session_id) {
+      await expireStaleCheckoutLink(
+        supabase,
+        user.id,
+        existing.stripe_checkout_session_id,
+        "draft total change"
+      );
+    }
 
     const { error } = await supabase
       .from("invoices")
       .update({
         subtotal_cents: subtotal,
+        ...(retireLink && CLEARED_CHECKOUT_LINK),
         ...(body.notes !== undefined && {
           notes: String(body.notes).slice(0, 2000),
         }),
@@ -169,7 +207,7 @@ export async function DELETE(
 
   const { data: existing } = await supabase
     .from("invoices")
-    .select("id, status")
+    .select("id, status, payments ( id )")
     .eq("id", id)
     .eq("teacher_id", user.id)
     .single();
@@ -177,11 +215,9 @@ export async function DELETE(
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (existing.status !== "draft" && existing.status !== "void") {
-    return NextResponse.json(
-      { error: "Only draft or void invoices can be deleted" },
-      { status: 400 }
-    );
+  const deleteError = invoiceDeleteError(existing);
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError }, { status: 400 });
   }
 
   const { error } = await supabase

@@ -16,6 +16,7 @@ import {
   validateLiveStripeKeys,
   summarizePayments,
   resolveManualPaymentAmount,
+  draftTotalBelowPaidError,
   type BillableLessonInput,
 } from "@/lib/billing";
 import { DEFAULT_POLICY, type StudioPolicy } from "@/lib/schedule";
@@ -644,5 +645,19 @@ describe("resolveManualPaymentAmount", () => {
 
   it("rejects any payment when nothing is owed", () => {
     expect(resolveManualPaymentAmount(undefined, 0).ok).toBe(false);
+  });
+});
+
+describe("draftTotalBelowPaidError", () => {
+  it("allows a total at or above what is paid", () => {
+    expect(draftTotalBelowPaidError(10000, 0)).toBeNull();
+    expect(draftTotalBelowPaidError(10000, 4000)).toBeNull();
+    expect(draftTotalBelowPaidError(4000, 4000)).toBeNull();
+  });
+
+  it("rejects a total below what is paid, naming the paid amount", () => {
+    const error = draftTotalBelowPaidError(3999, 4000);
+    expect(error).toContain("$40.00");
+    expect(draftTotalBelowPaidError(0, 1)).not.toBeNull();
   });
 });
