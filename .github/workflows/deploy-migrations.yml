@@ -43,6 +43,8 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
       # Newer Supabase CLIs default `db push` to the local stack even after
-      # `supabase link`, so target the linked project explicitly.
+      # `supabase link`, so target the linked project explicitly. They also
+      # ask for confirmation before writing to production, which CI can't
+      # answer; --yes approves it (this job only runs for changes on main).
       - name: Push migrations
-        run: supabase db push --remote
+        run: supabase db push --remote --yes
