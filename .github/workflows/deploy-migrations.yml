@@ -42,5 +42,7 @@ jobs:
       - name: Link to Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
+      # Newer Supabase CLIs default `db push` to the local stack even after
+      # `supabase link`, so target the linked project explicitly.
       - name: Push migrations
-        run: supabase db push
+        run: supabase db push --remote
