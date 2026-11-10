@@ -4,6 +4,7 @@ import {
   createPlatformStripe,
   getPlatformStripeWebhookSecret,
 } from "@/lib/hosted-billing/stripe";
+import { cancelSubscriptionNow } from "@/lib/hosted-billing/founding";
 import type Stripe from "stripe";
 
 /**
@@ -26,9 +27,14 @@ function subscriptionIsActive(status: Stripe.Subscription.Status): boolean {
   );
 }
 
-/** Promote to Pro; never overwrite founding. */
+/**
+ * Promote to Pro; never overwrite founding. Founding is free for life, so a
+ * live subscription on a founding row is cancelled in Stripe rather than
+ * recorded. Without this, Stripe keeps charging the old Pro price.
+ */
 async function applyPro(
   service: ServiceClient,
+  stripe: Stripe,
   teacherId: string,
   fields: {
     stripe_subscription_id: string;
@@ -42,15 +48,19 @@ async function applyPro(
     .eq("id", teacherId)
     .maybeSingle();
   if (row?.hosted_plan === "founding") {
+    await cancelSubscriptionNow(stripe, fields.stripe_subscription_id);
+    console.info(
+      "hosted billing webhook: cancelled subscription on founding member",
+      teacherId,
+      fields.stripe_subscription_id
+    );
     await service
       .from("teachers")
       .update({
-        stripe_subscription_id: fields.stripe_subscription_id,
+        stripe_subscription_id: null,
+        stripe_cancel_at: null,
         ...(fields.stripe_customer_id
           ? { stripe_customer_id: fields.stripe_customer_id }
-          : {}),
-        ...(fields.stripe_cancel_at !== undefined
-          ? { stripe_cancel_at: fields.stripe_cancel_at }
           : {}),
       })
       .eq("id", teacherId);
@@ -150,7 +160,7 @@ export async function POST(req: NextRequest) {
           }
           break;
         }
-        await applyPro(service, teacherId, {
+        await applyPro(service, stripe, teacherId, {
           stripe_subscription_id: subscriptionId,
           ...(customerId ? { stripe_customer_id: customerId } : {}),
           stripe_cancel_at: null,
@@ -167,7 +177,7 @@ export async function POST(req: NextRequest) {
 
         if (teacherId) {
           if (active && event.type !== "customer.subscription.deleted") {
-            await applyPro(service, teacherId, {
+            await applyPro(service, stripe, teacherId, {
               stripe_subscription_id: sub.id,
               stripe_cancel_at: cancelAt,
             });
@@ -180,22 +190,15 @@ export async function POST(req: NextRequest) {
           if (active && event.type !== "customer.subscription.deleted") {
             const { data: row } = await service
               .from("teachers")
-              .select("id, hosted_plan")
+              .select("id")
               .eq("stripe_customer_id", customerId)
               .maybeSingle();
-            if (row?.id && row.hosted_plan !== "founding") {
-              await applyPro(service, row.id, {
+            if (row?.id) {
+              // applyPro cancels instead of recording when the row is founding.
+              await applyPro(service, stripe, row.id, {
                 stripe_subscription_id: sub.id,
                 stripe_cancel_at: cancelAt,
               });
-            } else if (row?.id && row.hosted_plan === "founding") {
-              await service
-                .from("teachers")
-                .update({
-                  stripe_subscription_id: sub.id,
-                  stripe_cancel_at: cancelAt,
-                })
-                .eq("id", row.id);
             }
           } else {
             await demoteFromPro(service, { customerId });
