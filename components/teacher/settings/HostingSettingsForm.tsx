@@ -46,7 +46,11 @@ export function HostingSettingsForm({
   const canUpgrade =
     softLimitsApply || plan === "trial" || plan === "free" || plan === "gifted";
   const canManageBilling =
-    checkoutConfigured && hasStripeCustomer && (plan === "pro" || !!stripeCancelAt);
+    checkoutConfigured &&
+    hasStripeCustomer &&
+    // Founding members who once paid for Pro keep portal access so they can
+    // see past invoices and confirm nothing is still billing them.
+    (plan === "pro" || plan === "founding" || !!stripeCancelAt);
 
   async function startCheckout() {
     setBusy("checkout");
