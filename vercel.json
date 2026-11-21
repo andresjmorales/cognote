@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/event-reminders",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/invoice-drafts",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/invoice-reminders",
+      "schedule": "0 16 * * *"
     }
   ]
 }

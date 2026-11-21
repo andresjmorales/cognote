@@ -273,7 +273,8 @@ services:
     tmpfs:
       - /tmp
 
-  # Optional: event-reminder emails on a schedule (Vercel Cron equivalent).
+  # Optional: scheduled jobs (event reminders, invoice drafts, payment
+  # reminders) — the Vercel Cron equivalent.
   # Enable with: docker compose --env-file .env.local --profile cron up -d
   cron:
     logging: *logging
@@ -290,6 +291,8 @@ services:
     command:
       - |
         echo "$$CRON_SCHEDULE wget -q -O- --header 'Authorization: Bearer $$CRON_SECRET' http://app:3000/api/cron/event-reminders >/proc/1/fd/1 2>&1" > /etc/crontabs/root
+        echo "$$CRON_SCHEDULE wget -q -O- --header 'Authorization: Bearer $$CRON_SECRET' http://app:3000/api/cron/invoice-drafts >/proc/1/fd/1 2>&1" >> /etc/crontabs/root
+        echo "$$CRON_SCHEDULE wget -q -O- --header 'Authorization: Bearer $$CRON_SECRET' http://app:3000/api/cron/invoice-reminders >/proc/1/fd/1 2>&1" >> /etc/crontabs/root
         exec crond -f -l 8
 
   # Optional: scheduled backup of the DB, the storage volume and the env/secrets.

@@ -306,8 +306,16 @@ with migrations applied automatically. No cloud accounts needed.
    auto-confirmed by default (`ENABLE_EMAIL_AUTOCONFIRM=true`) so no mail server
    is needed; the first signup becomes the studio owner.
 
-3. Reminder emails (optional): the stack ships a `cron` profile that hits
-   `/api/cron/event-reminders` daily, standing in for Vercel Cron:
+3. Reminder and billing emails (optional): the stack ships a `cron` profile that
+   hits the scheduled endpoints daily, standing in for Vercel Cron:
+
+   - `/api/cron/event-reminders` — one-off and recurring event reminders.
+   - `/api/cron/invoice-drafts` — creates DRAFT invoices for the previous month
+     and never sends them; review and send from Billing.
+   - `/api/cron/invoice-reminders` — emails one reminder per invoice once it is
+     at least one day past its payment terms (`daysOverdue >= 1`, so an invoice
+     becomes eligible the day after `payment_terms_days` elapse; 0 means due on
+     the day it is sent), and never repeats for the same invoice.
 
    ```bash
    docker compose --env-file .env.local --profile cron up -d
