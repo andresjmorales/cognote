@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { BillingListActions } from "@/components/teacher/billing/BillingList";
 import { InvoiceList } from "@/components/teacher/billing/InvoiceList";
 import { PaymentSettingsButton } from "@/components/teacher/billing/PaymentSettingsButton";
+import { ReceivablesCard } from "@/components/teacher/billing/ReceivablesCard";
 
 export const metadata = { title: "Billing" };
 
@@ -30,7 +31,7 @@ export default async function BillingPage() {
   const { data: invoices } = await supabase
     .from("invoices")
     .select(
-      "id, period_start, period_end, status, subtotal_cents, currency, created_at, guardians ( name, family_name ), payments ( amount_cents )"
+      "id, period_start, period_end, status, sent_at, subtotal_cents, currency, created_at, guardians ( name, family_name ), payments ( amount_cents )"
     )
     .eq("teacher_id", user.id)
     .order("created_at", { ascending: false });
@@ -48,6 +49,7 @@ export default async function BillingPage() {
       periodStart: inv.period_start,
       periodEnd: inv.period_end,
       status: inv.status,
+      sentAt: inv.sent_at,
       subtotalCents: inv.subtotal_cents,
       paidCents: sumAmountCents(
         ((inv.payments as { amount_cents: number }[] | null) ?? []).map(
@@ -90,6 +92,20 @@ export default async function BillingPage() {
           />
         </div>
       </div>
+
+      <ReceivablesCard
+        invoices={rows.map((row) => ({
+          id: row.id,
+          familyName: row.familyName,
+          status: row.status,
+          sentAt: row.sentAt,
+          subtotalCents: row.subtotalCents,
+          paidCents: row.paidCents,
+        }))}
+        termsDays={policy.payment_terms_days}
+        currency={policy.currency}
+        now={new Date()}
+      />
 
       <Card padding="sm">
         {!rows.length ? (
