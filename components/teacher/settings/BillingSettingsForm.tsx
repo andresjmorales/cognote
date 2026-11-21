@@ -37,6 +37,7 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
   );
   const [currency, setCurrency] = useState(policy.currency || "USD");
   const [cadence, setCadence] = useState<InvoiceCadence>(policy.invoice_cadence);
+  const [terms, setTerms] = useState(String(policy.payment_terms_days));
   const [billAttended, setBillAttended] = useState(policy.bill_attended);
   const [billNoShow, setBillNoShow] = useState(policy.bill_no_show);
   const [billTeacherCancel, setBillTeacherCancel] = useState(
@@ -85,6 +86,21 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
       durationRateCents[String(minutes)] = cents;
     }
 
+    // A blank terms field must never be sent as 0 (which would mean "due on
+    // send"): the teacher erased the value, they did not choose immediate
+    // payment. Block instead of guessing.
+    if (terms.trim() === "") {
+      setMessage("Enter payment terms in days (0 = due on send)");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+    const termsDays = Number(terms);
+    if (!Number.isInteger(termsDays) || termsDays < 0 || termsDays > 120) {
+      setMessage("Payment terms must be a whole number of days between 0 and 120");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+
     setBusy(true);
     setMessage(null);
     const res = await fetch("/api/settings/policy", {
@@ -98,6 +114,11 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
         travelFeeCents,
         currency: currency.trim().toUpperCase() || "USD",
         invoiceCadence: cadence,
+        // Only send the column when it changed: an always-sent new column
+        // fails the whole policy upsert on a database without the migration.
+        ...(termsDays !== policy.payment_terms_days && {
+          paymentTermsDays: termsDays,
+        }),
         billAttended,
         billNoShow,
         billTeacherCancel,
@@ -239,6 +260,23 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           <span className="block text-xs text-muted mt-1">
             Only pre-fills the Generate dialog. You can always change the
             range before creating drafts.
+          </span>
+        </label>
+
+        <label className="text-sm">
+          <span className="block text-xs font-semibold text-muted mb-1">
+            Payment terms (days after sending)
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={120}
+            value={terms}
+            onChange={(e) => setTerms(e.target.value)}
+            className={`${inputClass} w-full max-w-xs`}
+          />
+          <span className="block text-xs text-muted mt-1">
+            Invoices older than this get one reminder email.
           </span>
         </label>
 

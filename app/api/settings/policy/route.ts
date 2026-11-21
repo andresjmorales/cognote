@@ -123,6 +123,26 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  // Payment terms are optional: absent or "" means "leave the column alone",
+  // which keeps saves working on databases without the migration applied.
+  let terms: number | undefined;
+  if (
+    body.paymentTermsDays !== undefined &&
+    body.paymentTermsDays !== null &&
+    body.paymentTermsDays !== ""
+  ) {
+    // Number(), not parseInt(): "14.9" and "14abc" must be rejected, not
+    // silently truncated into a value the teacher never chose.
+    const parsed = Number(body.paymentTermsDays);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 120) {
+      return NextResponse.json(
+        { error: "Payment terms must be between 0 and 120 days" },
+        { status: 400 }
+      );
+    }
+    terms = parsed;
+  }
+
   const rateBasis = body.rateBasis as RateBasis | undefined;
   if (
     rateBasis !== undefined &&
@@ -286,6 +306,7 @@ export async function PUT(req: NextRequest) {
       currency: String(body.currency).trim().toUpperCase().slice(0, 3) || "USD",
     }),
     ...(cadence !== undefined && { invoice_cadence: cadence }),
+    ...(terms !== undefined && { payment_terms_days: terms }),
     ...(body.paymentInstructions !== undefined && {
       payment_instructions: String(body.paymentInstructions).slice(0, 2000),
     }),
@@ -415,6 +436,7 @@ export async function PUT(req: NextRequest) {
     "bill_late_student_cancel",
     "bill_makeup",
     "invoice_cadence",
+    "payment_terms_days",
   ] as const;
   const familyRelevantChanged = FAMILY_RELEVANT_FIELDS.some(
     (field) =>
