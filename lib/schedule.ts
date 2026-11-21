@@ -48,6 +48,8 @@ export interface StudioPolicy {
   rate_basis: RateBasis;
   currency: string;
   invoice_cadence: InvoiceCadence;
+  /** Days after sending before an invoice is overdue. */
+  payment_terms_days: number;
   payment_instructions: string;
   /** Optional payment QR image (data:image/png|jpeg;base64 URL). */
   payment_qr_code: string | null;
@@ -103,6 +105,7 @@ export const DEFAULT_POLICY: StudioPolicy = {
   rate_basis: "per_hour",
   currency: "USD",
   invoice_cadence: "monthly",
+  payment_terms_days: 14,
   payment_instructions: "",
   payment_qr_code: null,
   payment_provider: "manual",

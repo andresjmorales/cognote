@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
       period_start: today,
       period_end: today,
       status: "draft",
+      source: "credit_package",
       subtotal_cents: request.priceCents,
       currency: policy.currency,
     })
