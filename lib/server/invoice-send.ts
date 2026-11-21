@@ -3,6 +3,7 @@ import { sendEmail } from "@/lib/email";
 import { loadInvoicePdf } from "@/lib/server/invoice-pdf-data";
 import { isValidPaymentQrDataUrl } from "@/lib/payment-qr";
 import { formatMoney, summarizePayments } from "@/lib/billing";
+import { escapeHtml } from "@/lib/html";
 import { createCheckoutSession } from "@/lib/payments";
 import {
   familyEmailRecipients,
@@ -198,12 +199,4 @@ ${payHtml}
   }
 
   return { ok: true, emailed, emailError, checkoutUrl, checkoutError };
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
