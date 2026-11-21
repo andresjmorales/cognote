@@ -5,26 +5,11 @@ import {
   sendEventEmails,
   type EventEmailRow,
 } from "@/lib/server/event-email";
-import { requestOrigin } from "@/lib/server/http";
 import { DEFAULT_POLICY, type StudioPolicy } from "@/lib/schedule";
-import { secureCompare } from "@/lib/server/secure-compare";
+import { authorizeCron, cronOrigin } from "@/lib/server/cron";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-function authorizeCron(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  const header = req.headers.get("authorization");
-  if (!header) return false;
-  return secureCompare(header, `Bearer ${secret}`);
-}
-
-function cronOrigin(req: NextRequest): string {
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (site) return site;
-  return requestOrigin(req);
-}
 
 /**
  * Daily job (Hobby allows once/day): email families the studio-local day

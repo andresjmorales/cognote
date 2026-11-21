@@ -9,7 +9,8 @@ export type NotificationType =
   | "portal_cancel"
   | "invoice_paid"
   | "event_rsvp"
-  | "welcome";
+  | "welcome"
+  | "invoice_drafts_ready";
 
 export async function createTeacherNotification(
   supabase: SupabaseClient,
@@ -72,7 +73,13 @@ export async function createTeacherNotification(
       ? policy.notify_email_portal_cancel
       : args.type === "invoice_paid"
         ? policy.notify_email_invoice_paid
-        : false;
+        : args.type === "invoice_drafts_ready"
+          ? // Drafts-ready rides the studio's existing billing email preference:
+            // without an email a teacher with no push subscription is never
+            // told the drafts exist. A dedicated column would need a migration
+            // plus a form field; reusing the billing one is honest about it.
+            policy.notify_email_invoice_paid
+          : false;
 
   if (!wantEmail) return { emailed: false };
 
