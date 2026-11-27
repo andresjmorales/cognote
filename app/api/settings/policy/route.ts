@@ -357,6 +357,22 @@ export async function PUT(req: NextRequest) {
   // already-stored) whenever Stripe is (or will be) the provider.
   const { encryptSecret } = await import("@/lib/token");
   const currentPolicy = await getPolicy(supabase, user.id);
+  const effectiveCadence = cadence ?? currentPolicy.invoice_cadence;
+
+  // Switching to Month-to-date always turns auto-drafts off, even if the
+  // client omitted the flag. This also heals a previously saved invalid row.
+  if (cadence === "manual") {
+    upsert.auto_draft_invoices = false;
+  } else if (
+    effectiveCadence === "manual" &&
+    body.autoDraftInvoices !== undefined &&
+    Boolean(body.autoDraftInvoices)
+  ) {
+    return NextResponse.json(
+      { error: "Auto-drafts require Previous calendar month cadence." },
+      { status: 400 }
+    );
+  }
 
   // Default the BCC address to the account email when the toggle is turned on
   // without an explicit address, so one click yields a usable setting.
