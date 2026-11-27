@@ -78,7 +78,7 @@ export function ReceivablesCard({
       </dl>
       {remindersEnabled && (
         <p className="text-xs text-muted mt-3">
-          One reminder email goes out once an invoice is more than{""}
+          One reminder email goes out once an invoice is more than{" "}
           {termsDays === 1 ? "1 day" : `${termsDays} days`} old.
         </p>
       )}
