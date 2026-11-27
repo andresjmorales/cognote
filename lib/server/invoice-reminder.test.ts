@@ -231,14 +231,59 @@ describe("sendInvoiceReminder - paths that do not send", () => {
     const { client, calls } = stubSupabase({ invoices: [{ data: [] }] });
 
     const result = await run(client);
-
     expect(result).toEqual({ status: "skipped", reason: "already_reminded" });
     expect(sendEmail).not.toHaveBeenCalled();
     expect(releases(calls)).toHaveLength(0);
   });
+
+  it("skips an invoice sent before reminders were enabled", async () => {
+    const enabledPolicy: StudioPolicy = {
+      ...MANUAL_POLICY,
+      invoice_reminders_enabled_at: "2026-09-01T00:00:00Z",
+    };
+    vi.mocked(getPolicy).mockResolvedValue(enabledPolicy);
+
+    const { client, calls } = stubSupabase({
+      invoices: [
+        claimTaken,
+        { data: invoiceRow() },
+        { data: [{ id: INVOICE_ID }] }, // the release CAS matches the stamp
+      ],
+    });
+
+    const result = await run(client);
+    expect(result).toEqual({ status: "skipped", reason: "not_enabled" });
+    expect(sendEmail).not.toHaveBeenCalled();
+    const released = releases(calls);
+    expect(released).toHaveLength(1);
+    expect(released[0].eq).toEqual([
+      ["id", INVOICE_ID],
+      ["teacher_id", TEACHER_ID],
+      ["reminder_sent_at", NOW.toISOString()],
+    ]);
+  });
 });
 
 describe("sendInvoiceReminder - the send path", () => {
+  it("sends for an invoice sent after reminders were enabled", async () => {
+    const enabledPolicy: StudioPolicy = {
+      ...MANUAL_POLICY,
+      invoice_reminders_enabled_at: "2026-07-01T00:00:00Z",
+    };
+    vi.mocked(getPolicy).mockResolvedValue(enabledPolicy);
+
+    const { client, calls } = stubSupabase({
+      invoices: [claimTaken, { data: invoiceRow() }, { data: invoiceRow() }],
+    });
+
+    const result = await run(client);
+    expect(result).toEqual({ status: "sent" });
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(claims(calls)[0].payload).toEqual({
+      reminder_sent_at: NOW.toISOString(),
+    });
+  });
+
   it("claims null-timestamped, sends, and leaves the stamp in place", async () => {
     const { client, calls } = stubSupabase({
       invoices: [claimTaken, { data: invoiceRow() }, { data: invoiceRow() }],

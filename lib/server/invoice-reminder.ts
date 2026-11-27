@@ -132,6 +132,17 @@ export async function sendInvoiceReminder(
   if (!family) return skip("no_family");
 
   const policy = await getPolicy(supabase, teacherId);
+  // Reminders only apply to invoices sent at/after the studio enabled them.
+  // null enabled_at means reminders are off entirely — release the claim so
+  // another run can retry later if the studio turns reminders on.
+  if (
+    policy.invoice_reminders_enabled_at &&
+    new Date(invoice.sent_at as string) <
+      new Date(policy.invoice_reminders_enabled_at)
+  ) {
+    return skip("not_enabled");
+  }
+
   const summary = summarizePayments(
     invoice.subtotal_cents,
     ((invoice.payments as { amount_cents: number }[] | null) ?? []).map((p) => ({
