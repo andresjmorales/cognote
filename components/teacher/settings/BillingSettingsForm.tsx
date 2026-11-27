@@ -37,6 +37,13 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
   );
   const [currency, setCurrency] = useState(policy.currency || "USD");
   const [cadence, setCadence] = useState<InvoiceCadence>(policy.invoice_cadence);
+  const [terms, setTerms] = useState(String(policy.payment_terms_days));
+  const [autoDraft, setAutoDraft] = useState(
+    policy.invoice_cadence === "monthly" && policy.auto_draft_invoices
+  );
+  const [remindersOn, setRemindersOn] = useState(
+    policy.invoice_reminders_enabled_at !== null
+  );
   const [billAttended, setBillAttended] = useState(policy.bill_attended);
   const [billNoShow, setBillNoShow] = useState(policy.bill_no_show);
   const [billTeacherCancel, setBillTeacherCancel] = useState(
@@ -85,6 +92,21 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
       durationRateCents[String(minutes)] = cents;
     }
 
+    // A blank terms field must never be sent as 0 (which would mean "due on
+    // send"): the teacher erased the value, they did not choose immediate
+    // payment. Block instead of guessing.
+    if (terms.trim() === "") {
+      setMessage("Enter payment terms in days (0 = due on send)");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+    const termsDays = Number(terms);
+    if (!Number.isInteger(termsDays) || termsDays < 0 || termsDays > 120) {
+      setMessage("Payment terms must be a whole number of days between 0 and 120");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+
     setBusy(true);
     setMessage(null);
     const res = await fetch("/api/settings/policy", {
@@ -98,6 +120,19 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
         travelFeeCents,
         currency: currency.trim().toUpperCase() || "USD",
         invoiceCadence: cadence,
+        // Only send the column when it changed: an always-sent new column
+        // fails the whole policy upsert on a database without the migration.
+        ...(termsDays !== policy.payment_terms_days && {
+          paymentTermsDays: termsDays,
+        }),
+        ...(autoDraft !== policy.auto_draft_invoices && {
+          autoDraftInvoices: autoDraft,
+        }),
+        ...(
+          remindersOn !== (policy.invoice_reminders_enabled_at !== null) && {
+            invoiceRemindersEnabled: remindersOn,
+          }
+        ),
         billAttended,
         billNoShow,
         billTeacherCancel,
@@ -228,7 +263,11 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           </span>
           <select
             value={cadence}
-            onChange={(e) => setCadence(e.target.value as InvoiceCadence)}
+            onChange={(e) => {
+              const next = e.target.value as InvoiceCadence;
+              setCadence(next);
+              if (next === "manual") setAutoDraft(false);
+            }}
             className={`${inputClass} w-full`}
           >
             <option value="monthly">
@@ -237,8 +276,63 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
             <option value="manual">Month-to-date (1st through today)</option>
           </select>
           <span className="block text-xs text-muted mt-1">
-            Only pre-fills the Generate dialog. You can always change the
-            range before creating drafts.
+            Pre-fills the Generate dialog's date range. Monthly auto-drafts are
+            controlled by the checkbox below.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={cadence === "monthly" && autoDraft}
+            disabled={cadence === "manual"}
+            onChange={(e) => setAutoDraft(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium">
+              Auto-generate draft invoices each month
+            </span>
+            <span className="block text-xs text-muted">
+              {cadence === "manual"
+                ? "Auto-drafts always bill the previous calendar month. Choose Previous calendar month to enable."
+                : "Creates drafts for the previous calendar month on days 1-3. You review and send them — nothing is sent automatically."}
+            </span>
+          </span>
+        </label>
+
+        <label className="text-sm">
+          <span className="block text-xs font-semibold text-muted mb-1">
+            Payment terms (days after sending)
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={120}
+            value={terms}
+            onChange={(e) => setTerms(e.target.value)}
+            className={`${inputClass} w-full max-w-xs`}
+          />
+          <span className="block text-xs text-muted mt-1">
+            Invoices older than this get one reminder email.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={remindersOn}
+            onChange={(e) => setRemindersOn(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium">
+              Send one reminder email for overdue invoices
+            </span>
+            <span className="block text-xs text-muted">
+              Only applies to invoices sent after you turn this on. Older
+              unpaid invoices are not chased.
+            </span>
           </span>
         </label>
 

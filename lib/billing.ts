@@ -1,6 +1,7 @@
 import type {
   AttendanceStatus,
   InvoiceItemKind,
+  InvoiceStatus,
 } from "@/lib/supabase/types";
 import type { StudioPolicy } from "@/lib/schedule";
 
@@ -359,6 +360,11 @@ export function sumAmountCents(items: { amountCents: number }[]): number {
   return items.reduce((sum, i) => sum + i.amountCents, 0);
 }
 
+/** What a family still owes on an invoice; an overpayment shows as 0. */
+export function invoiceBalance(subtotalCents: number, paidCents: number): number {
+  return Math.max(0, subtotalCents - paidCents);
+}
+
 export interface PaymentSummary {
   paidCents: number;
   /** What the family still owes; never negative (overpayment shows as 0). */
@@ -379,7 +385,7 @@ export function summarizePayments(
   const paidCents = sumAmountCents(payments);
   return {
     paidCents,
-    balanceCents: Math.max(0, subtotalCents - paidCents),
+    balanceCents: invoiceBalance(subtotalCents, paidCents),
     settled: paidCents >= subtotalCents,
   };
 }
@@ -465,6 +471,99 @@ export function dollarsToCents(value: string | number): number | null {
 export function centsToDollarsInput(cents: number | null | undefined): string {
   if (cents == null) return "";
   return (cents / 100).toFixed(2);
+}
+
+const DAY_MS = 86_400_000;
+
+/** When an invoice sent at `sentAt` becomes due under `termsDays`. */
+export function invoiceDueAt(sentAt: string | Date, termsDays: number): Date {
+  const sent = typeof sentAt === "string" ? new Date(sentAt) : sentAt;
+  return new Date(sent.getTime() + termsDays * DAY_MS);
+}
+
+/** Whole days past due; <= 0 means not yet due. */
+export function daysOverdue(
+  sentAt: string | Date,
+  termsDays: number,
+  now: Date
+): number {
+  return Math.floor((now.getTime() - invoiceDueAt(sentAt, termsDays).getTime()) / DAY_MS);
+}
+
+export interface AgingInvoice {
+  id: string;
+  familyName: string;
+  status: InvoiceStatus;
+  /** Nullable in the database: an invoice can exist before it is sent. */
+  sentAt: string | null;
+  subtotalCents: number;
+  paidCents: number;
+}
+
+export type AgingBucketKey =
+  | "current"
+  | "overdue1to14"
+  | "overdue15to30"
+  | "overdue31plus";
+
+export interface AgingBuckets {
+  buckets: Record<AgingBucketKey, { cents: number; invoices: AgingInvoice[] }>;
+  /** Everything still owed, current and overdue. */
+  totalCents: number;
+  /** Overdue buckets only, so not-yet-due money can't read as overdue. */
+  overdueCents: number;
+}
+
+/**
+ * Outstanding balance grouped by how far past due it is. The status filter
+ * lives here: only `sent` invoices are aged, because a void invoice keeps its
+ * sentAt and subtotal while never collecting, and a draft or paid invoice is
+ * not owed. A sent invoice with no sentAt, an unreadable sentAt, or nothing
+ * left to pay is skipped. A partly paid invoice contributes its balance,
+ * never its subtotal.
+ */
+export function agingBuckets(
+  invoices: AgingInvoice[],
+  termsDays: number,
+  now: Date
+): AgingBuckets {
+  const buckets: AgingBuckets["buckets"] = {
+    current: { cents: 0, invoices: [] },
+    overdue1to14: { cents: 0, invoices: [] },
+    overdue15to30: { cents: 0, invoices: [] },
+    overdue31plus: { cents: 0, invoices: [] },
+  };
+
+  for (const invoice of invoices) {
+    if (invoice.status !== "sent") continue;
+    if (!invoice.sentAt) continue;
+    const late = daysOverdue(invoice.sentAt, termsDays, now);
+    if (!Number.isFinite(late)) continue;
+    const balance = invoiceBalance(invoice.subtotalCents, invoice.paidCents);
+    if (balance <= 0) continue;
+    const key: AgingBucketKey =
+      late <= 0 ? "current" : late <= 14 ? "overdue1to14" : late <= 30 ? "overdue15to30" : "overdue31plus";
+    buckets[key].cents += balance;
+    buckets[key].invoices.push(invoice);
+  }
+
+  const cents = (key: AgingBucketKey) => buckets[key].cents;
+
+  return {
+    buckets,
+    totalCents: Object.values(buckets).reduce((sum, b) => sum + b.cents, 0),
+    overdueCents: cents("overdue1to14") + cents("overdue15to30") + cents("overdue31plus"),
+  };
+}
+
+/**
+ * Monthly drafts run in a three-day window so a missed run self-heals and a
+ * mid-month invocation is a no-op. Reads the day by splitting rather than by
+ * slicing so "2026-12-1" is accepted instead of parsing to NaN.
+ */
+export function shouldDraftInvoicesOn(todayLocal: string): boolean {
+  const day = Number(todayLocal.split("-")[2]);
+  return Number.isInteger(day) && day >= 1 && day <= 3;
 }
 
 /**

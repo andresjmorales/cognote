@@ -123,6 +123,26 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  // Payment terms are optional: absent or "" means "leave the column alone",
+  // which keeps saves working on databases without the migration applied.
+  let terms: number | undefined;
+  if (
+    body.paymentTermsDays !== undefined &&
+    body.paymentTermsDays !== null &&
+    body.paymentTermsDays !== ""
+  ) {
+    // Number(), not parseInt(): "14.9" and "14abc" must be rejected, not
+    // silently truncated into a value the teacher never chose.
+    const parsed = Number(body.paymentTermsDays);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 120) {
+      return NextResponse.json(
+        { error: "Payment terms must be between 0 and 120 days" },
+        { status: 400 }
+      );
+    }
+    terms = parsed;
+  }
+
   const rateBasis = body.rateBasis as RateBasis | undefined;
   if (
     rateBasis !== undefined &&
@@ -286,6 +306,15 @@ export async function PUT(req: NextRequest) {
       currency: String(body.currency).trim().toUpperCase().slice(0, 3) || "USD",
     }),
     ...(cadence !== undefined && { invoice_cadence: cadence }),
+    ...(terms !== undefined && { payment_terms_days: terms }),
+    ...(body.autoDraftInvoices !== undefined && {
+      auto_draft_invoices: Boolean(body.autoDraftInvoices),
+    }),
+    ...(body.invoiceRemindersEnabled !== undefined && {
+      invoice_reminders_enabled_at: body.invoiceRemindersEnabled
+        ? new Date().toISOString()
+        : null,
+    }),
     ...(body.paymentInstructions !== undefined && {
       payment_instructions: String(body.paymentInstructions).slice(0, 2000),
     }),
@@ -328,6 +357,22 @@ export async function PUT(req: NextRequest) {
   // already-stored) whenever Stripe is (or will be) the provider.
   const { encryptSecret } = await import("@/lib/token");
   const currentPolicy = await getPolicy(supabase, user.id);
+  const effectiveCadence = cadence ?? currentPolicy.invoice_cadence;
+
+  // Switching to Month-to-date always turns auto-drafts off, even if the
+  // client omitted the flag. This also heals a previously saved invalid row.
+  if (cadence === "manual") {
+    upsert.auto_draft_invoices = false;
+  } else if (
+    effectiveCadence === "manual" &&
+    body.autoDraftInvoices !== undefined &&
+    Boolean(body.autoDraftInvoices)
+  ) {
+    return NextResponse.json(
+      { error: "Auto-drafts require Previous calendar month cadence." },
+      { status: 400 }
+    );
+  }
 
   // Default the BCC address to the account email when the toggle is turned on
   // without an explicit address, so one click yields a usable setting.
@@ -415,6 +460,9 @@ export async function PUT(req: NextRequest) {
     "bill_late_student_cancel",
     "bill_makeup",
     "invoice_cadence",
+    "payment_terms_days",
+    "auto_draft_invoices",
+    "invoice_reminders_enabled_at",
   ] as const;
   const familyRelevantChanged = FAMILY_RELEVANT_FIELDS.some(
     (field) =>

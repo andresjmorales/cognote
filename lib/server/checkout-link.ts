@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPolicy } from "@/lib/server/scheduling";
+import type { StudioPolicy } from "@/lib/schedule";
 import { expireCheckoutSession } from "@/lib/payments";
 
 /**
@@ -8,17 +9,20 @@ import { expireCheckoutSession } from "@/lib/payments";
  * Best effort: a Stripe failure is logged, not thrown. The caller still
  * clears `stripe_checkout_session_id` / `stripe_checkout_url` so the old
  * link is never reused, and a fresh one is made for the current balance.
+ *
+ * Callers that already hold the policy pass it in; otherwise it is loaded.
  */
 export async function expireStaleCheckoutLink(
   supabase: SupabaseClient,
   teacherId: string,
   sessionId: string,
-  reason: string
+  reason: string,
+  policy?: StudioPolicy
 ): Promise<void> {
-  const policy = await getPolicy(supabase, teacherId);
-  if (!policy.stripe_secret_key) return;
+  const { stripe_secret_key } = policy ?? (await getPolicy(supabase, teacherId));
+  if (!stripe_secret_key) return;
   try {
-    await expireCheckoutSession(policy.stripe_secret_key, sessionId);
+    await expireCheckoutSession(stripe_secret_key, sessionId);
   } catch (err) {
     console.error(
       `Expire Stripe checkout after ${reason} failed:`,

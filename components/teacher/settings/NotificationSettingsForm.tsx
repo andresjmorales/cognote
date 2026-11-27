@@ -74,8 +74,9 @@ export function NotificationSettingsForm({
       <h2 className="font-semibold text-lg mb-1">Notifications</h2>
       <p className="text-sm text-muted mb-4">
         In-app bell, optional push to your phone, optional email for family
-        portal cancellations and Stripe payment receipts, and an optional BCC of
-        the family email you send.
+        portal cancellations, billing notices (payment receipts and monthly
+        draft-ready reminders), and an optional BCC of the family email you
+        send.
       </p>
       <form onSubmit={handleSave} className="space-y-3">
         <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -114,9 +115,12 @@ export function NotificationSettingsForm({
             onChange={(e) => setEmailPaid(e.target.checked)}
           />
           <span>
-            <span className="font-medium">Email me a receipt when an invoice is paid online</span>
+            <span className="font-medium">
+              Billing emails — payment receipts and monthly draft-ready notices
+            </span>
             <span className="block text-xs text-muted">
-              Stripe Checkout payments. Includes family, amount, and period.
+              When an invoice is paid online, and once a month when new draft
+              invoices are ready to review.
             </span>
           </span>
         </label>

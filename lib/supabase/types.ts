@@ -197,6 +197,7 @@ export interface Database {
           rate_basis: RateBasis;
           currency: string;
           invoice_cadence: InvoiceCadence;
+          payment_terms_days: number;
           payment_instructions: string;
           payment_qr_code: string | null;
           payment_provider: PaymentProvider;
@@ -244,6 +245,7 @@ export interface Database {
           rate_basis?: RateBasis;
           currency?: string;
           invoice_cadence?: InvoiceCadence;
+          payment_terms_days?: number;
           payment_instructions?: string;
           payment_qr_code?: string | null;
           payment_provider?: PaymentProvider;
@@ -289,6 +291,7 @@ export interface Database {
           rate_basis?: RateBasis;
           currency?: string;
           invoice_cadence?: InvoiceCadence;
+          payment_terms_days?: number;
           payment_instructions?: string;
           payment_qr_code?: string | null;
           payment_provider?: PaymentProvider;
@@ -355,10 +358,12 @@ export interface Database {
           period_start: string;
           period_end: string;
           status: InvoiceStatus;
+          source: "lessons" | "credit_package";
           subtotal_cents: number;
           currency: string;
           sent_at: string | null;
           paid_at: string | null;
+          reminder_sent_at: string | null;
           payment_method: PaymentMethod | null;
           stripe_checkout_session_id: string | null;
           stripe_payment_intent_id: string | null;
@@ -373,10 +378,12 @@ export interface Database {
           period_start: string;
           period_end: string;
           status?: InvoiceStatus;
+          source?: "lessons" | "credit_package";
           subtotal_cents?: number;
           currency?: string;
           sent_at?: string | null;
           paid_at?: string | null;
+          reminder_sent_at?: string | null;
           payment_method?: PaymentMethod | null;
           stripe_checkout_session_id?: string | null;
           stripe_payment_intent_id?: string | null;
@@ -385,10 +392,12 @@ export interface Database {
         };
         Update: {
           status?: InvoiceStatus;
+          source?: "lessons" | "credit_package";
           subtotal_cents?: number;
           currency?: string;
           sent_at?: string | null;
           paid_at?: string | null;
+          reminder_sent_at?: string | null;
           payment_method?: PaymentMethod | null;
           stripe_checkout_session_id?: string | null;
           stripe_payment_intent_id?: string | null;
@@ -561,7 +570,12 @@ export interface Database {
         Row: {
           id: string;
           teacher_id: string;
-          type: "portal_cancel" | "invoice_paid" | "event_rsvp" | "welcome";
+          type:
+            | "portal_cancel"
+            | "invoice_paid"
+            | "event_rsvp"
+            | "welcome"
+            | "invoice_drafts_ready";
           title: string;
           body: string;
           href: string | null;
@@ -571,7 +585,12 @@ export interface Database {
         Insert: {
           id?: string;
           teacher_id: string;
-          type: "portal_cancel" | "invoice_paid" | "event_rsvp" | "welcome";
+          type:
+            | "portal_cancel"
+            | "invoice_paid"
+            | "event_rsvp"
+            | "welcome"
+            | "invoice_drafts_ready";
           title: string;
           body?: string;
           href?: string | null;

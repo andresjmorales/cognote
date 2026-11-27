@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   deriveInvoiceItems,
+  groupItemsByGuardian,
   isBillable,
+  sumAmountCents,
   type BillableLessonInput,
   type InvoiceItemDraft,
 } from "@/lib/billing";
@@ -10,6 +12,7 @@ import {
   type CreditCandidate,
   type CreditPackageInput,
 } from "@/lib/credits";
+import { loadCreditInputs, recordRedemptions } from "@/lib/server/credits";
 import type { StudioPolicy } from "@/lib/schedule";
 import { oneToOne } from "@/lib/schedule";
 import type { AttendanceStatus } from "@/lib/supabase/types";
@@ -228,5 +231,221 @@ export async function derivePeriodItems(
     skippedAlreadyInvoiced,
     newRedemptions,
     creditedByGuardian,
+  };
+}
+
+/**
+ * The three lookups every caller needs before deriving: lessons already
+ * invoiced (lesson and travel lines separately), and prepaid credit inputs.
+ */
+export async function deriveForPeriod(
+  supabase: SupabaseClient,
+  teacherId: string,
+  periodStart: string,
+  periodEnd: string,
+  policy: StudioPolicy
+): Promise<DerivedPeriod> {
+  const [excludeLessonIds, travelInvoicedLessonIds, credits] = await Promise.all([
+    getInvoicedLessonIds(supabase, teacherId),
+    getInvoicedLessonIds(supabase, teacherId, { kind: "travel" }),
+    loadCreditInputs(supabase, teacherId),
+  ]);
+
+  return derivePeriodItems(supabase, teacherId, periodStart, periodEnd, policy, {
+    excludeLessonIds,
+    travelInvoicedLessonIds,
+    credits,
+  });
+}
+
+export interface DraftInvoiceSummary {
+  guardianId: string;
+  familyName: string;
+  subtotalCents: number;
+  missingRateCount: number;
+  creditedLessonCount: number;
+}
+
+export interface CreateDraftInvoicesResult {
+  created: string[];
+  skippedAlreadyInvoiced: number;
+  creditsUsed: number;
+  error?: string;
+}
+
+/**
+ * Create one DRAFT invoice per family with billable lessons in the period, and
+ * record any prepaid credit redemptions the period consumed.
+ *
+ * Credits are recorded FIRST: the database refuses a redemption for a lesson
+ * that is already invoiced, so writing the lines first would fail the run. A
+ * period can legitimately consume credits and produce no invoices at all.
+ *
+ * Never sends. Draft is the only editable invoice state, so a wrong auto-sent
+ * invoice would be permanently wrong.
+ */
+export async function createDraftInvoices(
+  supabase: SupabaseClient,
+  teacherId: string,
+  periodStart: string,
+  periodEnd: string,
+  policy: StudioPolicy,
+  opts: { skipAlreadyDrafted?: boolean } = {}
+): Promise<CreateDraftInvoicesResult> {
+  const { items, skippedAlreadyInvoiced, newRedemptions } =
+    await deriveForPeriod(supabase, teacherId, periodStart, periodEnd, policy);
+
+  const groups = groupItemsByGuardian(items);
+  let guardianIds = [...groups.keys()];
+
+  if (opts.skipAlreadyDrafted && guardianIds.length) {
+    // Belt and braces beside the lesson-level gate, for the cron only: the
+    // teacher's own commit route must stay able to replace an invoice they
+    // voided. ANY status counts here (void included), because the question is
+    // whether this family+period was already attempted, and two overlapping
+    // runs can both find an empty covered-lesson set.
+    const { data: existing, error: existingError } = await supabase
+      .from("invoices")
+      .select("guardian_id")
+      .eq("teacher_id", teacherId)
+      .eq("period_start", periodStart)
+      .eq("period_end", periodEnd)
+      .in("guardian_id", guardianIds);
+    if (existingError) throw new Error(existingError.message);
+    const covered = new Set(
+      (existing ?? []).map((row) => row.guardian_id as string)
+    );
+    guardianIds = guardianIds.filter((id) => !covered.has(id));
+  }
+
+  const redemptionError = await recordRedemptions(supabase, teacherId, newRedemptions);
+  if (redemptionError) {
+    return {
+      created: [],
+      skippedAlreadyInvoiced,
+      creditsUsed: 0,
+      error: redemptionError,
+    };
+  }
+
+  const created: string[] = [];
+  for (const guardianId of guardianIds) {
+    const lineItems = groups.get(guardianId)!;
+    const { data: invoice, error } = await supabase
+      .from("invoices")
+      .insert({
+        teacher_id: teacherId,
+        guardian_id: guardianId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        status: "draft",
+        source: "lessons",
+        subtotal_cents: sumAmountCents(lineItems),
+        currency: policy.currency,
+      })
+      .select("id")
+      .single();
+
+    if (error?.code === "23505") {
+      // The live-invoice unique index says this family+period was drafted by a
+      // concurrent run between the gate above and this insert. That is the
+      // outcome we wanted, not an error: skip it and carry on.
+      continue;
+    }
+    if (error || !invoice) {
+      return {
+        created,
+        skippedAlreadyInvoiced,
+        creditsUsed: newRedemptions.size,
+        error: error?.message ?? "Failed to create invoice",
+      };
+    }
+
+    const rows = lineItems.map((item, idx) => ({
+      invoice_id: invoice.id,
+      lesson_id: item.lessonId,
+      kind: item.kind,
+      description: item.description,
+      quantity: item.quantity,
+      unit_cents: item.unitCents,
+      amount_cents: item.amountCents,
+      sort_order: idx,
+    }));
+
+    const { error: itemsError } = await supabase.from("invoice_items").insert(rows);
+    if (itemsError) {
+      await supabase.from("invoices").delete().eq("id", invoice.id);
+      return {
+        created,
+        skippedAlreadyInvoiced,
+        creditsUsed: newRedemptions.size,
+        error: itemsError.message,
+      };
+    }
+    created.push(invoice.id);
+  }
+
+  return {
+    created,
+    skippedAlreadyInvoiced,
+    creditsUsed: newRedemptions.size,
+  };
+}
+
+export interface PreviewPeriodResult {
+  drafts: (DraftInvoiceSummary & {
+    periodStart: string;
+    periodEnd: string;
+    currency: string;
+    items: InvoiceItemDraft[];
+  })[];
+  totalCents: number;
+  skippedAlreadyInvoiced: number;
+  creditsToUse: number;
+}
+
+export async function previewPeriodDrafts(
+  supabase: SupabaseClient,
+  teacherId: string,
+  periodStart: string,
+  periodEnd: string,
+  policy: StudioPolicy
+): Promise<PreviewPeriodResult> {
+  const result = await deriveForPeriod(supabase, teacherId, periodStart, periodEnd, policy);
+  const groups = groupItemsByGuardian(result.items);
+  const guardianIds = [...groups.keys()];
+
+  const { data: guardians } = guardianIds.length
+    ? await supabase
+        .from("guardians")
+        .select("id, name, family_name")
+        .eq("teacher_id", teacherId)
+        .in("id", guardianIds)
+    : { data: [] };
+
+  const nameById = new Map(
+    (guardians ?? []).map((g) => [g.id as string, (g.family_name?.trim() || g.name) as string])
+  );
+
+  const drafts = guardianIds.map((guardianId) => {
+    const items = groups.get(guardianId)!;
+    return {
+      guardianId,
+      familyName: nameById.get(guardianId) ?? "Family",
+      periodStart,
+      periodEnd,
+      currency: policy.currency,
+      subtotalCents: sumAmountCents(items),
+      missingRateCount: items.filter((i) => i.missingRate).length,
+      creditedLessonCount: result.creditedByGuardian.get(guardianId) ?? 0,
+      items,
+    };
+  });
+
+  return {
+    drafts,
+    totalCents: drafts.reduce((sum, d) => sum + d.subtotalCents, 0),
+    skippedAlreadyInvoiced: result.skippedAlreadyInvoiced,
+    creditsToUse: result.newRedemptions.size,
   };
 }

@@ -17,6 +17,12 @@ import {
   summarizePayments,
   resolveManualPaymentAmount,
   draftTotalBelowPaidError,
+  agingBuckets,
+  daysOverdue,
+  invoiceBalance,
+  invoiceDueAt,
+  shouldDraftInvoicesOn,
+  type AgingInvoice,
   type BillableLessonInput,
 } from "@/lib/billing";
 import { DEFAULT_POLICY, type StudioPolicy } from "@/lib/schedule";
@@ -659,5 +665,154 @@ describe("draftTotalBelowPaidError", () => {
     const error = draftTotalBelowPaidError(3999, 4000);
     expect(error).toContain("$40.00");
     expect(draftTotalBelowPaidError(0, 1)).not.toBeNull();
+  });
+});
+
+describe("invoiceDueAt", () => {
+  const sent = "2026-11-01T14:00:00.000Z";
+
+  it("treats terms 0 as due at the sent instant", () => {
+    expect(invoiceDueAt(sent, 0).toISOString()).toBe(sent);
+  });
+
+  it("adds the payment terms to the sent instant", () => {
+    expect(invoiceDueAt(sent, 14).toISOString()).toBe("2026-11-15T14:00:00.000Z");
+  });
+
+  it("accepts a Date as well as an ISO string", () => {
+    expect(invoiceDueAt(new Date(sent), 14).toISOString()).toBe(
+      "2026-11-15T14:00:00.000Z"
+    );
+  });
+});
+
+describe("daysOverdue", () => {
+  const sent = "2026-11-01T14:00:00.000Z";
+
+  it("is 0 at the due instant", () => {
+    expect(daysOverdue(sent, 14, new Date("2026-11-15T14:00:00Z"))).toBe(0);
+  });
+
+  it("counts whole days past due", () => {
+    expect(daysOverdue(sent, 14, new Date("2026-11-18T14:00:00Z"))).toBe(3);
+  });
+
+  it("is negative before the invoice is due", () => {
+    expect(daysOverdue(sent, 14, new Date("2026-11-10T14:00:00Z"))).toBe(-5);
+  });
+
+  it("is NaN for an empty or garbage sentAt so callers must guard", () => {
+    expect(Number.isNaN(daysOverdue("", 14, new Date("2026-11-18T14:00:00Z")))).toBe(true);
+    expect(
+      Number.isNaN(daysOverdue("not-a-date", 14, new Date("2026-11-18T14:00:00Z")))
+    ).toBe(true);
+  });
+});
+
+describe("agingBuckets", () => {
+  const now = new Date("2026-12-01T00:00:00Z");
+  const inv = (
+    id: string,
+    sentDaysAgo: number,
+    subtotalCents: number,
+    paidCents = 0,
+    overrides: Partial<AgingInvoice> = {}
+  ): AgingInvoice => ({
+    id,
+    familyName: `Family ${id}`,
+    status: "sent",
+    sentAt: new Date(now.getTime() - sentDaysAgo * 86_400_000).toISOString(),
+    subtotalCents,
+    paidCents,
+    ...overrides,
+  });
+
+  it("uses the unpaid balance, not the subtotal", () => {
+    const buckets = agingBuckets([inv("a", 5, 10_000, 4_000)], 14, now);
+    expect(buckets.totalCents).toBe(6_000);
+  });
+
+  it("drops a fully paid invoice", () => {
+    const buckets = agingBuckets([inv("b", 40, 9_000, 9_000)], 14, now);
+    expect(buckets.totalCents).toBe(0);
+    expect(buckets.buckets.overdue31plus.invoices).toHaveLength(0);
+  });
+
+  it("excludes a void invoice that still has a balance", () => {
+    const buckets = agingBuckets([inv("v", 40, 9_000, 0, { status: "void" })], 14, now);
+    expect(buckets.totalCents).toBe(0);
+    expect(buckets.overdueCents).toBe(0);
+    expect(buckets.buckets.overdue31plus.invoices).toHaveLength(0);
+  });
+
+  it("excludes an invoice with no sentAt instead of throwing", () => {
+    const buckets = agingBuckets([inv("n", 40, 9_000, 0, { sentAt: null })], 14, now);
+    expect(buckets.totalCents).toBe(0);
+    expect(buckets.buckets.current.invoices).toHaveLength(0);
+  });
+
+  it("excludes an invoice with an unparseable sentAt", () => {
+    const buckets = agingBuckets([inv("g", 40, 9_000, 0, { sentAt: "not-a-date" })], 14, now);
+    expect(buckets.totalCents).toBe(0);
+    expect(buckets.buckets.overdue31plus.invoices).toHaveLength(0);
+  });
+
+  it("places invoices in the right bucket at the edges", () => {
+    // Buckets key off days PAST DUE, so the sent ages are termsDays + lateness:
+    // 2 days (current), 14 late, 15 late, 31 late.
+    const buckets = agingBuckets(
+      [inv("cur", 2, 100), inv("d14", 28, 200), inv("d15", 29, 300), inv("d31", 45, 400)],
+      14,
+      now
+    );
+    expect(buckets.buckets.current.cents).toBe(100);
+    expect(buckets.buckets.overdue1to14.cents).toBe(200);
+    expect(buckets.buckets.overdue15to30.cents).toBe(300);
+    expect(buckets.buckets.overdue31plus.cents).toBe(400);
+    expect(buckets.totalCents).toBe(1_000);
+  });
+
+  it("keeps exactly 30 days past due in overdue15to30", () => {
+    const buckets = agingBuckets([inv("d30", 44, 500)], 14, now);
+    expect(buckets.buckets.overdue15to30.cents).toBe(500);
+    expect(buckets.buckets.overdue31plus.cents).toBe(0);
+  });
+
+  it("reports overdueCents without the not-yet-due bucket", () => {
+    const buckets = agingBuckets(
+      [inv("cur", 2, 100), inv("d14", 28, 200), inv("d31", 45, 400)],
+      14,
+      now
+    );
+    expect(buckets.totalCents).toBe(700);
+    expect(buckets.overdueCents).toBe(600);
+  });
+});
+
+describe("shouldDraftInvoicesOn", () => {
+  it("runs on the 1st, 2nd and 3rd only", () => {
+    expect(shouldDraftInvoicesOn("2026-12-01")).toBe(true);
+    expect(shouldDraftInvoicesOn("2026-12-03")).toBe(true);
+    expect(shouldDraftInvoicesOn("2026-12-04")).toBe(false);
+    expect(shouldDraftInvoicesOn("2026-12-15")).toBe(false);
+  });
+
+  it("reads a non-zero-padded day instead of yielding NaN", () => {
+    expect(shouldDraftInvoicesOn("2026-12-1")).toBe(true);
+    expect(shouldDraftInvoicesOn("2026-12-3")).toBe(true);
+    expect(shouldDraftInvoicesOn("2026-12-4")).toBe(false);
+  });
+
+  it("refuses a day it cannot read", () => {
+    expect(shouldDraftInvoicesOn("")).toBe(false);
+    expect(shouldDraftInvoicesOn("2026-12-xx")).toBe(false);
+  });
+});
+
+describe("invoiceBalance", () => {
+  it("is the unpaid part, never negative", () => {
+    expect(invoiceBalance(10_000, 4_000)).toBe(6_000);
+    expect(invoiceBalance(10_000, 10_000)).toBe(0);
+    expect(invoiceBalance(10_000, 12_000)).toBe(0);
   });
 });
