@@ -261,7 +261,11 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           </span>
           <select
             value={cadence}
-            onChange={(e) => setCadence(e.target.value as InvoiceCadence)}
+            onChange={(e) => {
+              const next = e.target.value as InvoiceCadence;
+              setCadence(next);
+              if (next === "manual") setAutoDraft(false);
+            }}
             className={`${inputClass} w-full`}
           >
             <option value="monthly">
@@ -279,7 +283,8 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           <input
             type="checkbox"
             className="mt-0.5"
-            checked={autoDraft}
+            checked={cadence === "monthly" && autoDraft}
+            disabled={cadence === "manual"}
             onChange={(e) => setAutoDraft(e.target.checked)}
           />
           <span>
@@ -287,8 +292,9 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
               Auto-generate draft invoices each month
             </span>
             <span className="block text-xs text-muted">
-              Creates drafts for the previous calendar month on days 1-3. You
-              review and send them — nothing is sent automatically.
+              {cadence === "manual"
+                ? "Auto-drafts always bill the previous calendar month. Choose Previous calendar month to enable."
+                : "Creates drafts for the previous calendar month on days 1-3. You review and send them — nothing is sent automatically."}
             </span>
           </span>
         </label>
