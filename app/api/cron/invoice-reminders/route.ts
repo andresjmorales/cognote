@@ -65,6 +65,16 @@ export async function GET(req: NextRequest) {
         policy.payment_terms_days,
         now
       );
+      // Reminders only apply to invoices sent at/after the studio enabled
+      // them. null enabled_at means reminders are off entirely.
+      if (
+        policy.invoice_reminders_enabled_at &&
+        new Date(invoice.sent_at as string) <
+          new Date(policy.invoice_reminders_enabled_at)
+      ) {
+        skipped += 1;
+        continue;
+      }
       if (!Number.isFinite(lateDays) || lateDays < 1) {
         skipped += 1;
         continue;

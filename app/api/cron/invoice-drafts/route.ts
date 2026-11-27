@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Daily job: for studios on the monthly cadence, create DRAFT invoices for the
- * previous full calendar month. Never sends — the teacher reviews and sends.
- * Safe to run repeatedly: already-invoiced lessons are excluded by the
+ * Daily job: for studios that opted in to auto-drafts, create DRAFT invoices
+ * for the previous full calendar month. Never sends — the teacher reviews and
+ * sends. Safe to run repeatedly: already-invoiced lessons are excluded by the
  * double-billing gate, so a second run creates nothing.
  */
 export async function GET(req: NextRequest) {
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const { data: policyRows, error } = await supabase
     .from("studio_policies")
     .select("teacher_id")
-    .eq("invoice_cadence", "monthly");
+    .eq("auto_draft_invoices", true);
 
   if (error) {
     console.error("invoice-drafts load:", error);
