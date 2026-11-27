@@ -38,7 +38,9 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
   const [currency, setCurrency] = useState(policy.currency || "USD");
   const [cadence, setCadence] = useState<InvoiceCadence>(policy.invoice_cadence);
   const [terms, setTerms] = useState(String(policy.payment_terms_days));
-  const [autoDraft, setAutoDraft] = useState(policy.auto_draft_invoices);
+  const [autoDraft, setAutoDraft] = useState(
+    policy.invoice_cadence === "monthly" && policy.auto_draft_invoices
+  );
   const [remindersOn, setRemindersOn] = useState(
     policy.invoice_reminders_enabled_at !== null
   );
