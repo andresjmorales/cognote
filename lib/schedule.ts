@@ -50,6 +50,10 @@ export interface StudioPolicy {
   invoice_cadence: InvoiceCadence;
   /** Days after sending before an invoice is overdue. */
   payment_terms_days: number;
+  /** When true, the daily cron drafts the previous month's invoices for this studio. */
+  auto_draft_invoices: boolean;
+  /** When set, overdue invoice reminders only apply to invoices sent at or after this instant. Null = reminders off. */
+  invoice_reminders_enabled_at: string | null;
   payment_instructions: string;
   /** Optional payment QR image (data:image/png|jpeg;base64 URL). */
   payment_qr_code: string | null;
@@ -106,6 +110,8 @@ export const DEFAULT_POLICY: StudioPolicy = {
   currency: "USD",
   invoice_cadence: "monthly",
   payment_terms_days: 14,
+  auto_draft_invoices: false,
+  invoice_reminders_enabled_at: null,
   payment_instructions: "",
   payment_qr_code: null,
   payment_provider: "manual",

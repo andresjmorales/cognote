@@ -307,6 +307,14 @@ export async function PUT(req: NextRequest) {
     }),
     ...(cadence !== undefined && { invoice_cadence: cadence }),
     ...(terms !== undefined && { payment_terms_days: terms }),
+    ...(body.autoDraftInvoices !== undefined && {
+      auto_draft_invoices: Boolean(body.autoDraftInvoices),
+    }),
+    ...(body.invoiceRemindersEnabled !== undefined && {
+      invoice_reminders_enabled_at: body.invoiceRemindersEnabled
+        ? new Date().toISOString()
+        : null,
+    }),
     ...(body.paymentInstructions !== undefined && {
       payment_instructions: String(body.paymentInstructions).slice(0, 2000),
     }),
@@ -437,6 +445,8 @@ export async function PUT(req: NextRequest) {
     "bill_makeup",
     "invoice_cadence",
     "payment_terms_days",
+    "auto_draft_invoices",
+    "invoice_reminders_enabled_at",
   ] as const;
   const familyRelevantChanged = FAMILY_RELEVANT_FIELDS.some(
     (field) =>
