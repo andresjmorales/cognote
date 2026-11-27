@@ -6,7 +6,7 @@ alter table public.studio_policies
   add column if not exists auto_draft_invoices boolean not null default false;
 
 comment on column public.studio_policies.auto_draft_invoices is
-  'When true, the daily cron drafts the previous month\'s invoices for this studio. Null/false = off.';
+  'When true, the daily cron drafts the previous month''s invoices for this studio. Null/false = off.';
 
 alter table public.studio_policies
   add column if not exists invoice_reminders_enabled_at timestamptz;
