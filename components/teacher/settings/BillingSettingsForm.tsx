@@ -38,6 +38,10 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
   const [currency, setCurrency] = useState(policy.currency || "USD");
   const [cadence, setCadence] = useState<InvoiceCadence>(policy.invoice_cadence);
   const [terms, setTerms] = useState(String(policy.payment_terms_days));
+  const [autoDraft, setAutoDraft] = useState(policy.auto_draft_invoices);
+  const [remindersOn, setRemindersOn] = useState(
+    policy.invoice_reminders_enabled_at !== null
+  );
   const [billAttended, setBillAttended] = useState(policy.bill_attended);
   const [billNoShow, setBillNoShow] = useState(policy.bill_no_show);
   const [billTeacherCancel, setBillTeacherCancel] = useState(
@@ -119,6 +123,14 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
         ...(termsDays !== policy.payment_terms_days && {
           paymentTermsDays: termsDays,
         }),
+        ...(autoDraft !== policy.auto_draft_invoices && {
+          autoDraftInvoices: autoDraft,
+        }),
+        ...(
+          remindersOn !== (policy.invoice_reminders_enabled_at !== null) && {
+            invoiceRemindersEnabled: remindersOn,
+          }
+        ),
         billAttended,
         billNoShow,
         billTeacherCancel,
@@ -258,8 +270,26 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
             <option value="manual">Month-to-date (1st through today)</option>
           </select>
           <span className="block text-xs text-muted mt-1">
-            Only pre-fills the Generate dialog. You can always change the
-            range before creating drafts.
+            Pre-fills the Generate dialog's date range. Monthly auto-drafts are
+            controlled by the checkbox below.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={autoDraft}
+            onChange={(e) => setAutoDraft(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium">
+              Auto-generate draft invoices each month
+            </span>
+            <span className="block text-xs text-muted">
+              Creates drafts for the previous calendar month on days 1-3. You
+              review and send them — nothing is sent automatically.
+            </span>
           </span>
         </label>
 
@@ -277,6 +307,24 @@ export function BillingSettingsForm({ policy }: { policy: StudioPolicy }) {
           />
           <span className="block text-xs text-muted mt-1">
             Invoices older than this get one reminder email.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={remindersOn}
+            onChange={(e) => setRemindersOn(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium">
+              Send one reminder email for overdue invoices
+            </span>
+            <span className="block text-xs text-muted">
+              Only applies to invoices sent after you turn this on. Older
+              unpaid invoices are not chased.
+            </span>
           </span>
         </label>
 
