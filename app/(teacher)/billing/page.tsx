@@ -105,6 +105,7 @@ export default async function BillingPage() {
         termsDays={policy.payment_terms_days}
         currency={policy.currency}
         now={new Date()}
+        remindersEnabled={policy.invoice_reminders_enabled_at !== null}
       />
 
       <Card padding="sm">

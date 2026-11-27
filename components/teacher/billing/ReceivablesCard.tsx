@@ -22,11 +22,13 @@ export function ReceivablesCard({
   termsDays,
   currency,
   now,
+  remindersEnabled,
 }: {
   invoices: AgingInvoice[];
   termsDays: number;
   currency: string;
   now: Date;
+  remindersEnabled: boolean;
 }) {
   const { buckets, totalCents, overdueCents } = agingBuckets(
     invoices,
@@ -74,10 +76,12 @@ export function ReceivablesCard({
           </div>
         ))}
       </dl>
-      <p className="text-xs text-muted mt-3">
-        One reminder email goes out once an invoice is more than{" "}
-        {termsDays === 1 ? "1 day" : `${termsDays} days`} old.
-      </p>
+      {remindersEnabled && (
+        <p className="text-xs text-muted mt-3">
+          One reminder email goes out once an invoice is more than{""}
+          {termsDays === 1 ? "1 day" : `${termsDays} days`} old.
+        </p>
+      )}
     </Card>
   );
 }
